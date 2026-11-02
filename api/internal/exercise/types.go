@@ -66,6 +66,13 @@ type CheckResult struct {
 	Passed   bool   `json:"passed"`
 	Visible  bool   `json:"visible"`
 	Feedback string `json:"feedback,omitempty"` // hidden checks: message only, never test source
+	// Got and Expected are short value reprs, set only on failed visible checks.
+	Got      string `json:"got,omitempty"`
+	Expected string `json:"expected,omitempty"`
+	// Line is the learner's source line the failure points at (1-based), if known.
+	Line int `json:"line,omitempty"`
+	// Weight scales this row in Score; 0 counts as 1. Not sent to the browser.
+	Weight float64 `json:"-"`
 }
 
 // Result statuses.
@@ -80,22 +87,37 @@ const (
 // The API maps it to 400; it is not a failed attempt.
 var ErrInvalidAnswer = errors.New("invalid answer")
 
-// NewResult builds a Result from check rows: pass only when every check passes,
-// score is the passing fraction. Weighted scoring arrives with code checks (Phase 2).
+// NewResult builds a Result from check rows: pass only when every check passes;
+// score is the weighted passing fraction. No rows is an error.
 func NewResult(checks []CheckResult) Result {
 	r := Result{Status: StatusPass, Checks: checks}
 	if len(checks) == 0 {
 		r.Status = StatusError
 		return r
 	}
-	passed := 0
+	var passed, total float64
 	for _, c := range checks {
+		w := c.Weight
+		if w <= 0 {
+			w = 1
+		}
+		total += w
 		if c.Passed {
-			passed++
+			passed += w
 		} else {
 			r.Status = StatusFail
 		}
 	}
-	r.Score = float64(passed) / float64(len(checks))
+	r.Score = passed / total
 	return r
+}
+
+// Testable is implemented by types whose exercises carry reference answers.
+// cq test grades the reference answer (must pass) and every wrong answer
+// (each must fail). Specs come straight from ParseSpec, so fields that are not
+// stored in private_spec (solution, wrong/) are still present.
+type Testable interface {
+	ReferenceAnswer(s Spec) (json.RawMessage, error)
+	// WrongAnswers maps a name (e.g. "wrong/off_by_one.py") to an answer.
+	WrongAnswers(s Spec) (map[string]json.RawMessage, error)
 }

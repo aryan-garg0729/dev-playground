@@ -100,13 +100,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/submissions/{submissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSubmission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Error: {
             error: {
-                /** @description e.g. not_found, bad_request, invalid_answer, stale_version, locked, unauthorized */
+                /** @description e.g. not_found, bad_request, invalid_answer, stale_version, rate_limited, grader_unavailable, locked, unauthorized */
                 code: string;
                 message: string;
             };
@@ -164,6 +180,12 @@ export interface components {
             passed: boolean;
             visible: boolean;
             feedback?: string;
+            /** @description Short repr of the learner's value; failed visible checks only */
+            got?: string;
+            /** @description Short repr of the expected value; failed visible checks only */
+            expected?: string;
+            /** @description 1-based line in the learner's file the failure points at */
+            line?: number;
         };
         ExerciseDetail: {
             id: string;
@@ -196,7 +218,8 @@ export interface components {
             exercise_version: number;
             /** @description The learner's own answer */
             answer: unknown;
-            result: components["schemas"]["Result"];
+            /** @description Null while the submission is still being graded */
+            result: null | components["schemas"]["Result"];
             /** Format: date-time */
             created_at: string;
         };
@@ -212,6 +235,24 @@ export interface components {
             result: components["schemas"]["Result"];
             /** @description Always 0 until Phase 4 */
             xp_awarded: number;
+        };
+        PendingResponse: {
+            /** Format: uuid */
+            submission_id: string;
+            /** @enum {string} */
+            status: "pending";
+        };
+        SubmissionStatus: {
+            /** Format: uuid */
+            submission_id: string;
+            exercise_id: string;
+            exercise_version: number;
+            /** @enum {string} */
+            status: "pending" | "pass" | "fail" | "error" | "timeout";
+            result: null | components["schemas"]["Result"];
+            xp_awarded: number;
+            /** Format: date-time */
+            created_at: string;
         };
     };
     responses: {
@@ -369,12 +410,47 @@ export interface operations {
                     "application/json": components["schemas"]["SubmitResponse"];
                 };
             };
+            /** @description Still grading after 15 s; poll GET /submissions/{id} */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingResponse"];
+                };
+            };
             400: components["responses"]["Error"];
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             415: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                submissionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One of the learner's own submissions; result is null while pending */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubmissionStatus"];
+                };
+            };
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
 }

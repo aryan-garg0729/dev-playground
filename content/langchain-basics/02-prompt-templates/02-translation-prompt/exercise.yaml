@@ -1,0 +1,35 @@
+id: lc.prompts.translation-prompt
+type: code
+version: 1
+title: A translation prompt
+xp: 20
+difficulty: 1
+tags: [prompts]
+spec:
+  language: python
+  runner: docker-python
+  prompt: prompt.md
+  entry: main.py
+  starter: starter.py
+  solution: solution.py
+  limits: { timeout_ms: 5000, memory_mb: 256 }
+  examples:
+    - input: 'make_translation_prompt().input_variables'
+      output: "['source', 'target', 'text']"
+  constraints:
+    - 'System: "You are a translator from {source} to {target}. Reply with the translation only."'
+    - 'Human: "{text}"'
+  hints:
+    - ChatPromptTemplate.from_messages takes a list of (role, template) pairs.
+  checks:
+    - kind: unit_tests
+      file: tests_visible.py
+      visible: true
+    - kind: unit_tests
+      file: tests_hidden.py
+      weight: 2
+    - kind: stdout_equals
+      name: Running main.py prints both messages
+      expected: |
+        system: You are a translator from English to French. Reply with the translation only.
+        human: Good morning

@@ -3,14 +3,20 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aryangarg/codequest/api/internal/exercise"
 	"github.com/aryangarg/codequest/api/internal/grading"
+	"github.com/aryangarg/codequest/api/internal/ratelimit"
+	"github.com/aryangarg/codequest/api/internal/runner"
 	"github.com/aryangarg/codequest/api/internal/store"
 )
 
@@ -119,6 +125,12 @@ type submitResponse struct {
 	XPAwarded    int             `json:"xp_awarded"` // always 0 until Phase 4
 }
 
+// pendingResponse is the 202 body: grading continues; poll GET /submissions/{id}.
+type pendingResponse struct {
+	SubmissionID string `json:"submission_id"`
+	Status       string `json:"status"` // "pending"
+}
+
 func (a *api) submit(w http.ResponseWriter, r *http.Request) {
 	user := currentUser(r)
 	if !user.Valid {
@@ -147,9 +159,86 @@ func (a *api) submit(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "stale_version", "this exercise changed; reload to get the latest version")
 	case errors.Is(err, exercise.ErrInvalidAnswer):
 		writeError(w, http.StatusBadRequest, "invalid_answer", err.Error())
+	case errors.Is(err, runner.ErrUnavailable):
+		a.Log.Error("grader unavailable", "err", err, "req_id", middleware.GetReqID(r.Context()))
+		writeError(w, http.StatusServiceUnavailable, "grader_unavailable", "the grader is busy or offline; try again shortly")
 	case err != nil:
 		a.internal(w, r, err)
+	case g.Pending:
+		writeJSON(w, http.StatusAccepted, pendingResponse{SubmissionID: g.SubmissionID.String(), Status: "pending"})
 	default:
 		writeJSON(w, http.StatusOK, submitResponse{SubmissionID: g.SubmissionID.String(), Result: g.Result})
 	}
+}
+
+type submissionResponse struct {
+	SubmissionID    string          `json:"submission_id"`
+	ExerciseID      string          `json:"exercise_id"`
+	ExerciseVersion int             `json:"exercise_version"`
+	Status          string          `json:"status"` // pending | pass | fail | error | timeout
+	Result          json.RawMessage `json:"result"` // null while pending
+	XPAwarded       int             `json:"xp_awarded"`
+	CreatedAt       time.Time       `json:"created_at"`
+}
+
+func (a *api) getSubmission(w http.ResponseWriter, r *http.Request) {
+	user := currentUser(r)
+	if !user.Valid {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "sign in to see submissions")
+		return
+	}
+	id, err := uuid.Parse(chi.URLParam(r, "submissionID"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "submission not found")
+		return
+	}
+	s, err := a.Grader.Get(r.Context(), user.UUID, id)
+	switch {
+	case errors.Is(err, grading.ErrNoSubmission):
+		writeError(w, http.StatusNotFound, "not_found", "submission not found")
+	case err != nil:
+		a.internal(w, r, err)
+	default:
+		res := s.Result
+		if len(res) == 0 {
+			res = json.RawMessage("null")
+		}
+		writeJSON(w, http.StatusOK, submissionResponse{
+			SubmissionID: s.ID.String(), ExerciseID: s.Exercise, ExerciseVersion: s.Version,
+			Status: s.Status, Result: res, CreatedAt: s.CreatedAt,
+		})
+	}
+}
+
+// limitSubmits applies the per-user and per-IP submit limits. If Redis is
+// down, submits are refused rather than let through unlimited.
+func (a *api) limitSubmits(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			ip = r.RemoteAddr
+		}
+		type limit struct {
+			rule ratelimit.Rule
+			key  string
+		}
+		checks := []limit{{ratelimit.Rule{Name: "submit-ip", Limit: a.SubmitPerIP, Window: time.Minute}, ip}}
+		if u := currentUser(r); u.Valid {
+			checks = append(checks, limit{ratelimit.Rule{Name: "submit-user", Limit: a.SubmitPerUser, Window: time.Minute}, u.UUID.String()})
+		}
+		for _, c := range checks {
+			ok, retry, err := a.Limiter.Allow(r.Context(), c.rule, c.key)
+			if err != nil {
+				a.Log.Error("rate limiter", "err", err)
+				writeError(w, http.StatusServiceUnavailable, "unavailable", "try again shortly")
+				return
+			}
+			if !ok {
+				w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
+				writeError(w, http.StatusTooManyRequests, "rate_limited", "too many submissions; wait a moment")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

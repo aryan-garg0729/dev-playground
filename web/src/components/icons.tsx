@@ -64,3 +64,9 @@ export const LockIcon = (p: IconProps) => (
     <path d="M8 11V7a4 4 0 0 1 8 0v4" />
   </Icon>
 );
+export const PanelLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16M13 10l2 2-2 2" />
+  </Icon>
+);

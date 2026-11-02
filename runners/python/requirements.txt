@@ -1,0 +1,5 @@
+# Libraries available to learner code and tests in codequest/python.
+# Pinned to the versions the LangChain course was written against.
+langchain-core==1.7.3
+langchain-ollama==1.1.0
+pydantic==2.14.2

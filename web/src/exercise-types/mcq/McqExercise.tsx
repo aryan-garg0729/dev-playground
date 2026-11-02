@@ -15,7 +15,7 @@ export interface McqAnswer {
   choices: string[];
 }
 
-export function McqExercise({ publicView, draft, onChange, onSubmit, result }: ExerciseRendererProps<McqPublicView, McqAnswer>) {
+export function McqExercise({ header, publicView, draft, onChange, onSubmit, result }: ExerciseRendererProps<McqPublicView, McqAnswer>) {
   const { question, multiple, options } = publicView;
   const choices = draft?.choices ?? [];
   const [pending, setPending] = useState(false);
@@ -43,7 +43,8 @@ export function McqExercise({ publicView, draft, onChange, onSubmit, result }: E
   const feedback = result?.result.checks.map((c) => c.feedback).filter(Boolean);
 
   return (
-    <div className="flex flex-col gap-4">
+    <article className="flex min-w-0 max-w-[760px] flex-1 flex-col gap-4 self-start rounded-lg border border-border bg-surface px-6 py-5">
+      {header}
       <Markdown>{question}</Markdown>
 
       <fieldset className="flex flex-col gap-2">
@@ -98,6 +99,6 @@ export function McqExercise({ publicView, draft, onChange, onSubmit, result }: E
           </section>
         )}
       </div>
-    </div>
+    </article>
   );
 }

@@ -181,3 +181,32 @@ func (mcqType) Grade(ctx context.Context, ex exercise.Exercise, sub exercise.Sub
 	}
 	return exercise.NewResult(rows), nil
 }
+
+// ReferenceAnswer is the answer set.
+func (mcqType) ReferenceAnswer(sp exercise.Spec) (json.RawMessage, error) {
+	s, ok := sp.(Spec)
+	if !ok {
+		return nil, fmt.Errorf("mcq: spec %T", sp)
+	}
+	return json.Marshal(Answer{Choices: s.Answer})
+}
+
+// WrongAnswers is every single option that is not the answer set.
+func (mcqType) WrongAnswers(sp exercise.Spec) (map[string]json.RawMessage, error) {
+	s, ok := sp.(Spec)
+	if !ok {
+		return nil, fmt.Errorf("mcq: spec %T", sp)
+	}
+	out := map[string]json.RawMessage{}
+	for _, o := range s.Options {
+		if len(s.Answer) == 1 && s.Answer[0] == o.ID {
+			continue
+		}
+		b, err := json.Marshal(Answer{Choices: []string{o.ID}})
+		if err != nil {
+			return nil, err
+		}
+		out["option "+o.ID] = b
+	}
+	return out, nil
+}

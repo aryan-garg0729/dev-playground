@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { GradeResult } from '../api/client';
 
 export type { GradeResult };
@@ -11,6 +12,8 @@ export interface RunOutput {
 }
 
 export interface ExerciseRendererProps<V = unknown, A = unknown> {
+  /** Pills and title, rendered by the page; the renderer places it at the top of its problem pane. */
+  header: ReactNode;
   publicView: V; // from GET /exercises/:id
   draft: A | undefined; // last answer
   onChange: (answer: A) => void;

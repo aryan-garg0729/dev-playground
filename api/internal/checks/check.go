@@ -12,17 +12,36 @@ import (
 )
 
 // CheckInput is everything a check may look at. Config is the check's own
-// manifest entry; Answer is the learner's answer. Runner output is added with
-// the code type in Phase 2.
+// manifest entry (without "kind"); Answer is the learner's answer; Report is the
+// harness report for runner-based types (nil for mcq).
 type CheckInput struct {
 	Config json.RawMessage
 	Answer json.RawMessage
+	Report *Report
 }
 
 // Check is one check kind.
 type Check interface {
 	Kind() string
 	Run(ctx context.Context, in CheckInput) ([]exercise.CheckResult, error)
+}
+
+// Validator is implemented by kinds whose manifest config can be checked at
+// build time. Unknown fields must be rejected.
+type Validator interface {
+	Validate(config json.RawMessage) error
+}
+
+// Validate checks a manifest config for kind, if the kind supports it.
+func Validate(kind string, config json.RawMessage) error {
+	c, ok := Get(kind)
+	if !ok {
+		return fmt.Errorf("unknown check kind %q (known: %v)", kind, Kinds())
+	}
+	if v, ok := c.(Validator); ok {
+		return v.Validate(config)
+	}
+	return nil
 }
 
 var registry = map[string]Check{}

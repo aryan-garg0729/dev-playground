@@ -2,6 +2,9 @@ id: lc.chat-models
 title: Chat models & messages
 exercises:
   - 01-message-roles
-  - 02-runnable-methods
-  - 03-stateless-models
-  - 04-token-usage
+  - 02-build-messages
+  - 03-runnable-methods
+  - 04-stream-tokens
+  - 05-stateless-models
+  - 06-continue-conversation
+  - 07-token-usage

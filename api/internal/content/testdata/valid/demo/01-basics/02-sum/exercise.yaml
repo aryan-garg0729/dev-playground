@@ -1,0 +1,29 @@
+id: demo.basics.sum
+type: code
+version: 1
+title: Sum a list
+xp: 20
+difficulty: 2
+tags: [loops]
+spec:
+  language: python
+  runner: pyodide
+  prompt: prompt.md
+  entry: main.py
+  starter: starter.py
+  solution: solution.py
+  limits: { timeout_ms: 2000, memory_mb: 128 }
+  examples:
+    - { input: "nums = [1, 2, 3]", output: "6", explanation: "1 + 2 + 3 = 6" }
+  constraints: ["0 ≤ len(nums) ≤ 10⁴"]
+  hints: ["What should total start at?"]
+  checks:
+    - kind: unit_tests
+      file: tests_visible.py
+      visible: true
+    - kind: unit_tests
+      file: tests_hidden.py
+      weight: 2
+    - kind: forbidden_calls
+      names: [sum]
+      message: Try it with a loop instead of sum()

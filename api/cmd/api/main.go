@@ -14,11 +14,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/aryangarg/codequest/api/internal/config"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all" // register exercise types
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/httpapi"
+	"github.com/aryangarg/codequest/api/internal/ratelimit"
+	"github.com/aryangarg/codequest/api/internal/runner"
 	"github.com/aryangarg/codequest/api/internal/store"
 )
 
@@ -44,6 +47,22 @@ func run(log *slog.Logger) error {
 	}
 	defer pool.Close()
 
+	ropt, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return fmt.Errorf("REDIS_URL: %w", err)
+	}
+	rdb := redis.NewClient(ropt)
+	defer func() { _ = rdb.Close() }()
+
+	grader := grading.NewService(pool, &runner.Queue{Redis: rdb}, grading.Options{Log: log})
+	defer grader.Close()
+	// Anything still pending from before this start was lost with the old process.
+	if n, err := grader.FailStale(ctx, 5*time.Minute); err != nil {
+		log.Error("fail stale submissions", "err", err)
+	} else if n > 0 {
+		log.Warn("marked stale pending submissions as errors", "count", n)
+	}
+
 	var devUser uuid.NullUUID
 	if cfg.DevUserEmail != "" {
 		u, err := store.New(pool).EnsureUserByEmail(ctx, store.EnsureUserByEmailParams{Email: cfg.DevUserEmail, Name: "Dev User"})
@@ -57,8 +76,9 @@ func run(log *slog.Logger) error {
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.New(httpapi.Deps{
-			Pool: pool, Grader: grading.NewService(pool), Log: log,
+			Pool: pool, Grader: grader, Log: log,
 			AllowedOrigins: cfg.AllowedOrigins, DevUser: devUser,
+			Limiter: &ratelimit.Limiter{Redis: rdb},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

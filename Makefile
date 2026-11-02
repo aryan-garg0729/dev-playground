@@ -5,16 +5,19 @@ DATABASE_URL ?= postgres://codequest:codequest@localhost:5432/codequest?sslmode=
 SQLC_IMAGE := sqlc/sqlc:1.30.0
 LINT_IMAGE := golangci/golangci-lint:v2.12-alpine
 
-.PHONY: up down db migrate content validate test test-api test-web lint tokens tokens-check sqlc api-types
+REDIS_TEST_URL ?= redis://localhost:6379/15
+RUNNER_IMAGE := codequest/python:3.12
 
-up: ## Start Postgres, Redis, API and web (applies migrations and builds content/)
+.PHONY: up down db migrate content validate content-test runner-image test test-api test-web lint tokens tokens-check sqlc api-types
+
+up: ## Start Postgres, Redis, API, worker and web (applies migrations and builds content/)
 	$(COMPOSE) up --build
 
 down:
 	$(COMPOSE) down
 
-db: ## Start only Postgres and wait until healthy
-	$(COMPOSE) up -d --wait postgres
+db: ## Start Postgres and Redis and wait until healthy
+	$(COMPOSE) up -d --wait postgres redis
 
 migrate: db
 	cd api && DATABASE_URL='$(DATABASE_URL)' go run ./cmd/cq migrate up
@@ -25,11 +28,18 @@ content: migrate ## Compile content/ into Postgres
 validate:
 	cd api && go run ./cmd/cq validate ../content
 
-test: test-api lint test-web ## Everything CI runs
+runner-image: ## Build the codequest/python grading image
+	docker build -q -t $(RUNNER_IMAGE) runners/python
 
-test-api: db
+content-test: runner-image ## Content CI: every solution passes, every wrong/ file fails
+	cd api && go run ./cmd/cq test ../content
+
+test: test-api content-test lint test-web ## Everything CI runs
+
+test-api: db runner-image
 	cd api && go vet ./... && \
-	  CQ_REQUIRE_DB=1 TEST_DATABASE_URL='$(DATABASE_URL)' go test -count=1 ./...
+	  CQ_REQUIRE_DB=1 CQ_REQUIRE_DOCKER=1 TEST_DATABASE_URL='$(DATABASE_URL)' TEST_REDIS_URL='$(REDIS_TEST_URL)' \
+	  go test -count=1 ./...
 
 lint:
 	docker run --rm -v "$(CURDIR)/api":/src -w /src $(LINT_IMAGE) golangci-lint run ./...

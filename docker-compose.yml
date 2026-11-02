@@ -41,6 +41,7 @@ services:
       HTTP_ADDR: ":8080"
       ALLOWED_ORIGINS: http://localhost:5173
       DEV_USER_EMAIL: ${DEV_USER_EMAIL:-dev@codequest.local}
+      REDIS_URL: redis://redis:6379/0
     ports: ["8080:8080"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/v1/healthz"]
@@ -50,6 +51,26 @@ services:
     depends_on:
       setup: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
+
+  # Builds the codequest/python grading image, checks it starts, then exits.
+  runner-python:
+    build: ./runners/python
+    image: codequest/python:3.12
+    entrypoint: ["python", "-c", "import cq, langchain_core"]
+    network_mode: none
+
+  # Grading worker. It starts runner containers through the host's Docker
+  # socket, which is root-equivalent: in production it runs on its own host
+  # with no other services and no database credentials.
+  worker:
+    build: { context: ./api, target: worker }
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      WORKER_CONCURRENCY: "2"
+    volumes: [/var/run/docker.sock:/var/run/docker.sock]
+    depends_on:
+      redis: { condition: service_healthy }
+      runner-python: { condition: service_completed_successfully }
 
   web:
     build: ./web

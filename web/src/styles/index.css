@@ -21,3 +21,11 @@
     accent-color: var(--accent);
   }
 }
+
+/* Monaco: the failing line from the last result (see CheckList README). */
+.monaco-editor .cq-error-line {
+  background: var(--danger-soft);
+}
+.monaco-editor .line-numbers.cq-error-number {
+  color: var(--danger);
+}

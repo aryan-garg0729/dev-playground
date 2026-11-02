@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/aryangarg/codequest/api/internal/exercise/mcq"
+	_ "github.com/aryangarg/codequest/api/internal/exercise/all"
 )
 
 // writeTree writes files (path -> content) under a temp dir and returns it.

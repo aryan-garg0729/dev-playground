@@ -27,6 +27,7 @@ function Harness({ onSubmit }: { onSubmit: (a: McqAnswer) => Promise<GradeResult
   const [result, setResult] = useState<GradeResult>();
   return (
     <McqExercise
+      header={null}
       publicView={view}
       draft={draft}
       result={result}
@@ -66,7 +67,7 @@ describe('McqExercise', () => {
     const onSubmit = vi.fn<(a: McqAnswer) => Promise<GradeResult>>().mockResolvedValue(graded('pass'));
     function Multi() {
       const [draft, setDraft] = useState<McqAnswer>();
-      return <McqExercise publicView={{ ...view, multiple: true }} draft={draft} result={undefined} onChange={setDraft} onSubmit={onSubmit} />;
+      return <McqExercise header={null} publicView={{ ...view, multiple: true }} draft={draft} result={undefined} onChange={setDraft} onSubmit={onSubmit} />;
     }
     render(<Multi />);
     expect(screen.getByText('Select all that apply')).toBeInTheDocument();

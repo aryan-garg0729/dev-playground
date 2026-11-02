@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-const maxBodyBytes = 64 << 10
+const maxBodyBytes = 128 << 10 // a 50 KB code file can double in size when JSON-escaped
 
 type errorBody struct {
 	Error errorDetail `json:"error"`

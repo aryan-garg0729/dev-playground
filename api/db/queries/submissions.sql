@@ -20,3 +20,18 @@ FROM submissions
 WHERE user_id = @user_id AND exercise_id = @exercise_id
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- name: FinishSubmission :exec
+UPDATE submissions SET status = @status, score = @score, result = @result
+WHERE id = @id AND status = 'pending';
+
+-- name: GetSubmission :one
+SELECT id, exercise_id, exercise_version, status, score, result, created_at
+FROM submissions
+WHERE id = @id AND user_id = @user_id;
+
+-- name: FailStalePending :execrows
+UPDATE submissions
+SET status = 'error',
+    result = '{"status":"error","score":0,"checks":[{"name":"Grader","passed":false,"visible":true,"feedback":"Grading was interrupted; submit again"}],"stdout":"","runtime_ms":0}'
+WHERE status = 'pending' AND created_at < now() - make_interval(secs => @older_than_secs::float8);

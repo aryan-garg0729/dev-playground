@@ -63,12 +63,27 @@ paths:
         "200":
           description: Graded result
           content: { application/json: { schema: { $ref: "#/components/schemas/SubmitResponse" } } }
+        "202":
+          description: Still grading after 15 s; poll GET /submissions/{id}
+          content: { application/json: { schema: { $ref: "#/components/schemas/PendingResponse" } } }
         "400": { $ref: "#/components/responses/Error" }
         "401": { $ref: "#/components/responses/Error" }
         "403": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
         "409": { $ref: "#/components/responses/Error" }
         "415": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
+  /submissions/{submissionId}:
+    get:
+      operationId: getSubmission
+      parameters: [{ name: submissionId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: One of the learner's own submissions; result is null while pending
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionStatus" } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
 components:
   responses:
     Error:
@@ -83,7 +98,7 @@ components:
           type: object
           required: [code, message]
           properties:
-            code: { type: string, description: "e.g. not_found, bad_request, invalid_answer, stale_version, locked, unauthorized" }
+            code: { type: string, description: "e.g. not_found, bad_request, invalid_answer, stale_version, rate_limited, grader_unavailable, locked, unauthorized" }
             message: { type: string }
     Me:
       type: object
@@ -156,6 +171,9 @@ components:
         passed: { type: boolean }
         visible: { type: boolean }
         feedback: { type: string }
+        got: { type: string, description: Short repr of the learner's value; failed visible checks only }
+        expected: { type: string, description: Short repr of the expected value; failed visible checks only }
+        line: { type: integer, description: 1-based line in the learner's file the failure points at }
     ExerciseDetail:
       type: object
       required: [id, type, version, title, xp, difficulty, tags, free, boss, course_id, chapter, position, prev_id, next_id, public_view, last_submission]
@@ -192,7 +210,11 @@ components:
         submission_id: { type: string, format: uuid }
         exercise_version: { type: integer }
         answer: { description: The learner's own answer, type-specific }
-        result: { $ref: "#/components/schemas/Result" }
+        result:
+          description: Null while the submission is still being graded
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Result"
         created_at: { type: string, format: date-time }
     Submission:
       type: object
@@ -209,3 +231,23 @@ components:
         submission_id: { type: string, format: uuid }
         result: { $ref: "#/components/schemas/Result" }
         xp_awarded: { type: integer, description: Always 0 until Phase 4 }
+    PendingResponse:
+      type: object
+      required: [submission_id, status]
+      properties:
+        submission_id: { type: string, format: uuid }
+        status: { type: string, enum: [pending] }
+    SubmissionStatus:
+      type: object
+      required: [submission_id, exercise_id, exercise_version, status, result, xp_awarded, created_at]
+      properties:
+        submission_id: { type: string, format: uuid }
+        exercise_id: { type: string }
+        exercise_version: { type: integer }
+        status: { type: string, enum: [pending, pass, fail, error, timeout] }
+        result:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Result"
+        xp_awarded: { type: integer }
+        created_at: { type: string, format: date-time }

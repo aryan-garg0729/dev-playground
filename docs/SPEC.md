@@ -41,7 +41,7 @@ codequest/
     design/                 # tokens.json, README.md, components/, screens/
   api/                      # Go module
     cmd/api/main.go         # HTTP server
-    cmd/worker/main.go      # server-side grading worker
+    cmd/worker/main.go      # server-side grading worker (Redis queue -> Docker; no DB access)
     cmd/cq/main.go          # CLI: validate, test, build content
     internal/
       content/              # load + validate exercise packages
@@ -60,6 +60,7 @@ codequest/
     src/styles/tokens.css   # generated from docs/design/tokens.json
     src/exercise-types/     # one folder per type: renderer components
     src/runner-client/      # postMessage bridge to sandbox
+  runners/python/           # codequest/python:3.12 grading image + harness (Phase 2)
   sandbox/                  # static runner page (served from separate origin)
     index.html  worker.ts   # Pyodide / sql.js / JS execution
   content/                  # courses as files (see Content format)
@@ -187,6 +188,8 @@ exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 - `cq validate <dir>` and `cq build <dir>` print every problem as `path: reason` and exit 1. `<dir>` is a folder of courses or a single course folder.
 - `cq build` writes everything in one transaction, upserting by id. Courses, chapters and exercises no longer in the content are **unpublished, never deleted**, so progress and submissions keyed on old ids survive.
 - mcq: `question` names a markdown file; `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
+- code (decided in Phase 2): `language: python`; `runner: docker-python` (submit-only) or `pyodide` (server grades it on `docker-python`); `prompt` (markdown), `entry` (a module file name such as `main.py`), `starter` and `solution` are required files; `limits` default to 3000 ms / 128 MB, capped at 10000 ms / 512 MB; `examples`, `constraints` and `hints` are optional and public. At least one check. `solution.*` and `wrong/*.py` are read by `cq build`/`cq test` but never stored in `private_spec`; hidden test sources are stored there (server-only). Visible test files are sent to the browser as `visible_tests`.
+- Test files are Python modules with top-level `test_*` functions that import from the entry module. A test's docstring is its row name. `from cq import expect` gives `expect(got, expected)`, which compares exact types (so a learner object with a rigged `__eq__` cannot pass) and reports got/expected. Label hidden tests in words: a hidden label that looks like code (contains `()[]{}=`) is replaced by "Hidden test N". `cq.fakes` (fake chat models) is available to tests and learner code in the image.
 
 ## Exercise type plugin system
 
@@ -203,6 +206,17 @@ type Type interface {
     Grade(ctx context.Context, ex Exercise, sub Submission) (Result, error)
 }
 
+// Optional: types with reference answers implement Testable for `cq test`.
+type Testable interface {
+    ReferenceAnswer(s Spec) (json.RawMessage, error)               // must pass
+    WrongAnswers(s Spec) (map[string]json.RawMessage, error)       // each must not pass
+}
+```
+
+Runner-based types get the server runner from the context (`runner.FromContext`), set by the grading service (queue runner) or `cq test` (Docker runner), so plugins hold no global state.
+
+```go
+
 var registry = map[string]Type{}
 
 func Register(t Type) { registry[t.Name()] = t }   // called from each plugin's init()
@@ -213,6 +227,7 @@ React registry (`web/src/exercise-types/index.ts`):
 
 ```ts
 export interface ExerciseRendererProps<V = unknown, A = unknown> {
+  header: React.ReactNode;                   // pills + title from the page; renderer places it in its problem pane
   publicView: V;                             // from GET /exercises/:id
   draft: A | undefined;                      // autosaved answer
   onChange: (answer: A) => void;
@@ -273,10 +288,14 @@ type CheckResult struct {
     Passed   bool   `json:"passed"`
     Visible  bool   `json:"visible"`
     Feedback string `json:"feedback,omitempty"` // hidden checks: message only, never test source
+    Got      string `json:"got,omitempty"`      // failed visible checks only: short repr
+    Expected string `json:"expected,omitempty"` // failed visible checks only
+    Line     int    `json:"line,omitempty"`     // learner source line the failure points at
+    Weight   float64 `json:"-"`                 // score weight, 0 = 1; never sent
 }
 ```
 
-`status` is `pass` only when every check passes. Game, tutor and analytics code must depend only on `Result`, never on the exercise type.
+`status` is `pass` only when every check passes; `score` is the weighted passing fraction. Hidden test rows never carry got/expected, exception messages or assertion internals: only an authored assertion message, "Wrong result", or "Your code raised <ExceptionType>". Game, tutor and analytics code must depend only on `Result`, never on the exercise type.
 
 ### Check primitives (`api/internal/checks`)
 
@@ -297,7 +316,18 @@ type Check interface {
     Kind() string
     Run(ctx context.Context, in CheckInput) ([]CheckResult, error)
 }
+// Optional, called by cq build: reject bad configs (unknown fields are errors).
+type Validator interface { Validate(config json.RawMessage) error }
 ```
+
+Manifest fields (every code check also takes `name`, `visible`, `weight ≥ 0`):
+
+| Kind | Fields | Defaults |
+| --- | --- | --- |
+| `unit_tests` | `file` (a `.py` in the exercise folder) | `visible: false`; one row per test, weight applies per row; `name` not allowed |
+| `stdout_equals` | `expected` | `visible: true`, name "Program output"; runs the entry as `__main__`; trailing whitespace per line and trailing blank lines ignored |
+| `stdout_regex` | `pattern` (Go RE2, unanchored), `message` | `visible: true` |
+| `forbidden_calls` | `names` (identifiers), `message` | static AST scan of learner files: `f(...)` and `x.f(...)` count. A teaching aid, not a sandbox |
 
 ### Runner interface (`api/internal/runner`)
 
@@ -306,21 +336,33 @@ type Runner interface {
     Run(ctx context.Context, job Job) (Output, error)
 }
 type Job struct {
-    Image   string            // e.g. codequest/python:3.12
-    Files   map[string]string // learner files + test files
-    Cmd     []string
-    Limits  Limits            // timeout, memory, pids, output bytes
+    Image  string // e.g. codequest/python:3.12
+    Stdin  []byte // the harness job (files, tests, limits) as JSON
+    Limits Limits // timeout, memory, pids, output bytes
 }
 type Output struct { Stdout, Stderr string; ExitCode, RuntimeMs int; TimedOut bool }
 ```
 
-Docker runner requirements: `--network none`, read-only root filesystem with a tmpfs work dir, non-root user, `--memory`, `--pids-limit 64`, CPU quota, hard wall-clock kill, output capped. Test harnesses emit results as one JSON line on a dedicated file descriptor so learner `print` calls cannot spoof them.
+Files reach the container on stdin (decided in Phase 2), so the root filesystem stays read-only and no host path is ever mounted; this also works when the worker itself runs in a container.
 
-Server grading runs in `cmd/worker`, which pulls jobs from a Redis queue. The API waits up to 15 s for the result, otherwise returns `202` with a submission id for polling.
+Docker runner (docker CLI): `--network none`, `--read-only` with tmpfs `/work` (16 MB) and `/tmp` (8 MB, noexec), `--user 10001`, `--cap-drop ALL`, `no-new-privileges`, `--memory` = `--memory-swap`, `--pids-limit 64`, `--cpus 1`, nofile/fsize ulimits, no logging, stdout capped at 256 KB and stderr at 16 KB, and a hard kill (`docker rm -f`) at 2 × timeout + 5 s.
+
+Python harness (`runners/python/harness`), PID 1 in the container and non-dumpable (no ptrace or `/proc/1/mem` from learner code):
+
+1. Reads the job from stdin, writes only the learner files to `/work`. Test sources are never written to disk.
+2. Statically scans learner files for syntax errors and forbidden calls (AST).
+3. If a stdout check exists, runs the entry as `__main__` in a child process (program phase).
+4. Runs the tests in a second child that gets the test sources and a random nonce on stdin, and reports one JSON line per test on a dedicated pipe fd. Records without the nonce, for unknown tests or repeated are dropped.
+5. Each phase is killed (whole process group) at `timeout_ms`. Child stdout/stderr are pipes the harness reads, so learner `print` output can only ever appear inside the report's `stdout` field.
+6. Writes exactly one JSON report line to its own stdout; the Go side parses it and runs the checks.
+
+Known limit: tests execute in the learner's process, so a determined learner could introspect or monkey-patch test objects in memory. Hidden tests deter casual peeking; they are not a vault. The grade itself still comes only from the server.
+
+Server grading runs in `cmd/worker`, which pulls jobs from Redis (`cq:jobs` list; reply on `cq:result:<id>`, 2 min TTL; jobs older than 60 s in the queue are skipped). The worker has no database access. The API grades in a goroutine and waits up to 15 s: a result in time is stored with progress in one transaction (200); otherwise a `pending` submission is stored, the API returns `202 {submission_id, status: "pending"}`, and the background grade finishes it. `GET /submissions/{id}` polls (owner only). A runner outage before the wait ends is `503 grader_unavailable` and nothing is stored; after it, the submission becomes `error` and does not count as an attempt. At startup, submissions pending for over 5 minutes are marked `error`.
 
 ### Content CI (`cq test`)
 
-For every exercise, CI must verify:
+`cq test <dir>` (needs Docker and the runner image; part of `make test`) grades every `Testable` exercise's reference answer and wrong answers on the Docker runner and prints one line per case. For mcq, the wrong answers are each single non-answer option. For every exercise, CI must verify:
 
 - [ ] Manifest parses and matches its type's spec schema.
 - [ ] `solution.*` passes every check on the server runner.
@@ -341,7 +383,7 @@ Learner code never runs in the main app's page. It runs in a Web Worker inside a
 Server-side rules:
 
 - Never trust a client-reported pass. XP, streaks, leagues and course completion are written only by the server grading path.
-- Rate-limit submissions per user (e.g. 30/min) and per IP in Redis.
+- Rate-limit submissions per user (30/min) and per IP (120/min) in Redis, fixed one-minute windows; over the limit is `429 rate_limited` with `Retry-After`. If Redis is down, submits are refused (503), never let through unlimited.
 - Docker runner hardening as listed under Grading. The worker host runs no other services and has no credentials to the database beyond writing results.
 - Store passwords nowhere (magic link + OAuth only). CSRF protection on all state-changing endpoints. Validate all request bodies.
 
@@ -379,14 +421,14 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/exercises/{id}` | `public_view`, type, saved draft, last result; 402 if locked |
 | PUT | `/exercises/{id}/draft` | Autosave answer |
 | POST | `/exercises/{id}/submit` | Grade; returns `Result` + XP awarded + level/streak changes |
-| GET | `/submissions/{id}` | Poll a pending submission |
+| GET | `/submissions/{id}` | Poll a pending submission (owner only; `result` is null while pending) |
 | POST | `/exercises/{id}/hint` | AI tutor message |
 | GET | `/leagues/current` | This week's league standings |
 | GET | `/medals` | Earned and available medals with progress |
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `internal`. Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
 CSRF (until real sessions in Phase 4): every non-GET request must be `Content-Type: application/json`, and a browser `Origin` header, when present, must be in `ALLOWED_ORIGINS`.
 
@@ -575,7 +617,7 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 ## Conventions and rules for Claude Code
 
 - Work one phase at a time. Before coding, list the files you will create or change. After coding, run tests and report which acceptance criteria pass.
-- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
+- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk). The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
 - Go: standard layout above, `gofmt` + `golangci-lint`, errors wrapped with `fmt.Errorf("...: %w", err)`, `context.Context` first argument, table-driven tests, no global state except the plugin registries.
 - SQL only through `sqlc`-generated queries. Every schema change is a new migration; never edit an applied one.
 - React: function components, TypeScript strict mode, no `any` outside the renderer registry, server state through TanStack Query, components under 200 lines.
@@ -589,7 +631,9 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 
 - Final product name and domains (app, sandbox origin). Needed before Phase 3.
 - ~~First course topic for launch.~~ Resolved (Phase 1): LangChain, sample course `content/langchain-basics`, adapted from the author's genai lesson notes; to be refined into the full course.
-- LangChain `code` exercises (Phase 2): the `docker-python` image needs `langchain-core`, `langchain-ollama` and fake chat models; grading uses fakes only, never a live model or the network.
+- ~~LangChain `code` exercises (Phase 2).~~ Resolved: `codequest/python:3.12` ships the pinned LangChain packages and `cq.fakes`; the sample LangChain code exercises use `runner: docker-python` and fakes only.
+- Phase 2 interim UI: Run is disabled until the browser sandbox (Phase 3); the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats waits for Phase 4.
+- Dev Compose mounts the host Docker socket into the worker (root-equivalent). Production runs the worker on a dedicated host (later gVisor).
 - LangChain in the browser (Phase 3): Pyodide would need self-hosted `langchain-core` and `pydantic` wheels (CSP forbids fetching from PyPI). Decide whether these exercises are submit-only, graded on the server.
 - Exact prices per plan and per country tier. Needed before Phase 5.
 - LLM provider for the tutor. Needed before Phase 6.

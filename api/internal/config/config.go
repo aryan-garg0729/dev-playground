@@ -3,7 +3,9 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -15,6 +17,25 @@ type Config struct {
 	// stand-in for auth; Phase 4 removes it. Never set it in production.
 	DevUserEmail   string
 	AllowedOrigins []string
+	RedisURL       string
+}
+
+// Worker holds cmd/worker settings.
+type Worker struct {
+	RedisURL    string
+	Concurrency int    // WORKER_CONCURRENCY, default 2
+	DockerBin   string // DOCKER_BIN, default "docker"
+}
+
+// LoadWorker reads the worker's environment.
+func LoadWorker() (Worker, error) {
+	w := Worker{RedisURL: getenv("REDIS_URL", "redis://localhost:6379/0"), DockerBin: getenv("DOCKER_BIN", "docker")}
+	n, err := strconv.Atoi(getenv("WORKER_CONCURRENCY", "2"))
+	if err != nil || n < 1 || n > 64 {
+		return Worker{}, fmt.Errorf("WORKER_CONCURRENCY must be 1-64, got %q", os.Getenv("WORKER_CONCURRENCY"))
+	}
+	w.Concurrency = n
+	return w, nil
 }
 
 // Load reads the environment.
@@ -24,6 +45,7 @@ func Load() (Config, error) {
 		HTTPAddr:       getenv("HTTP_ADDR", ":8080"),
 		DevUserEmail:   os.Getenv("DEV_USER_EMAIL"),
 		AllowedOrigins: splitList(getenv("ALLOWED_ORIGINS", "http://localhost:5173")),
+		RedisURL:       getenv("REDIS_URL", "redis://localhost:6379/0"),
 	}
 	if c.DatabaseURL == "" {
 		return Config{}, errors.New("DATABASE_URL is required")

@@ -2,6 +2,7 @@
 //
 //	cq validate <dir>   validate a content tree; print every problem as "path: reason"
 //	cq build <dir>      validate, then write the compiled bundle to DATABASE_URL
+//	cq test <dir>       content CI: every reference answer passes, every wrong/ answer fails
 //	cq migrate up|down  apply or roll back (one step) database migrations
 package main
 
@@ -18,11 +19,13 @@ import (
 	"github.com/aryangarg/codequest/api/internal/config"
 	"github.com/aryangarg/codequest/api/internal/content"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all" // register exercise types
+	"github.com/aryangarg/codequest/api/internal/runner"
 )
 
 const usage = `usage:
   cq validate <dir>
   cq build <dir>
+  cq test <dir>
   cq migrate up|down`
 
 func main() {
@@ -64,6 +67,22 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		sayf(stdout, "built: %d course(s), %d chapter(s), %d exercise(s)\n", st.Courses, st.Chapters, st.Exercises)
+		return 0
+	case "test":
+		b, ok := load(args[1], stderr)
+		if !ok {
+			return 1
+		}
+		bin := os.Getenv("DOCKER_BIN")
+		if bin == "" {
+			bin = "docker"
+		}
+		failed := contentTest(ctx, b, runner.Docker{Binary: bin}, stdout)
+		if failed > 0 {
+			sayf(stderr, "%d content check(s) failed\n", failed)
+			return 1
+		}
+		sayf(stdout, "ok: %s, every reference passes and every wrong answer fails\n", summary(b))
 		return 0
 	case "migrate":
 		dsn, err := config.DatabaseURL()

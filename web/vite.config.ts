@@ -11,6 +11,10 @@ export default defineConfig({
       '/api': { target: process.env.VITE_API_PROXY ?? 'http://localhost:8080', changeOrigin: false },
     },
   },
+  build: {
+    // Monaco (~2.7 MB) is one lazy chunk, loaded only on code lessons.
+    chunkSizeWarningLimit: 3000,
+  },
   test: {
     environment: 'jsdom',
     globals: true,

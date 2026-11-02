@@ -49,6 +49,43 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 	return i, err
 }
 
+const failStalePending = `-- name: FailStalePending :execrows
+UPDATE submissions
+SET status = 'error',
+    result = '{"status":"error","score":0,"checks":[{"name":"Grader","passed":false,"visible":true,"feedback":"Grading was interrupted; submit again"}],"stdout":"","runtime_ms":0}'
+WHERE status = 'pending' AND created_at < now() - make_interval(secs => $1::float8)
+`
+
+func (q *Queries) FailStalePending(ctx context.Context, olderThanSecs float64) (int64, error) {
+	result, err := q.db.Exec(ctx, failStalePending, olderThanSecs)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const finishSubmission = `-- name: FinishSubmission :exec
+UPDATE submissions SET status = $1, score = $2, result = $3
+WHERE id = $4 AND status = 'pending'
+`
+
+type FinishSubmissionParams struct {
+	Status string          `json:"status"`
+	Score  float64         `json:"score"`
+	Result json.RawMessage `json:"result"`
+	ID     uuid.UUID       `json:"id"`
+}
+
+func (q *Queries) FinishSubmission(ctx context.Context, arg FinishSubmissionParams) error {
+	_, err := q.db.Exec(ctx, finishSubmission,
+		arg.Status,
+		arg.Score,
+		arg.Result,
+		arg.ID,
+	)
+	return err
+}
+
 const getLatestSubmission = `-- name: GetLatestSubmission :one
 SELECT id, exercise_version, answer, status, score, result, created_at
 FROM submissions
@@ -79,6 +116,42 @@ func (q *Queries) GetLatestSubmission(ctx context.Context, arg GetLatestSubmissi
 		&i.ID,
 		&i.ExerciseVersion,
 		&i.Answer,
+		&i.Status,
+		&i.Score,
+		&i.Result,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getSubmission = `-- name: GetSubmission :one
+SELECT id, exercise_id, exercise_version, status, score, result, created_at
+FROM submissions
+WHERE id = $1 AND user_id = $2
+`
+
+type GetSubmissionParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+type GetSubmissionRow struct {
+	ID              uuid.UUID       `json:"id"`
+	ExerciseID      string          `json:"exercise_id"`
+	ExerciseVersion int32           `json:"exercise_version"`
+	Status          string          `json:"status"`
+	Score           float64         `json:"score"`
+	Result          json.RawMessage `json:"result"`
+	CreatedAt       time.Time       `json:"created_at"`
+}
+
+func (q *Queries) GetSubmission(ctx context.Context, arg GetSubmissionParams) (GetSubmissionRow, error) {
+	row := q.db.QueryRow(ctx, getSubmission, arg.ID, arg.UserID)
+	var i GetSubmissionRow
+	err := row.Scan(
+		&i.ID,
+		&i.ExerciseID,
+		&i.ExerciseVersion,
 		&i.Status,
 		&i.Score,
 		&i.Result,

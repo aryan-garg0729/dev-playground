@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, unwrap } from './client';
+import { api, ApiError, type GradeResult, unwrap } from './client';
 
 export const keys = {
   me: ['me'] as const,
@@ -37,16 +37,39 @@ export function useExercise(exerciseId: string) {
   });
 }
 
+const POLL_MS = 1000;
+const POLL_LIMIT_MS = 3 * 60 * 1000;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Submits an answer. If the server is still grading after 15 s it answers 202;
+ * then this polls GET /submissions/{id} until the result is in.
+ */
+export async function submitAndWait(exerciseId: string, version: number, answer: unknown, pollMs = POLL_MS): Promise<GradeResult> {
+  const first = await unwrap(
+    api.POST('/exercises/{exerciseId}/submit', {
+      params: { path: { exerciseId } },
+      body: { exercise_id: exerciseId, version, answer },
+    }),
+  );
+  if ('result' in first) return first;
+  const id = first.submission_id;
+  const deadline = Date.now() + POLL_LIMIT_MS;
+  while (Date.now() < deadline) {
+    await sleep(pollMs);
+    const s = await unwrap(api.GET('/submissions/{submissionId}', { params: { path: { submissionId: id } } }));
+    if (s.status !== 'pending' && s.result) {
+      return { submission_id: s.submission_id, result: s.result, xp_awarded: s.xp_awarded };
+    }
+  }
+  throw new ApiError(504, 'timeout', 'Grading is taking too long. Reload the page later to see the result.');
+}
+
 export function useSubmit(exerciseId: string, courseId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { version: number; answer: unknown }) =>
-      unwrap(
-        api.POST('/exercises/{exerciseId}/submit', {
-          params: { path: { exerciseId } },
-          body: { exercise_id: exerciseId, version: body.version, answer: body.answer },
-        }),
-      ),
+    mutationFn: (body: { version: number; answer: unknown }) => submitAndWait(exerciseId, body.version, body.answer),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.courses });
       if (courseId) void qc.invalidateQueries({ queryKey: keys.course(courseId) });

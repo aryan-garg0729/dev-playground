@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,8 +18,11 @@ import (
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/httpapi"
+	"github.com/aryangarg/codequest/api/internal/ratelimit"
+	"github.com/aryangarg/codequest/api/internal/runner"
 	"github.com/aryangarg/codequest/api/internal/store"
 	"github.com/aryangarg/codequest/api/internal/testdb"
+	"github.com/aryangarg/codequest/api/internal/testredis"
 )
 
 const (
@@ -31,9 +35,22 @@ type env struct {
 	t    *testing.T
 	pool *pgxpool.Pool
 	h    http.Handler
+	user uuid.NullUUID
+}
+
+// opts tweak setup for one test.
+type opts struct {
+	runner        runner.Runner
+	wait          time.Duration // grading wait before 202
+	submitPerUser int
 }
 
 func setup(t *testing.T, withUser bool) *env {
+	t.Helper()
+	return setupWith(t, withUser, opts{})
+}
+
+func setupWith(t *testing.T, withUser bool, o opts) *env {
 	t.Helper()
 	pool, _ := testdb.New(t)
 	ctx := context.Background()
@@ -58,8 +75,14 @@ func setup(t *testing.T, withUser bool) *env {
 		}
 		dev = uuid.NullUUID{UUID: u.ID, Valid: true}
 	}
-	h := httpapi.New(httpapi.Deps{Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grading.NewService(pool), AllowedOrigins: []string{origin}, DevUser: dev})
-	return &env{t: t, pool: pool, h: h}
+	rdb, prefix := testredis.New(t)
+	grader := grading.NewService(pool, o.runner, grading.Options{Wait: o.wait, Log: slog.New(slog.DiscardHandler)})
+	t.Cleanup(grader.Close)
+	h := httpapi.New(httpapi.Deps{
+		Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grader, AllowedOrigins: []string{origin}, DevUser: dev,
+		Limiter: &ratelimit.Limiter{Redis: rdb, Prefix: prefix}, SubmitPerUser: o.submitPerUser,
+	})
+	return &env{t: t, pool: pool, h: h, user: dev}
 }
 
 func (e *env) do(method, path, body string, hdr map[string]string) (int, []byte) {
@@ -107,14 +130,15 @@ type courseDetail struct {
 }
 
 // forbiddenKeys must never appear in any browser-facing response.
-var forbiddenKeys = []string{"private_spec", "explain", "solution", "tests_hidden"}
+var forbiddenKeys = []string{"private_spec", "explain", "solution", "tests_hidden", "tests", "wrong", "checks"}
 
 func findKeys(v any, path string, out *[]string) {
 	switch t := v.(type) {
 	case map[string]any:
 		for k, child := range t {
 			for _, f := range forbiddenKeys {
-				if k == f {
+				// The learner's own last result legitimately has "checks".
+				if k == f && (k != "checks" || !strings.Contains(path, "last_submission")) {
 					*out = append(*out, path+"."+k)
 				}
 			}
@@ -184,8 +208,10 @@ func TestCourseListsManifestOrder(t *testing.T) {
 		}
 	}
 	want := []string{
-		"lc.chat-models", "lc.chat.message-roles", "lc.chat.runnable-methods", "lc.chat.stateless-models", "lc.chat.token-usage",
-		"lc.prompt-templates", "lc.prompts.input-variables", "lc.prompts.messages-placeholder", "lc.prompts.escape-braces", "lc.prompts.partial-functions",
+		"lc.chat-models", "lc.chat.message-roles", "lc.chat.build-messages", "lc.chat.runnable-methods", "lc.chat.stream-tokens",
+		"lc.chat.stateless-models", "lc.chat.continue-conversation", "lc.chat.token-usage",
+		"lc.prompt-templates", "lc.prompts.input-variables", "lc.prompts.translation-prompt", "lc.prompts.messages-placeholder",
+		"lc.prompts.escape-braces", "lc.prompts.partial-functions", "lc.prompts.dated-prompt",
 	}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("order:\n got %v\nwant %v", got, want)

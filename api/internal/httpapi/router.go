@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aryangarg/codequest/api/internal/grading"
+	"github.com/aryangarg/codequest/api/internal/ratelimit"
 )
 
 // Deps are the handler dependencies.
@@ -25,6 +26,10 @@ type Deps struct {
 	AllowedOrigins []string
 	// DevUser, when valid, is the user every request acts as (Phase 1, no auth).
 	DevUser uuid.NullUUID
+	// Limiter rate-limits submissions per user and per client IP. Required.
+	Limiter *ratelimit.Limiter
+	// SubmitPerUser and SubmitPerIP are per-minute limits (defaults 30 and 120).
+	SubmitPerUser, SubmitPerIP int
 }
 
 type api struct{ Deps }
@@ -33,6 +38,12 @@ type api struct{ Deps }
 func New(d Deps) http.Handler {
 	if d.Log == nil {
 		d.Log = slog.Default()
+	}
+	if d.SubmitPerUser <= 0 {
+		d.SubmitPerUser = 30
+	}
+	if d.SubmitPerIP <= 0 {
+		d.SubmitPerIP = 120
 	}
 	a := &api{d}
 	r := chi.NewRouter()
@@ -56,7 +67,8 @@ func New(d Deps) http.Handler {
 		r.Get("/courses", a.listCourses)
 		r.Get("/courses/{courseID}", a.getCourse)
 		r.Get("/exercises/{exerciseID}", a.getExercise)
-		r.Post("/exercises/{exerciseID}/submit", a.submit)
+		r.With(a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
+		r.Get("/submissions/{submissionID}", a.getSubmission)
 	})
 	return r
 }
