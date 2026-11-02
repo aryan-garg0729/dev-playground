@@ -1,0 +1,10 @@
+id: broken.ok
+type: mcq
+version: 1
+title: Fine
+xp: 5
+spec:
+  question: prompt.md
+  options: [{ id: a, text: "A" }, { id: b, text: "B" }]
+  answer: [a]
+  explain: Because.

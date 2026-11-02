@@ -1,0 +1,155 @@
+package httpapi
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/aryangarg/codequest/api/internal/exercise"
+	"github.com/aryangarg/codequest/api/internal/grading"
+	"github.com/aryangarg/codequest/api/internal/store"
+)
+
+type chapterRef struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+type position struct {
+	Index int `json:"index"` // 1-based, within the chapter
+	Total int `json:"total"`
+}
+
+type lastSubmission struct {
+	SubmissionID    string          `json:"submission_id"`
+	ExerciseVersion int             `json:"exercise_version"`
+	Answer          json.RawMessage `json:"answer"`
+	Result          json.RawMessage `json:"result"`
+	CreatedAt       time.Time       `json:"created_at"`
+}
+
+type exerciseDetail struct {
+	ID         string          `json:"id"`
+	Type       string          `json:"type"`
+	Version    int             `json:"version"`
+	Title      string          `json:"title"`
+	XP         int             `json:"xp"`
+	Difficulty int             `json:"difficulty"`
+	Tags       []string        `json:"tags"`
+	Free       bool            `json:"free"`
+	Boss       bool            `json:"boss"`
+	CourseID   string          `json:"course_id"`
+	Chapter    chapterRef      `json:"chapter"`
+	Position   position        `json:"position"`
+	PrevID     *string         `json:"prev_id"`
+	NextID     *string         `json:"next_id"`
+	PublicView json.RawMessage `json:"public_view"`
+	Last       *lastSubmission `json:"last_submission"`
+}
+
+func (a *api) getExercise(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	q := store.New(a.Pool)
+	user := currentUser(r)
+	e, err := q.GetExercise(ctx, chi.URLParam(r, "exerciseID"))
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, "not_found", "exercise not found")
+		return
+	}
+	if err != nil {
+		a.internal(w, r, err)
+		return
+	}
+	// Phase 5: billing.HasAccess check here, 402 { code: "locked" }.
+
+	siblings, err := q.ListCourseExercises(ctx, store.ListCourseExercisesParams{UserID: user, CourseID: e.CourseID})
+	if err != nil {
+		a.internal(w, r, err)
+		return
+	}
+	out := exerciseDetail{
+		ID: e.ID, Type: e.Type, Version: int(e.Version), Title: e.Title, XP: int(e.Xp),
+		Difficulty: int(e.Difficulty), Tags: e.Tags, Free: e.Free, Boss: e.Boss, CourseID: e.CourseID,
+		Chapter: chapterRef{ID: e.ChapterID, Title: e.ChapterTitle}, PublicView: e.PublicView,
+	}
+	if out.Tags == nil {
+		out.Tags = []string{}
+	}
+	for i, s := range siblings {
+		if s.ChapterID == e.ChapterID {
+			out.Position.Total++
+			if s.ID == e.ID {
+				out.Position.Index = out.Position.Total
+			}
+		}
+		if s.ID == e.ID {
+			if i > 0 {
+				out.PrevID = &siblings[i-1].ID
+			}
+			if i+1 < len(siblings) {
+				out.NextID = &siblings[i+1].ID
+			}
+		}
+	}
+
+	if user.Valid {
+		last, err := q.GetLatestSubmission(ctx, store.GetLatestSubmissionParams{UserID: user.UUID, ExerciseID: e.ID})
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+		case err != nil:
+			a.internal(w, r, err)
+			return
+		default:
+			out.Last = &lastSubmission{
+				SubmissionID: last.ID.String(), ExerciseVersion: int(last.ExerciseVersion),
+				Answer: last.Answer, Result: last.Result, CreatedAt: last.CreatedAt,
+			}
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+type submitResponse struct {
+	SubmissionID string          `json:"submission_id"`
+	Result       exercise.Result `json:"result"`
+	XPAwarded    int             `json:"xp_awarded"` // always 0 until Phase 4
+}
+
+func (a *api) submit(w http.ResponseWriter, r *http.Request) {
+	user := currentUser(r)
+	if !user.Valid {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "sign in to submit")
+		return
+	}
+	var sub exercise.Submission
+	if err := decodeJSON(w, r, &sub); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	pathID := chi.URLParam(r, "exerciseID")
+	if sub.ExerciseID != pathID {
+		writeError(w, http.StatusBadRequest, "bad_request", "exercise_id does not match the URL")
+		return
+	}
+	if len(sub.Answer) == 0 || string(sub.Answer) == "null" {
+		writeError(w, http.StatusBadRequest, "bad_request", "answer is required")
+		return
+	}
+	g, err := a.Grader.Submit(r.Context(), user.UUID, sub)
+	switch {
+	case errors.Is(err, grading.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "exercise not found")
+	case errors.Is(err, grading.ErrStaleVersion):
+		writeError(w, http.StatusConflict, "stale_version", "this exercise changed; reload to get the latest version")
+	case errors.Is(err, exercise.ErrInvalidAnswer):
+		writeError(w, http.StatusBadRequest, "invalid_answer", err.Error())
+	case err != nil:
+		a.internal(w, r, err)
+	default:
+		writeJSON(w, http.StatusOK, submitResponse{SubmissionID: g.SubmissionID.String(), Result: g.Result})
+	}
+}

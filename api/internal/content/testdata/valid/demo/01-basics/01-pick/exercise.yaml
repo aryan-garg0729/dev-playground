@@ -1,0 +1,13 @@
+id: demo.basics.pick
+type: mcq
+version: 2
+title: Pick one
+xp: 5
+free: true
+spec:
+  question: prompt.md
+  options:
+    - { id: a, text: "Alpha" }
+    - { id: b, text: "Beta" }
+  answer: [b]
+  explain: SERVER_ONLY_SENTINEL explanation is revealed only after submit.

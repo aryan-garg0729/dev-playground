@@ -1,0 +1,25 @@
+<!-- @dsCard group="Game" height=88 subtitle="Streak, level, XP" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500&display=swap">
+<style>
+  body { margin: 0; background: var(--surface); }
+  .row { display: flex; align-items: center; gap: 14px; padding: var(--space-5); }
+  .streak { display: flex; align-items: center; gap: 6px; font-family: var(--font-pixel); font-size: 16px; color: var(--accent-text); }
+  .streak svg { stroke: var(--accent); }
+  .level { font-family: var(--font-pixel); font-size: 13px; color: var(--level-ink); background: var(--level-bg); padding: 2px 7px; border-radius: var(--radius-sm); }
+  .track { width: 80px; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden; }
+  .fill { width: 68%; height: 100%; background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="row">
+  <span class="streak"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.5 1 2.5 2.5 3-0.5-3 0-5.5 0-8z"></path></svg>12</span>
+  <span class="level">Lv 7</span>
+  <div class="track" role="img" aria-label="340 of 500 XP"><div class="fill"></div></div>
+</div>
+</body>
+</html>

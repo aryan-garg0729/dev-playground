@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: CodeQuest API
+  version: 0.1.0
+  description: JSON API under /api/v1. Errors always use the Error envelope.
+servers:
+  - url: /api/v1
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { status: { type: string } }, required: [status] } } } }
+        "503": { $ref: "#/components/responses/Error" }
+  /me:
+    get:
+      operationId: getMe
+      responses:
+        "200":
+          description: Current user
+          content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /courses:
+    get:
+      operationId: listCourses
+      responses:
+        "200":
+          description: Published courses with the user's progress
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [courses]
+                properties:
+                  courses: { type: array, items: { $ref: "#/components/schemas/CourseSummary" } }
+  /courses/{courseId}:
+    get:
+      operationId: getCourse
+      parameters: [{ name: courseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Chapters and exercises in manifest order
+          content: { application/json: { schema: { $ref: "#/components/schemas/CourseDetail" } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /exercises/{exerciseId}:
+    get:
+      operationId: getExercise
+      parameters: [{ name: exerciseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Public view of the exercise and the learner's last submission
+          content: { application/json: { schema: { $ref: "#/components/schemas/ExerciseDetail" } } }
+        "402": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /exercises/{exerciseId}/submit:
+    post:
+      operationId: submitExercise
+      parameters: [{ name: exerciseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Submission" } } }
+      responses:
+        "200":
+          description: Graded result
+          content: { application/json: { schema: { $ref: "#/components/schemas/SubmitResponse" } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "415": { $ref: "#/components/responses/Error" }
+components:
+  responses:
+    Error:
+      description: Error
+      content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, description: "e.g. not_found, bad_request, invalid_answer, stale_version, locked, unauthorized" }
+            message: { type: string }
+    Me:
+      type: object
+      required: [user]
+      properties:
+        user:
+          type: object
+          required: [id, email, name, avatar, timezone]
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string }
+            name: { type: string }
+            avatar: { type: string }
+            timezone: { type: string }
+    CourseSummary:
+      type: object
+      required: [id, title, description, chapter_count, exercise_count, passed_count]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        chapter_count: { type: integer }
+        exercise_count: { type: integer }
+        passed_count: { type: integer }
+    ProgressStatus:
+      type: string
+      enum: [not_started, started, passed]
+    ExerciseSummary:
+      type: object
+      required: [id, title, type, xp, difficulty, free, boss, status]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        type: { type: string }
+        xp: { type: integer }
+        difficulty: { type: integer, minimum: 1, maximum: 5 }
+        free: { type: boolean }
+        boss: { type: boolean }
+        status: { $ref: "#/components/schemas/ProgressStatus" }
+    CourseDetail:
+      type: object
+      required: [id, title, description, chapters]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        chapters:
+          type: array
+          items:
+            type: object
+            required: [id, title, exercises]
+            properties:
+              id: { type: string }
+              title: { type: string }
+              exercises: { type: array, items: { $ref: "#/components/schemas/ExerciseSummary" } }
+    Result:
+      type: object
+      required: [status, score, checks, stdout, runtime_ms]
+      properties:
+        status: { type: string, enum: [pass, fail, error, timeout] }
+        score: { type: number, minimum: 0, maximum: 1 }
+        checks: { type: array, items: { $ref: "#/components/schemas/CheckResult" } }
+        stdout: { type: string }
+        runtime_ms: { type: integer }
+    CheckResult:
+      type: object
+      required: [name, passed, visible]
+      properties:
+        name: { type: string }
+        passed: { type: boolean }
+        visible: { type: boolean }
+        feedback: { type: string }
+    ExerciseDetail:
+      type: object
+      required: [id, type, version, title, xp, difficulty, tags, free, boss, course_id, chapter, position, prev_id, next_id, public_view, last_submission]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        version: { type: integer }
+        title: { type: string }
+        xp: { type: integer }
+        difficulty: { type: integer }
+        tags: { type: array, items: { type: string } }
+        free: { type: boolean }
+        boss: { type: boolean }
+        course_id: { type: string }
+        chapter:
+          type: object
+          required: [id, title]
+          properties: { id: { type: string }, title: { type: string } }
+        position:
+          type: object
+          required: [index, total]
+          properties: { index: { type: integer }, total: { type: integer } }
+        prev_id: { type: [string, "null"] }
+        next_id: { type: [string, "null"] }
+        public_view: { description: Type-specific public view (see the exercise type's renderer) }
+        last_submission:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/LastSubmission"
+    LastSubmission:
+      type: object
+      required: [submission_id, exercise_version, answer, result, created_at]
+      properties:
+        submission_id: { type: string, format: uuid }
+        exercise_version: { type: integer }
+        answer: { description: The learner's own answer, type-specific }
+        result: { $ref: "#/components/schemas/Result" }
+        created_at: { type: string, format: date-time }
+    Submission:
+      type: object
+      required: [exercise_id, version, answer]
+      additionalProperties: false
+      properties:
+        exercise_id: { type: string }
+        version: { type: integer }
+        answer: { description: "Type-specific answer, e.g. mcq { choices: string[] }" }
+    SubmitResponse:
+      type: object
+      required: [submission_id, result, xp_awarded]
+      properties:
+        submission_id: { type: string, format: uuid }
+        result: { $ref: "#/components/schemas/Result" }
+        xp_awarded: { type: integer, description: Always 0 until Phase 4 }

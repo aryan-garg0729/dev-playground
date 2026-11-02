@@ -1,0 +1,10 @@
+id: broken.bad-spec
+type: mcq
+version: 1
+title: Answer not an option
+xp: 5
+spec:
+  question: prompt.md
+  options: [{ id: a, text: "A" }, { id: b, text: "B" }]
+  answer: [z]
+  explain: Because.

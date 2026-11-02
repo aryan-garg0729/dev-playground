@@ -1,0 +1,307 @@
+package httpapi_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/aryangarg/codequest/api/internal/content"
+	_ "github.com/aryangarg/codequest/api/internal/exercise/all"
+	"github.com/aryangarg/codequest/api/internal/grading"
+	"github.com/aryangarg/codequest/api/internal/httpapi"
+	"github.com/aryangarg/codequest/api/internal/store"
+	"github.com/aryangarg/codequest/api/internal/testdb"
+)
+
+const (
+	sentinel = "SERVER_ONLY_SENTINEL" // appears only in server-only files and the mcq explanation
+	origin   = "http://localhost:5173"
+	exID     = "demo.basics.pick"
+)
+
+type env struct {
+	t    *testing.T
+	pool *pgxpool.Pool
+	h    http.Handler
+}
+
+func setup(t *testing.T, withUser bool) *env {
+	t.Helper()
+	pool, _ := testdb.New(t)
+	ctx := context.Background()
+	// Build publishes exactly the bundle it is given, so merge the sample
+	// content and the fixture (whose server-only files carry the sentinel).
+	bundle := &content.Bundle{}
+	for _, dir := range []string{"../../../content", "../content/testdata/valid"} {
+		b, err := content.Load(dir)
+		if err != nil {
+			t.Fatalf("load %s: %v", dir, err)
+		}
+		bundle.Courses = append(bundle.Courses, b.Courses...)
+	}
+	if _, err := content.Build(ctx, pool, bundle); err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var dev uuid.NullUUID
+	if withUser {
+		u, err := store.New(pool).EnsureUserByEmail(ctx, store.EnsureUserByEmailParams{Email: "t@example.com", Name: "T"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dev = uuid.NullUUID{UUID: u.ID, Valid: true}
+	}
+	h := httpapi.New(httpapi.Deps{Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grading.NewService(pool), AllowedOrigins: []string{origin}, DevUser: dev})
+	return &env{t: t, pool: pool, h: h}
+}
+
+func (e *env) do(method, path, body string, hdr map[string]string) (int, []byte) {
+	e.t.Helper()
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	if body != "" {
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", origin)
+	}
+	for k, v := range hdr {
+		req.Header.Set(k, v)
+	}
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, req)
+	return rec.Code, rec.Body.Bytes()
+}
+
+func (e *env) getJSON(path string, v any) []byte {
+	e.t.Helper()
+	code, body := e.do(http.MethodGet, path, "", nil)
+	if code != http.StatusOK {
+		e.t.Fatalf("GET %s = %d: %s", path, code, body)
+	}
+	if v != nil {
+		if err := json.Unmarshal(body, v); err != nil {
+			e.t.Fatalf("decode %s: %v", path, err)
+		}
+	}
+	return body
+}
+
+func submitBody(choices ...string) string {
+	b, _ := json.Marshal(map[string]any{"exercise_id": exID, "version": 2, "answer": map[string]any{"choices": choices}})
+	return string(b)
+}
+
+type courseDetail struct {
+	Chapters []struct {
+		ID        string `json:"id"`
+		Exercises []struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"exercises"`
+	} `json:"chapters"`
+}
+
+// forbiddenKeys must never appear in any browser-facing response.
+var forbiddenKeys = []string{"private_spec", "explain", "solution", "tests_hidden"}
+
+func findKeys(v any, path string, out *[]string) {
+	switch t := v.(type) {
+	case map[string]any:
+		for k, child := range t {
+			for _, f := range forbiddenKeys {
+				if k == f {
+					*out = append(*out, path+"."+k)
+				}
+			}
+			// "answer" is allowed only as the learner's own last answer.
+			if k == "answer" && !strings.HasSuffix(path, "last_submission") {
+				*out = append(*out, path+"."+k)
+			}
+			findKeys(child, path+"."+k, out)
+		}
+	case []any:
+		for _, child := range t {
+			findKeys(child, path+"[]", out)
+		}
+	}
+}
+
+func TestNoServerOnlyContentInAnyResponse(t *testing.T) {
+	for _, withUser := range []bool{false, true} {
+		e := setup(t, withUser)
+		var list struct {
+			Courses []struct{ ID string } `json:"courses"`
+		}
+		bodies := map[string][]byte{"/api/v1/courses": e.getJSON("/api/v1/courses", &list)}
+		if len(list.Courses) < 2 {
+			t.Fatalf("want sample course and fixture, got %+v", list.Courses)
+		}
+		for _, c := range list.Courses {
+			var cd courseDetail
+			p := "/api/v1/courses/" + c.ID
+			bodies[p] = e.getJSON(p, &cd)
+			for _, ch := range cd.Chapters {
+				for _, ex := range ch.Exercises {
+					p := "/api/v1/exercises/" + ex.ID
+					bodies[p] = e.getJSON(p, nil)
+				}
+			}
+		}
+		if _, ok := bodies["/api/v1/exercises/"+exID]; !ok {
+			t.Fatal("fixture exercise was not crawled")
+		}
+		for path, body := range bodies {
+			if bytes.Contains(body, []byte(sentinel)) {
+				t.Errorf("%s leaks server-only content: %s", path, body)
+			}
+			var v any
+			if err := json.Unmarshal(body, &v); err != nil {
+				t.Fatal(err)
+			}
+			var bad []string
+			findKeys(v, "", &bad)
+			if len(bad) > 0 {
+				t.Errorf("%s exposes forbidden keys %v", path, bad)
+			}
+		}
+	}
+}
+
+func TestCourseListsManifestOrder(t *testing.T) {
+	e := setup(t, false)
+	var cd courseDetail
+	e.getJSON("/api/v1/courses/langchain-basics", &cd)
+	var got []string
+	for _, ch := range cd.Chapters {
+		got = append(got, ch.ID)
+		for _, ex := range ch.Exercises {
+			got = append(got, ex.ID)
+		}
+	}
+	want := []string{
+		"lc.chat-models", "lc.chat.message-roles", "lc.chat.runnable-methods", "lc.chat.stateless-models", "lc.chat.token-usage",
+		"lc.prompt-templates", "lc.prompts.input-variables", "lc.prompts.messages-placeholder", "lc.prompts.escape-braces", "lc.prompts.partial-functions",
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("order:\n got %v\nwant %v", got, want)
+	}
+}
+
+func TestSubmitFlow(t *testing.T) {
+	e := setup(t, true)
+
+	code, body := e.do(http.MethodPost, "/api/v1/exercises/"+exID+"/submit", submitBody("a"), nil)
+	if code != http.StatusOK {
+		t.Fatalf("wrong answer submit = %d: %s", code, body)
+	}
+	var res struct {
+		SubmissionID string `json:"submission_id"`
+		Result       struct {
+			Status string `json:"status"`
+			Checks []struct {
+				Passed   bool   `json:"passed"`
+				Feedback string `json:"feedback"`
+			} `json:"checks"`
+		} `json:"result"`
+		XPAwarded int `json:"xp_awarded"`
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		t.Fatal(err)
+	}
+	if res.Result.Status != "fail" || !strings.Contains(res.Result.Checks[0].Feedback, "revealed only after submit") {
+		t.Fatalf("want fail with explanation, got %s", body)
+	}
+
+	code, body = e.do(http.MethodPost, "/api/v1/exercises/"+exID+"/submit", submitBody("b"), nil)
+	if code != http.StatusOK || !strings.Contains(string(body), `"status":"pass"`) {
+		t.Fatalf("right answer = %d: %s", code, body)
+	}
+
+	var cd courseDetail
+	e.getJSON("/api/v1/courses/demo", &cd)
+	if st := cd.Chapters[0].Exercises[0].Status; st != "passed" {
+		t.Fatalf("progress status = %q, want passed", st)
+	}
+	var detail struct {
+		Last *struct {
+			Result struct {
+				Status string `json:"status"`
+			} `json:"result"`
+		} `json:"last_submission"`
+	}
+	e.getJSON("/api/v1/exercises/"+exID, &detail)
+	if detail.Last == nil || detail.Last.Result.Status != "pass" {
+		t.Fatalf("last_submission not returned: %+v", detail.Last)
+	}
+
+	var attempts int
+	if err := e.pool.QueryRow(context.Background(),
+		`SELECT attempts FROM progress WHERE exercise_id = $1`, exID).Scan(&attempts); err != nil {
+		t.Fatal(err)
+	}
+	if attempts != 2 {
+		t.Fatalf("attempts = %d, want 2", attempts)
+	}
+}
+
+func TestSubmitRejects(t *testing.T) {
+	e := setup(t, true)
+	anon := setup(t, false)
+	path := "/api/v1/exercises/" + exID + "/submit"
+	tests := []struct {
+		name     string
+		env      *env
+		path     string
+		body     string
+		hdr      map[string]string
+		wantCode int
+		wantErr  string
+	}{
+		{"no user", anon, path, submitBody("b"), nil, 401, "unauthorized"},
+		{"stale version", e, path, strings.Replace(submitBody("b"), `"version":2`, `"version":1`, 1), nil, 409, "stale_version"},
+		{"invalid option", e, path, submitBody("z"), nil, 400, "invalid_answer"},
+		{"two choices on single", e, path, submitBody("a", "b"), nil, 400, "invalid_answer"},
+		{"id mismatch", e, "/api/v1/exercises/lc.chat.message-roles/submit", submitBody("b"), nil, 400, "bad_request"},
+		{"unknown field", e, path, `{"exercise_id":"` + exID + `","version":2,"answer":{"choices":["b"]},"passed":true}`, nil, 400, "bad_request"},
+		{"missing answer", e, path, `{"exercise_id":"` + exID + `","version":2}`, nil, 400, "bad_request"},
+		{"unknown exercise", e, "/api/v1/exercises/nope/submit", strings.Replace(submitBody("b"), exID, "nope", 1), nil, 404, "not_found"},
+		{"foreign origin", e, path, submitBody("b"), map[string]string{"Origin": "https://evil.example"}, 403, "forbidden_origin"},
+		{"form content type", e, path, submitBody("b"), map[string]string{"Content-Type": "text/plain"}, 415, "unsupported_media_type"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, body := tt.env.do(http.MethodPost, tt.path, tt.body, tt.hdr)
+			if code != tt.wantCode {
+				t.Fatalf("status %d, want %d: %s", code, tt.wantCode, body)
+			}
+			var eb struct {
+				Error struct{ Code, Message string } `json:"error"`
+			}
+			if err := json.Unmarshal(body, &eb); err != nil || eb.Error.Code != tt.wantErr {
+				t.Fatalf("error code %q, want %q: %s", eb.Error.Code, tt.wantErr, body)
+			}
+		})
+	}
+	var n int
+	if err := e.pool.QueryRow(context.Background(), `SELECT count(*) FROM submissions`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("rejected submissions were stored: %d", n)
+	}
+}
+
+func TestNotFoundUsesErrorEnvelope(t *testing.T) {
+	e := setup(t, false)
+	for _, p := range []string{"/api/v1/courses/nope", "/api/v1/exercises/nope", "/api/v1/nope"} {
+		code, body := e.do(http.MethodGet, p, "", nil)
+		if code != 404 || !strings.Contains(string(body), `"code":"not_found"`) {
+			t.Errorf("%s = %d %s", p, code, body)
+		}
+	}
+}

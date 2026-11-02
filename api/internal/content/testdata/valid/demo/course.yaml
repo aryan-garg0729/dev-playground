@@ -1,0 +1,4 @@
+id: demo
+title: Demo course
+description: Fixture for tests.
+chapters: [01-basics]

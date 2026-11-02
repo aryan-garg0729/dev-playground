@@ -1,0 +1,17 @@
+id: lc.prompts.partial-functions
+type: mcq
+version: 1
+title: Partials with functions
+xp: 10
+difficulty: 2
+tags: [prompts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Pre-fills today; the function runs again on every invoke" }
+    - { id: b, text: "Pre-fills today once, with the date at the moment partial() ran" }
+    - { id: c, text: "Removes {today} from the prompt text" }
+    - { id: d, text: "Raises an error: partial values must be strings" }
+  answer: [a]
+  explain: .partial() pre-fills variables, and a function value is called when the prompt is formatted, so each invoke gets the current date.

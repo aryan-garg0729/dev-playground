@@ -1,0 +1,98 @@
+/* CodeQuest design tokens, generated from docs/design/tokens.json. Do not edit by hand. */
+:root, [data-theme="dark"] {
+  --bg: #18181B;
+  --surface: #1F1F23;
+  --surface-raised: #26262B;
+  --border: #2E2E34;
+  --border-strong: #3A3A42;
+  --text: #EDEDEF;
+  --text-secondary: #C4C4CC;
+  --text-muted: #9A9AA5;
+  --text-faint: #5C5C66;
+  --accent: #F5A524;
+  --accent-ink: #18181B;
+  --accent-text: #F5A524;
+  --accent-soft: #33280F;
+  --accent-line: #5A4316;
+  --progress-current: #F5A524;
+  --success: #2FBF71;
+  --success-soft: #1D3328;
+  --danger: #F2555A;
+  --danger-soft: #3A1F22;
+  --level-bg: var(--text);
+  --level-ink: var(--bg);
+  --code-keyword: #C678DD;
+  --code-function: #61AFEF;
+  --code-number: #D19A66;
+  --medal-bronze: #D08B55;
+  --medal-silver: #B8BCC6;
+  --medal-gold: #E8C547;
+  --medal-diamond: #7FD1E8;
+  --boss-hp: var(--danger);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #F5F5F7;
+  --surface: #FFFFFF;
+  --surface-raised: #F0F0F2;
+  --border: #E4E4E8;
+  --border-strong: #D4D4DA;
+  --text: #1A1A1E;
+  --text-secondary: #3F3F46;
+  --text-muted: #6B6B76;
+  --text-faint: #A1A1AA;
+  --accent: #F5A524;
+  --accent-ink: #1A1A1E;
+  --accent-text: #A15C00;
+  --accent-soft: #FFF3DC;
+  --accent-line: #F0C77A;
+  --progress-current: #C77700;
+  --success: #15803D;
+  --success-soft: #E7F6EC;
+  --danger: #D92D35;
+  --danger-soft: #FDECEC;
+  --level-bg: var(--text);
+  --level-ink: #FFFFFF;
+  --code-keyword: #8B3FB8;
+  --code-function: #1F6FD1;
+  --code-number: #B35C00;
+  --medal-bronze: #A0612F;
+  --medal-silver: #6E7380;
+  --medal-gold: #A88400;
+  --medal-diamond: #1E8FB0;
+  --boss-hp: var(--danger);
+  color-scheme: light;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+  --header-height: 56px;
+  --rail-collapsed: 48px;
+  --rail-open: 236px;
+  --touch-min: 44px;
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-pixel: "Pixelify Sans", Inter, sans-serif;
+}
+
+.text-page-title { font-family: var(--font-sans); font-size: 22px; line-height: 30px; font-weight: 600; }
+.text-brand { font-family: var(--font-sans); font-size: 16px; line-height: 22px; font-weight: 700; }
+.text-section { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; }
+.text-body { font-family: var(--font-sans); font-size: 14px; line-height: 24px; font-weight: 400; }
+.text-control { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 600; }
+.text-small { font-family: var(--font-sans); font-size: 13px; line-height: 20px; font-weight: 400; }
+.text-caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 500; }
+.text-code { font-family: var(--font-mono); font-size: 14px; line-height: 24px; font-weight: 400; }
+.text-code-sm { font-family: var(--font-mono); font-size: 13px; line-height: 23px; font-weight: 400; }
+.text-game { font-family: var(--font-pixel); font-size: 16px; line-height: 20px; font-weight: 500; }
+.text-game-sm { font-family: var(--font-pixel); font-size: 13px; line-height: 16px; font-weight: 500; }

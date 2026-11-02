@@ -1,0 +1,3 @@
+id: broken
+title: Broken course
+chapters: [01-ch, 02-missing-manifest]

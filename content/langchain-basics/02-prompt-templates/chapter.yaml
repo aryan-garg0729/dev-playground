@@ -1,0 +1,7 @@
+id: lc.prompt-templates
+title: Prompt templates
+exercises:
+  - 01-input-variables
+  - 02-messages-placeholder
+  - 03-escape-braces
+  - 04-partial-functions

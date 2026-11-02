@@ -1,0 +1,77 @@
+package content
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/aryangarg/codequest/api/internal/store"
+)
+
+// BuildStats summarises what Build wrote.
+type BuildStats struct {
+	Courses, Chapters, Exercises int
+}
+
+// Build writes a validated bundle to Postgres in one transaction. Rows are
+// upserted by id; anything no longer in the bundle is unpublished, never
+// deleted, so progress and submissions keyed on old ids stay intact.
+func Build(ctx context.Context, pool *pgxpool.Pool, b *Bundle) (BuildStats, error) {
+	var st BuildStats
+	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		q := store.New(tx)
+		var courseIDs, chapterIDs, exerciseIDs []string
+		for _, c := range b.Courses {
+			if err := q.UpsertCourse(ctx, store.UpsertCourseParams{
+				ID: c.ID, Title: c.Title, Description: c.Description,
+				OrderIndex: int32(c.Order), Published: c.Published,
+			}); err != nil {
+				return fmt.Errorf("course %s: %w", c.ID, err)
+			}
+			courseIDs = append(courseIDs, c.ID)
+			for ci, ch := range c.Chapters {
+				if err := q.UpsertChapter(ctx, store.UpsertChapterParams{
+					ID: ch.ID, CourseID: c.ID, Title: ch.Title, OrderIndex: int32(ci),
+				}); err != nil {
+					return fmt.Errorf("chapter %s: %w", ch.ID, err)
+				}
+				chapterIDs = append(chapterIDs, ch.ID)
+				for ei, ex := range ch.Exercises {
+					if err := q.UpsertExercise(ctx, store.UpsertExerciseParams{
+						ID: ex.ID, ChapterID: ch.ID, Type: ex.Type, Version: int32(ex.Version),
+						Title: ex.Title, Xp: int32(ex.XP), Difficulty: int32(ex.Difficulty),
+						Tags: ex.Tags, Free: ex.Free, Boss: ex.Boss, OrderIndex: int32(ei),
+						PublicView: ex.PublicView, PrivateSpec: ex.PrivateSpec,
+					}); err != nil {
+						return fmt.Errorf("exercise %s: %w", ex.ID, err)
+					}
+					exerciseIDs = append(exerciseIDs, ex.ID)
+				}
+			}
+		}
+		if err := q.UnpublishExercisesNotIn(ctx, nonNil(exerciseIDs)); err != nil {
+			return fmt.Errorf("unpublish exercises: %w", err)
+		}
+		if err := q.UnpublishChaptersNotIn(ctx, nonNil(chapterIDs)); err != nil {
+			return fmt.Errorf("unpublish chapters: %w", err)
+		}
+		if err := q.UnpublishCoursesNotIn(ctx, nonNil(courseIDs)); err != nil {
+			return fmt.Errorf("unpublish courses: %w", err)
+		}
+		st = BuildStats{Courses: len(courseIDs), Chapters: len(chapterIDs), Exercises: len(exerciseIDs)}
+		return nil
+	})
+	if err != nil {
+		return BuildStats{}, fmt.Errorf("build content: %w", err)
+	}
+	return st, nil
+}
+
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}

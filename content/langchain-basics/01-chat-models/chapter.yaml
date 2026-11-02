@@ -1,0 +1,7 @@
+id: lc.chat-models
+title: Chat models & messages
+exercises:
+  - 01-message-roles
+  - 02-runnable-methods
+  - 03-stateless-models
+  - 04-token-usage

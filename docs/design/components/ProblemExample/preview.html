@@ -1,0 +1,24 @@
+<!-- @dsCard group="Content" height=280 subtitle="Example blocks and constraints" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  body { margin: 0; background: var(--surface); font-family: var(--font-sans); color: var(--text); }
+  .stack { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); }
+  h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; line-height: 20px; color: var(--text); }
+  .ex { font-family: var(--font-mono); font-size: 13px; line-height: 23px; color: var(--text-secondary); border-left: 2px solid var(--border-strong); padding-left: 14px; }
+  .ex b { font-weight: 500; color: var(--text); }
+  ul { margin: 0; padding-left: 18px; font-family: var(--font-mono); font-size: 13px; line-height: 23px; color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div class="stack">
+  <div><h2>Example 1:</h2><div class="ex"><div><b>Input:</b> nums = [1, 2, 3]</div><div><b>Output:</b> 6</div><div><b>Explanation:</b> 1 + 2 + 3 = 6</div></div></div>
+  <div><h2>Example 2:</h2><div class="ex"><div><b>Input:</b> nums = []</div><div><b>Output:</b> 0</div></div></div>
+  <div><h2>Constraints:</h2><ul><li>0 ≤ len(nums) ≤ 10⁴</li><li>-1000 ≤ nums[i] ≤ 1000</li></ul></div>
+</div>
+</body>
+</html>

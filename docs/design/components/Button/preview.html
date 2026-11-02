@@ -1,0 +1,27 @@
+<!-- @dsCard group="Actions" height=120 subtitle="Primary, secondary, tutor, icon" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../../../web/src/styles/tokens.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  body { margin: 0; background: var(--surface); font-family: var(--font-sans); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-5); }
+  button { font-family: var(--font-sans); font-size: 13px; font-weight: 600; border-radius: var(--radius-md); cursor: pointer; min-height: 34px; padding: 0 16px; }
+  .primary { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); }
+  .secondary { background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); }
+  .tutor { background: transparent; color: var(--accent-text); border: 1px dashed var(--accent-line); min-height: 40px; padding: 0 12px; }
+  .icon { width: 32px; height: 32px; min-height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); }
+  .icon svg { stroke: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div class="row">
+  <button type="button" class="primary">Submit</button>
+  <button type="button" class="secondary">Run</button>
+  <button type="button" class="tutor">Ask the tutor · 3 left today</button>
+  <button type="button" class="icon" aria-label="Next lesson"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></button>
+</div>
+</body>
+</html>
