@@ -11,6 +11,9 @@ async function freshUser(page: Page) {
   const email = `e2e-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
   const res = await page.request.post('/api/v1/auth/dev', { headers: ORIGIN, data: { email, name: 'E2E Learner', timezone: 'UTC' } });
   expect(res.status()).toBe(200);
+  // Skip onboarding (Phase 6): `/` would otherwise open /welcome. onboarding.spec.ts covers it.
+  const onboard = await page.request.patch('/api/v1/me', { headers: ORIGIN, data: { onboarded: true } });
+  expect(onboard.status()).toBe(200);
 }
 
 test.describe('signed out', () => {

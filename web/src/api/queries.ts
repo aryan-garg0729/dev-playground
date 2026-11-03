@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { track } from '../analytics';
 import type { RunOutput } from '../exercise-types/types';
 import { api, ApiError, type GradeResult, unwrap } from './client';
+import type { paths } from './schema';
 
 export const keys = {
   me: ['me'] as const,
@@ -146,7 +148,10 @@ export function useVerifyMagicLink() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (token: string) => unwrap(api.POST('/auth/magic-link/verify', { body: { token, timezone: browserTimezone() } })),
-    onSuccess: () => qc.invalidateQueries(),
+    onSuccess: () => {
+      track('sign_in', { method: 'magic_link' });
+      return qc.invalidateQueries();
+    },
   });
 }
 
@@ -155,7 +160,10 @@ export function useDevSignIn() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => unwrap(api.POST('/auth/dev', { body: { timezone: browserTimezone() } })),
-    onSuccess: () => qc.invalidateQueries(),
+    onSuccess: () => {
+      track('sign_in', { method: 'dev' });
+      return qc.invalidateQueries();
+    },
   });
 }
 
@@ -196,9 +204,11 @@ function useEconomyMutation<T, V>(fn: (v: V, id: string) => Promise<T>) {
 }
 
 export function useBuy() {
-  return useEconomyMutation((powerup: string, id) =>
-    unwrap(api.POST('/shop/{powerup}/buy', { params: { path: { powerup } }, body: { request_id: id } })),
-  );
+  return useEconomyMutation(async (powerup: string, id) => {
+    const r = await unwrap(api.POST('/shop/{powerup}/buy', { params: { path: { powerup } }, body: { request_id: id } }));
+    track('shop_bought', { powerup });
+    return r;
+  });
 }
 
 export function useUsePowerup() {
@@ -224,5 +234,16 @@ export function useSetTitle() {
       void qc.invalidateQueries({ queryKey: keys.me });
       void qc.invalidateQueries({ queryKey: keys.medals });
     },
+  });
+}
+
+export type MeUpdate = paths['/me']['patch']['requestBody']['content']['application/json'];
+
+/** Saves onboarding answers (goal, daily goal) and marks onboarding finished. */
+export function useFinishOnboarding() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: MeUpdate) => unwrap(api.PATCH('/me', { body: { ...body, onboarded: true } })),
+    onSuccess: (me) => qc.setQueryData(keys.me, me),
   });
 }

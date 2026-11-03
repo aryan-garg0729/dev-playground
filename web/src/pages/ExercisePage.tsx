@@ -2,12 +2,14 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { CourseDetail, ExerciseDetail, GradeResult } from '../api/client';
 import { noOutcome, runOnServer, useCourse, useExercise, useSubmit } from '../api/queries';
+import { track } from '../analytics';
 import { AppHeader } from '../components/AppHeader';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons';
 import { LessonRail, type RailLesson } from '../components/LessonRail';
 import { PassCelebration } from '../components/PassCelebration';
 import { PowerUpsPanel } from '../components/PowerUpsPanel';
 import { DifficultyPill, Pill } from '../components/Pill';
+import { TutorPanel } from '../components/TutorPanel';
 import { type RunMode, type RunOutput, renderers, sandboxJobs } from '../exercise-types';
 import { runInSandbox, warmSandbox } from '../runner-client/sandbox';
 import { loadDraft, saveDraft } from './drafts';
@@ -67,9 +69,15 @@ function useRun(ex: ExerciseDetail): ((answer: unknown) => Promise<RunOutput>) |
   useEffect(() => {
     if (mode === 'browser') void warmSandbox(); // start loading the runtime now
   }, [mode]);
-  if (mode === 'server') return (answer) => runOnServer(ex.id, ex.version, answer);
+  if (mode === 'server') {
+    return (answer) => {
+      track('run_clicked', { exercise: ex.id, where: 'server' });
+      return runOnServer(ex.id, ex.version, answer);
+    };
+  }
   if (mode === 'browser' && toJob) {
     return async (answer) => {
+      track('run_clicked', { exercise: ex.id, where: 'browser' });
       const r = await runInSandbox(toJob(ex.public_view, answer));
       return { stdout: r.stdout, stderr: r.stderr, checks: r.checks, runtimeMs: r.runtimeMs, timedOut: r.timedOut, table: r.table, error: r.error };
     };
@@ -100,6 +108,9 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
   );
   const submit = useSubmit(ex.id, ex.course_id);
   const onRun = useRun(ex);
+  useEffect(() => {
+    track('lesson_opened', { exercise: ex.id, type: ex.type });
+  }, [ex.id, ex.type]);
   const Renderer = renderers[ex.type];
 
   const chapterNo = (course?.chapters.findIndex((c) => c.id === ex.chapter.id) ?? -1) + 1;
@@ -129,6 +140,7 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
         header={header}
         boss={boss}
         aside={<PowerUpsPanel exerciseId={ex.id} result={result} />}
+        tutor={(answerText) => <TutorPanel exerciseId={ex.id} code={answerText} />}
         publicView={ex.public_view}
         draft={draft}
         result={result}
@@ -139,6 +151,7 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
           if (ex.type === 'mcq') setResult(undefined); // a changed choice makes the shown verdict stale
         }}
         onSubmit={async (answer) => {
+          track('submit_clicked', { exercise: ex.id });
           const r = await submit.mutateAsync({ version: ex.version, answer });
           setResult(r);
           if (r.result.status === 'pass' && r.outcome.breakdown) setCelebrate(r); // first pass only

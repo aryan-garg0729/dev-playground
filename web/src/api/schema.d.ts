@@ -396,6 +396,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exercises/{exerciseId}/tutor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The learner's tutor conversation for this exercise and today's hints left. 404 tutor_unavailable when the tutor is off (always in production for now). */
+        get: operations["getTutorThread"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exercises/{exerciseId}/hint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Ask the AI tutor. The reply streams as Server-Sent Events: `delta` {text} pieces, then `done` {remaining, used_hint} or `error` {code, message} (a failed reply refunds the hint). Errors before the stream (limit, validation) use the JSON envelope; `limit_reached` (429) when today's hints are used. Using a hint sets progress.used_hint. */
+        post: operations["askTutor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Self-hosted product analytics. Only known event names; props are a flat object of at most 1 KB. */
+        post: operations["trackEvents"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/client-errors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A browser error for error monitoring; grouped by fingerprint per day and logged. */
+        post: operations["reportClientError"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -414,10 +482,30 @@ export interface components {
             name: string;
             avatar: string;
             timezone: string;
+            /** @enum {string} */
+            goal: "" | "zero" | "backend" | "interviews" | "ai";
+            onboarded: boolean;
         };
         Me: {
             user: components["schemas"]["User"];
             stats: components["schemas"]["Stats"];
+            features: components["schemas"]["Features"];
+        };
+        Features: {
+            /** @description The AI tutor is on (development only for now) */
+            tutor: boolean;
+        };
+        TutorMessage: {
+            /** @enum {string} */
+            role: "user" | "assistant";
+            content: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        TutorThread: {
+            daily_limit: number;
+            remaining: number;
+            messages: components["schemas"]["TutorMessage"][];
         };
         SignedIn: {
             user: components["schemas"]["User"];
@@ -904,6 +992,16 @@ export interface operations {
                     daily_goal?: number;
                     /** @description One of the user's earned medal titles */
                     title?: string;
+                    /**
+                     * @description Onboarding goal
+                     * @enum {string}
+                     */
+                    goal?: "zero" | "backend" | "interviews" | "ai";
+                    /**
+                     * @description Marks onboarding finished (cannot be undone)
+                     * @enum {boolean}
+                     */
+                    onboarded?: true;
                 };
             };
         };
@@ -1477,6 +1575,133 @@ export interface operations {
             };
             401: components["responses"]["Error"];
             404: components["responses"]["Error"];
+        };
+    };
+    getTutorThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exerciseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TutorThread"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    askTutor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exerciseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    message: string;
+                    /** @description The learner's current answer (code or SQL) */
+                    code?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Server-Sent Events stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    trackEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    anon_id?: string;
+                    events: {
+                        /** @enum {string} */
+                        name: "page_view" | "landing_cta" | "sign_in" | "onboarding_step" | "onboarding_completed" | "lesson_opened" | "run_clicked" | "submit_clicked" | "tutor_opened" | "tutor_asked" | "shop_bought";
+                        props?: {
+                            [key: string]: string | number | boolean;
+                        };
+                        path?: string;
+                        /** Format: date-time */
+                        at?: string;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Stored */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+        };
+    };
+    reportClientError: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    message: string;
+                    stack?: string;
+                    url?: string;
+                    user_agent?: string;
+                    release?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
         };
     };
 }

@@ -9,7 +9,7 @@ REDIS_TEST_URL ?= redis://localhost:6379/15
 RUNNER_IMAGE := codequest/python:3.12
 PW_IMAGE := mcr.microsoft.com/playwright:v1.64.1-noble
 
-.PHONY: up down db migrate content validate content-test runner-image e2e test test-api test-web test-sandbox lint tokens tokens-check sqlc api-types
+.PHONY: up down db migrate content validate content-test runner-image e2e lighthouse test test-api test-web test-sandbox lint tokens tokens-check sqlc api-types
 
 up: ## Start Postgres, Redis, API, worker and web (applies migrations and builds content/)
 	$(COMPOSE) up --build
@@ -40,7 +40,19 @@ e2e: ## Browser tests (sandbox isolation, timeouts, Run speed, content CI in the
 	cd api && DATABASE_URL='$(DATABASE_URL)' go run ./cmd/cq build ../content
 	docker run --rm --network host --ipc host -v "$(CURDIR)":/repo -w /repo/web $(PW_IMAGE) npx playwright test
 
-test: test-api content-test lint test-web test-sandbox e2e ## Everything CI runs
+# Lighthouse on the landing page (production build, served by vite preview and
+# proxied to the Compose API). The host's node_modules hold macOS binaries, so
+# the build runs on a Linux copy inside the Playwright image.
+lighthouse: ## Landing page Lighthouse audit; fails below 90 in any category
+	$(COMPOSE) up -d --build --wait api
+	docker run --rm --network host --ipc host -v "$(CURDIR)":/repo:ro -v "$(CURDIR)/web/e2e/.results":/out -v codequest_npm_cache:/root/.npm $(PW_IMAGE) sh -ec '\
+	  mkdir /tmp/web && cd /repo/web && tar --exclude=node_modules --exclude=dist --exclude=e2e -cf - . | tar -xf - -C /tmp/web; \
+	  cd /tmp/web && npm ci --no-audit --no-fund --loglevel=error && npm run build >/dev/null; \
+	  (npx vite preview --port 4173 --strictPort >/tmp/preview.log 2>&1 &); \
+	  for i in $$(seq 1 30); do node -e "fetch(\"http://localhost:4173/\").then(()=>process.exit(0),()=>process.exit(1))" && break; sleep 1; done; \
+	  node scripts/lighthouse.mjs http://localhost:4173/ /out'
+
+test: test-api content-test lint test-web test-sandbox e2e lighthouse ## Everything CI runs
 
 test-api: db runner-image
 	cd api && go vet ./... && \

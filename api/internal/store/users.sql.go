@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -14,7 +15,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, name, avatar)
 VALUES ($1, $2, $3)
-RETURNING id, email, name, avatar, timezone
+RETURNING id, email, name, avatar, timezone, goal, onboarded_at
 `
 
 type CreateUserParams struct {
@@ -24,11 +25,13 @@ type CreateUserParams struct {
 }
 
 type CreateUserRow struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	Name     string    `json:"name"`
-	Avatar   string    `json:"avatar"`
-	Timezone string    `json:"timezone"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Avatar      string     `json:"avatar"`
+	Timezone    string     `json:"timezone"`
+	Goal        string     `json:"goal"`
+	OnboardedAt *time.Time `json:"onboarded_at"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
@@ -40,6 +43,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Name,
 		&i.Avatar,
 		&i.Timezone,
+		&i.Goal,
+		&i.OnboardedAt,
 	)
 	return i, err
 }
@@ -48,7 +53,7 @@ const ensureUserByEmail = `-- name: EnsureUserByEmail :one
 INSERT INTO users (email, name)
 VALUES ($1, $2)
 ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-RETURNING id, email, name, avatar, timezone
+RETURNING id, email, name, avatar, timezone, goal, onboarded_at
 `
 
 type EnsureUserByEmailParams struct {
@@ -57,11 +62,13 @@ type EnsureUserByEmailParams struct {
 }
 
 type EnsureUserByEmailRow struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	Name     string    `json:"name"`
-	Avatar   string    `json:"avatar"`
-	Timezone string    `json:"timezone"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Avatar      string     `json:"avatar"`
+	Timezone    string     `json:"timezone"`
+	Goal        string     `json:"goal"`
+	OnboardedAt *time.Time `json:"onboarded_at"`
 }
 
 func (q *Queries) EnsureUserByEmail(ctx context.Context, arg EnsureUserByEmailParams) (EnsureUserByEmailRow, error) {
@@ -73,20 +80,24 @@ func (q *Queries) EnsureUserByEmail(ctx context.Context, arg EnsureUserByEmailPa
 		&i.Name,
 		&i.Avatar,
 		&i.Timezone,
+		&i.Goal,
+		&i.OnboardedAt,
 	)
 	return i, err
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, email, name, avatar, timezone FROM users WHERE id = $1
+SELECT id, email, name, avatar, timezone, goal, onboarded_at FROM users WHERE id = $1
 `
 
 type GetUserRow struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	Name     string    `json:"name"`
-	Avatar   string    `json:"avatar"`
-	Timezone string    `json:"timezone"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Avatar      string     `json:"avatar"`
+	Timezone    string     `json:"timezone"`
+	Goal        string     `json:"goal"`
+	OnboardedAt *time.Time `json:"onboarded_at"`
 }
 
 func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error) {
@@ -98,20 +109,24 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.Name,
 		&i.Avatar,
 		&i.Timezone,
+		&i.Goal,
+		&i.OnboardedAt,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, name, avatar, timezone FROM users WHERE email = $1
+SELECT id, email, name, avatar, timezone, goal, onboarded_at FROM users WHERE email = $1
 `
 
 type GetUserByEmailRow struct {
-	ID       uuid.UUID `json:"id"`
-	Email    string    `json:"email"`
-	Name     string    `json:"name"`
-	Avatar   string    `json:"avatar"`
-	Timezone string    `json:"timezone"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Avatar      string     `json:"avatar"`
+	Timezone    string     `json:"timezone"`
+	Goal        string     `json:"goal"`
+	OnboardedAt *time.Time `json:"onboarded_at"`
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -123,8 +138,24 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Name,
 		&i.Avatar,
 		&i.Timezone,
+		&i.Goal,
+		&i.OnboardedAt,
 	)
 	return i, err
+}
+
+const setUserGoal = `-- name: SetUserGoal :exec
+UPDATE users SET goal = $1 WHERE id = $2
+`
+
+type SetUserGoalParams struct {
+	Goal string    `json:"goal"`
+	ID   uuid.UUID `json:"id"`
+}
+
+func (q *Queries) SetUserGoal(ctx context.Context, arg SetUserGoalParams) error {
+	_, err := q.db.Exec(ctx, setUserGoal, arg.Goal, arg.ID)
+	return err
 }
 
 const setUserName = `-- name: SetUserName :exec
@@ -138,6 +169,15 @@ type SetUserNameParams struct {
 
 func (q *Queries) SetUserName(ctx context.Context, arg SetUserNameParams) error {
 	_, err := q.db.Exec(ctx, setUserName, arg.Name, arg.ID)
+	return err
+}
+
+const setUserOnboarded = `-- name: SetUserOnboarded :exec
+UPDATE users SET onboarded_at = COALESCE(onboarded_at, now()) WHERE id = $1
+`
+
+func (q *Queries) SetUserOnboarded(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, setUserOnboarded, id)
 	return err
 }
 

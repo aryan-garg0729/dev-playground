@@ -26,6 +26,7 @@ import (
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
 	"github.com/aryangarg/codequest/api/internal/runner"
 	"github.com/aryangarg/codequest/api/internal/store"
+	"github.com/aryangarg/codequest/api/internal/tutor"
 )
 
 func main() {
@@ -84,6 +85,14 @@ func run(log *slog.Logger) error {
 	if cfg.DevAuth {
 		log.Warn("DEV_AUTH=1: POST /auth/dev signs anyone in without email; development only")
 	}
+	// The AI tutor is development-only for now (config refuses it in production).
+	var tutorModel tutor.Provider
+	var tutorQuota *tutor.Quota
+	if cfg.Tutor == "ollama" {
+		tutorModel = &tutor.Ollama{URL: cfg.OllamaURL, Name: cfg.TutorModel}
+		tutorQuota = &tutor.Quota{Redis: rdb, Limit: cfg.TutorDailyLimit}
+		log.Info("AI tutor on", "provider", cfg.Tutor, "model", cfg.TutorModel, "url", cfg.OllamaURL, "daily_limit", cfg.TutorDailyLimit)
+	}
 
 	// Close finished league weeks now and every minute (safe on many replicas).
 	leagues := &game.Leagues{Pool: pool, Log: log, Rewards: econ}
@@ -101,6 +110,7 @@ func run(log *slog.Logger) error {
 			Links:          &auth.MagicLinks{Pool: pool, Mailer: mailer, AppURL: cfg.AppURL},
 			GitHub:         gh, DevAuth: cfg.DevAuth, SecureCookies: cfg.SecureCookies(), Board: board, Economy: econ,
 			Limiter: &ratelimit.Limiter{Redis: rdb},
+			Tutor:   tutorModel, TutorQuota: tutorQuota,
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -124,13 +134,17 @@ func run(log *slog.Logger) error {
 	return nil
 }
 
-// cleanAuth deletes expired sessions and old magic links every hour.
+// cleanAuth deletes expired sessions and old magic links every hour, and
+// analytics events and client errors older than 90 days.
 func cleanAuth(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) {
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
 	for {
 		if err := store.New(pool).DeleteExpiredAuth(ctx); err != nil && ctx.Err() == nil {
 			log.Error("clean expired sessions", "err", err)
+		}
+		if err := store.New(pool).DeleteOldTelemetry(ctx); err != nil && ctx.Err() == nil {
+			log.Error("clean old telemetry", "err", err)
 		}
 		select {
 		case <-ctx.Done():

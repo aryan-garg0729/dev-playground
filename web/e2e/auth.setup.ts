@@ -12,6 +12,9 @@ const BOSS = 'fd.py.fizzbuzz-boss';
 setup('sign in (dev)', async ({ request }) => {
   const res = await request.post('/api/v1/auth/dev', { headers: ORIGIN, data: { timezone: 'UTC' } });
   expect(res.status(), await res.text()).toBe(200);
+  // The shared dev user skips onboarding (onboarding.spec.ts covers it with a fresh user).
+  const onboard = await request.patch('/api/v1/me', { headers: ORIGIN, data: { onboarded: true } });
+  expect(onboard.status(), await onboard.text()).toBe(200);
   const solution = readFileSync(resolve(import.meta.dirname, '../../content/foundations/01-python-warm-up/03-fizzbuzz-boss/solution.py'), 'utf8');
   const boss = await request.post(`/api/v1/exercises/${BOSS}/submit`, {
     headers: ORIGIN, data: { exercise_id: BOSS, version: 1, answer: { files: { 'main.py': solution } } },

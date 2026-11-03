@@ -54,7 +54,7 @@ function Hints({ hints }: { hints: string[] }) {
 }
 
 export function CodeExercise(props: ExerciseRendererProps<CodePublicView, CodeAnswer>) {
-  const { header, publicView: pv, draft, onChange, onRun, onSubmit, result, aside, boss } = props;
+  const { header, publicView: pv, draft, onChange, onRun, onSubmit, result, aside, boss, tutor } = props;
   const code = draft?.files[pv.entry] ?? pv.starter;
   const counts = pv.check_counts;
   const answer: CodeAnswer = { files: { [pv.entry]: code } };
@@ -70,9 +70,7 @@ export function CodeExercise(props: ExerciseRendererProps<CodePublicView, CodeAn
       problemFooter={
         <>
           <Hints hints={pv.hints} />
-          <Button variant="tutor" disabled title="The AI tutor arrives in a later release">
-            Ask the tutor
-          </Button>
+          {tutor?.(code)}
         </>
       }
       file={pv.entry}

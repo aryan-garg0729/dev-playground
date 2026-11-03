@@ -27,6 +27,7 @@ import (
 	"github.com/aryangarg/codequest/api/internal/runner"
 	"github.com/aryangarg/codequest/api/internal/testdb"
 	"github.com/aryangarg/codequest/api/internal/testredis"
+	"github.com/aryangarg/codequest/api/internal/tutor"
 )
 
 const (
@@ -79,6 +80,8 @@ type opts struct {
 	github        *auth.GitHub
 	now           func() time.Time
 	rand          func(n int) int
+	tutor         tutor.Provider // nil: tutor off
+	tutorLimit    int            // hints per day (default 3)
 }
 
 func setup(t *testing.T, withUser bool) *env {
@@ -115,7 +118,15 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	t.Cleanup(grader.Close)
 	sessions := &auth.Sessions{Pool: pool}
 	mail := &captureMailer{}
+	var quota *tutor.Quota
+	if o.tutor != nil {
+		if o.tutorLimit == 0 {
+			o.tutorLimit = 3
+		}
+		quota = &tutor.Quota{Redis: rdb, Prefix: prefix, Limit: o.tutorLimit}
+	}
 	h := httpapi.New(httpapi.Deps{
+		Tutor: o.tutor, TutorQuota: quota,
 		Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grader, AllowedOrigins: []string{origin},
 		Sessions: sessions, Links: &auth.MagicLinks{Pool: pool, Mailer: mail, AppURL: origin},
 		GitHub: o.github, DevAuth: o.devAuth, Board: board, Economy: econ, Now: o.now,

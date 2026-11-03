@@ -19,6 +19,7 @@ import (
 	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
+	"github.com/aryangarg/codequest/api/internal/tutor"
 )
 
 // Deps are the handler dependencies.
@@ -47,6 +48,10 @@ type Deps struct {
 	Limiter *ratelimit.Limiter
 	// SubmitPerUser and SubmitPerIP are per-minute limits (defaults 30 and 120).
 	SubmitPerUser, SubmitPerIP int
+	// Tutor is the AI tutor's model; nil turns the tutor off (always in
+	// production for now). TutorQuota is its daily hint limit; required with Tutor.
+	Tutor      tutor.Provider
+	TutorQuota *tutor.Quota
 }
 
 type api struct{ Deps }
@@ -65,9 +70,8 @@ func New(d Deps) http.Handler {
 	a := &api{d}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(middleware.Recoverer)
 	r.Use(a.logRequests)
-	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(a.recoverer)
 	r.Use(a.guardStateChanges)
 	r.Use(a.sessionUser)
 
@@ -79,35 +83,45 @@ func New(d Deps) http.Handler {
 	})
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/healthz", a.healthz)
-		r.Get("/me", a.me)
-		r.Patch("/me", a.updateMe)
-		r.Get("/home", a.home)
-		r.Get("/leagues/current", a.currentLeague)
+		// The tutor streams for longer than the usual timeout; it sets its own.
+		r.With(a.requireUnlocked).Post("/exercises/{exerciseID}/hint", a.hint)
 
-		r.Get("/auth/providers", a.providers)
-		r.With(a.limitSignIns).Post("/auth/magic-link", a.sendMagicLink)
-		r.With(a.limitSignIns).Post("/auth/magic-link/verify", a.verifyMagicLink)
-		r.Get("/auth/github/start", a.githubStart)
-		r.Get("/auth/github/callback", a.githubCallback)
-		r.Post("/auth/logout", a.logout)
-		if d.DevAuth {
-			r.Post("/auth/dev", a.devSignIn)
-		}
-		r.Get("/courses", a.listCourses)
-		r.Get("/courses/{courseID}", a.getCourse)
-		r.With(a.requireUnlocked).Get("/exercises/{exerciseID}", a.getExercise)
-		r.With(a.requireUnlocked, a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
-		r.With(a.requireUnlocked, a.limitRuns).Post("/exercises/{exerciseID}/run", a.run)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Timeout(30 * time.Second))
+			r.Get("/healthz", a.healthz)
+			r.Get("/me", a.me)
+			r.Patch("/me", a.updateMe)
+			r.Get("/home", a.home)
+			r.Get("/leagues/current", a.currentLeague)
 
-		r.Get("/shop", a.shop)
-		r.Get("/inventory", a.shop)
-		r.Post("/shop/{powerup}/buy", a.buy)
-		r.Post("/powerups/{powerup}/use", a.usePowerup)
-		r.Get("/quests", a.quests)
-		r.Post("/quests/chest/open", a.openChest)
-		r.Get("/medals", a.medals)
-		r.Get("/submissions/{submissionID}", a.getSubmission)
+			r.Get("/auth/providers", a.providers)
+			r.With(a.limitSignIns).Post("/auth/magic-link", a.sendMagicLink)
+			r.With(a.limitSignIns).Post("/auth/magic-link/verify", a.verifyMagicLink)
+			r.Get("/auth/github/start", a.githubStart)
+			r.Get("/auth/github/callback", a.githubCallback)
+			r.Post("/auth/logout", a.logout)
+			if d.DevAuth {
+				r.Post("/auth/dev", a.devSignIn)
+			}
+			r.Get("/courses", a.listCourses)
+			r.Get("/courses/{courseID}", a.getCourse)
+			r.With(a.requireUnlocked).Get("/exercises/{exerciseID}", a.getExercise)
+			r.With(a.requireUnlocked, a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
+			r.With(a.requireUnlocked, a.limitRuns).Post("/exercises/{exerciseID}/run", a.run)
+
+			r.Get("/shop", a.shop)
+			r.Get("/inventory", a.shop)
+			r.Post("/shop/{powerup}/buy", a.buy)
+			r.Post("/powerups/{powerup}/use", a.usePowerup)
+			r.Get("/quests", a.quests)
+			r.Post("/quests/chest/open", a.openChest)
+			r.Get("/medals", a.medals)
+			r.Get("/submissions/{submissionID}", a.getSubmission)
+			r.With(a.requireUnlocked).Get("/exercises/{exerciseID}/tutor", a.tutorThread)
+
+			r.With(a.limitTelemetry).Post("/events", a.events)
+			r.With(a.limitTelemetry).Post("/client-errors", a.clientError)
+		})
 	})
 	return r
 }
@@ -178,6 +192,11 @@ func (a *api) logRequests(next http.Handler) http.Handler {
 		a.Log.Info("http", "method", r.Method, "path", r.URL.Path, "status", ww.Status(),
 			"ms", time.Since(start).Milliseconds(), "req_id", middleware.GetReqID(r.Context()))
 	})
+}
+
+// limitTelemetry bounds analytics and error reports per user and IP.
+func (a *api) limitTelemetry(next http.Handler) http.Handler {
+	return a.limit("telemetry", 60, 240, "too many reports; wait a moment", next)
 }
 
 func (a *api) internal(w http.ResponseWriter, r *http.Request, err error) {

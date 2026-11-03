@@ -15,16 +15,27 @@ import (
 )
 
 type userDTO struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Avatar   string `json:"avatar"`
-	Timezone string `json:"timezone"`
+	ID        string `json:"id"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	Avatar    string `json:"avatar"`
+	Timezone  string `json:"timezone"`
+	Goal      string `json:"goal"`      // onboarding goal: "", zero, backend, interviews, ai
+	Onboarded bool   `json:"onboarded"` // finished (or skipped) onboarding
 }
 
 func toUserDTO(u store.GetUserRow) userDTO {
-	return userDTO{ID: u.ID.String(), Email: u.Email, Name: u.Name, Avatar: u.Avatar, Timezone: u.Timezone}
+	return userDTO{ID: u.ID.String(), Email: u.Email, Name: u.Name, Avatar: u.Avatar, Timezone: u.Timezone,
+		Goal: u.Goal, Onboarded: u.OnboardedAt != nil}
 }
+
+// featuresDTO says which optional features this server has turned on.
+type featuresDTO struct {
+	Tutor bool `json:"tutor"`
+}
+
+// onboardingGoals are the goals a learner can pick (users.goal check).
+var onboardingGoals = map[string]bool{"zero": true, "backend": true, "interviews": true, "ai": true}
 
 type statsDTO struct {
 	TotalXP       int    `json:"total_xp"`
@@ -42,8 +53,9 @@ type statsDTO struct {
 }
 
 type meResponse struct {
-	User  userDTO  `json:"user"`
-	Stats statsDTO `json:"stats"`
+	User     userDTO     `json:"user"`
+	Stats    statsDTO    `json:"stats"`
+	Features featuresDTO `json:"features"`
 }
 
 // userStats loads the user's stats and their local "today".
@@ -98,7 +110,7 @@ func (a *api) me(w http.ResponseWriter, r *http.Request) {
 		a.internal(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, meResponse{User: toUserDTO(row), Stats: stats})
+	writeJSON(w, http.StatusOK, meResponse{User: toUserDTO(row), Stats: stats, Features: featuresDTO{Tutor: a.Tutor != nil}})
 }
 
 // updateMeRequest is everything a user may change about themselves. XP,
@@ -108,6 +120,9 @@ type updateMeRequest struct {
 	Timezone  *string `json:"timezone"`
 	DailyGoal *int    `json:"daily_goal"`
 	Title     *string `json:"title"` // one of the user's earned medal titles, or "" for none
+	Goal      *string `json:"goal"`  // onboarding goal
+	// Onboarded marks onboarding finished; only true is accepted (it cannot be undone).
+	Onboarded *bool `json:"onboarded"`
 }
 
 func (a *api) updateMe(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +146,12 @@ func (a *api) updateMe(w http.ResponseWriter, r *http.Request) {
 	case req.Name != nil && len(*req.Name) > 80:
 		writeError(w, http.StatusBadRequest, "bad_request", "name is too long")
 		return
+	case req.Goal != nil && !onboardingGoals[*req.Goal]:
+		writeError(w, http.StatusBadRequest, "bad_request", "goal must be zero, backend, interviews or ai")
+		return
+	case req.Onboarded != nil && !*req.Onboarded:
+		writeError(w, http.StatusBadRequest, "bad_request", "onboarded can only be set to true")
+		return
 	}
 	if req.Title != nil {
 		if err := a.Economy.SetTitle(r.Context(), u.UUID, *req.Title); err != nil {
@@ -147,6 +168,16 @@ func (a *api) updateMe(w http.ResponseWriter, r *http.Request) {
 		}
 		if req.Name != nil {
 			if err := q.SetUserName(r.Context(), store.SetUserNameParams{ID: u.UUID, Name: *req.Name}); err != nil {
+				return err
+			}
+		}
+		if req.Goal != nil {
+			if err := q.SetUserGoal(r.Context(), store.SetUserGoalParams{ID: u.UUID, Goal: *req.Goal}); err != nil {
+				return err
+			}
+		}
+		if req.Onboarded != nil {
+			if err := q.SetUserOnboarded(r.Context(), u.UUID); err != nil {
 				return err
 			}
 		}

@@ -26,7 +26,7 @@ export const sqlSandboxJob: ToSandboxJob<SqlPublicView, SqlAnswer> = (pv, answer
   timeoutMs: pv.timeout_ms,
 });
 
-export function SqlExercise({ header, publicView: pv, draft, onChange, onRun, onSubmit, result, aside }: ExerciseRendererProps<SqlPublicView, SqlAnswer>) {
+export function SqlExercise({ header, publicView: pv, draft, onChange, onRun, onSubmit, result, aside, tutor }: ExerciseRendererProps<SqlPublicView, SqlAnswer>) {
   const query = draft?.query ?? pv.starter;
   return (
     <Workspace
@@ -40,6 +40,7 @@ export function SqlExercise({ header, publicView: pv, draft, onChange, onRun, on
           </details>
         </>
       }
+      problemFooter={tutor?.(query)}
       file="query.sql"
       language="sql"
       code={query}

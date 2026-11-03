@@ -32,6 +32,11 @@ export interface ExerciseRendererProps<V = unknown, A = unknown> {
   aside?: ReactNode;
   /** Set when the lesson is a chapter boss: renderers that support it show HP and "Attack". */
   boss?: BossInfo;
+  /**
+   * The "Ask the tutor" control for the problem pane. Renderers that support the
+   * tutor call it with the learner's current answer as text (code or SQL).
+   */
+  tutor?: (answerText: string) => ReactNode;
 }
 
 /** A boss lesson: what defeating it gives. Its HP is its number of checks. */

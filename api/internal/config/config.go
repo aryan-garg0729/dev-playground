@@ -26,6 +26,13 @@ type Config struct {
 
 	SMTPAddr, SMTPUsername, SMTPPassword, MailFrom string
 	GitHubClientID, GitHubClientSecret             string
+
+	// Tutor is the AI tutor's provider: "" (off) or "ollama". Development
+	// only for now: production refuses to start with it set.
+	Tutor           string
+	OllamaURL       string // OLLAMA_URL, default http://localhost:11434
+	TutorModel      string // TUTOR_MODEL, default qwen2.5-coder:3b
+	TutorDailyLimit int    // TUTOR_DAILY_LIMIT, hints per user per day, default 5
 }
 
 // Worker holds cmd/worker settings.
@@ -62,6 +69,17 @@ func Load() (Config, error) {
 		MailFrom:           getenv("MAIL_FROM", "CodeQuest <no-reply@codequest.local>"),
 		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+		Tutor:              os.Getenv("TUTOR_PROVIDER"),
+		OllamaURL:          getenv("OLLAMA_URL", "http://localhost:11434"),
+		TutorModel:         getenv("TUTOR_MODEL", "qwen2.5-coder:3b"),
+	}
+	limit, err := strconv.Atoi(getenv("TUTOR_DAILY_LIMIT", "5"))
+	if err != nil || limit < 1 || limit > 1000 {
+		return Config{}, fmt.Errorf("TUTOR_DAILY_LIMIT must be 1-1000, got %q", os.Getenv("TUTOR_DAILY_LIMIT"))
+	}
+	c.TutorDailyLimit = limit
+	if c.Tutor != "" && c.Tutor != "ollama" {
+		return Config{}, fmt.Errorf("TUTOR_PROVIDER must be empty or \"ollama\", got %q", c.Tutor)
 	}
 	if c.DatabaseURL == "" {
 		return Config{}, errors.New("DATABASE_URL is required")
@@ -77,6 +95,8 @@ func Load() (Config, error) {
 			return Config{}, errors.New("SMTP_ADDR is required in production (magic links)")
 		case !strings.HasPrefix(c.AppURL, "https://"):
 			return Config{}, errors.New("APP_URL must be https in production")
+		case c.Tutor != "":
+			return Config{}, errors.New("TUTOR_PROVIDER must not be set in production (the tutor is development-only for now)")
 		}
 	}
 	return c, nil

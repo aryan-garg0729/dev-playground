@@ -35,6 +35,8 @@ paths:
                 timezone: { type: string, description: IANA zone, e.g. Asia/Kolkata }
                 daily_goal: { type: integer, minimum: 1, maximum: 10 }
                 title: { type: string, description: One of the user's earned medal titles, or "" to wear none }
+                goal: { type: string, enum: [zero, backend, interviews, ai], description: Onboarding goal }
+                onboarded: { type: boolean, enum: [true], description: Marks onboarding finished (cannot be undone) }
       responses:
         "200":
           description: Updated user
@@ -295,6 +297,102 @@ paths:
           content: { application/json: { schema: { $ref: "#/components/schemas/SubmissionStatus" } } }
         "401": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
+  /exercises/{exerciseId}/tutor:
+    get:
+      operationId: getTutorThread
+      description: The learner's tutor conversation for this exercise and today's hints left. 404 tutor_unavailable when the tutor is off (always in production for now).
+      parameters: [{ name: exerciseId, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Conversation, oldest first
+          content: { application/json: { schema: { $ref: "#/components/schemas/TutorThread" } } }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+  /exercises/{exerciseId}/hint:
+    post:
+      operationId: askTutor
+      description: >-
+        Ask the AI tutor. The reply streams as Server-Sent Events: `delta` {text} pieces, then `done` {remaining, used_hint}
+        or `error` {code, message} (a failed reply refunds the hint). Errors before the stream (limit, validation) use the
+        JSON envelope; `limit_reached` (429) when today's hints are used. Using a hint sets progress.used_hint.
+      parameters: [{ name: exerciseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [message]
+              properties:
+                message: { type: string, maxLength: 2000 }
+                code: { type: string, description: The learner's current answer (code or SQL) }
+      responses:
+        "200":
+          description: Server-Sent Events stream
+          content: { text/event-stream: { schema: { type: string } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
+  /events:
+    post:
+      operationId: trackEvents
+      description: Self-hosted product analytics. Only known event names; props are a flat object of at most 1 KB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [events]
+              properties:
+                anon_id: { type: string, pattern: "^[A-Za-z0-9-]{8,64}$" }
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 20
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [name]
+                    properties:
+                      name:
+                        type: string
+                        enum: [page_view, landing_cta, sign_in, onboarding_step, onboarding_completed, lesson_opened, run_clicked, submit_clicked, tutor_opened, tutor_asked, shop_bought]
+                      props: { type: object, additionalProperties: { oneOf: [{ type: string }, { type: number }, { type: boolean }] } }
+                      path: { type: string }
+                      at: { type: string, format: date-time }
+      responses:
+        "204": { description: Stored }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /client-errors:
+    post:
+      operationId: reportClientError
+      description: A browser error for error monitoring; grouped by fingerprint per day and logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [message]
+              properties:
+                message: { type: string }
+                stack: { type: string }
+                url: { type: string }
+                user_agent: { type: string }
+                release: { type: string }
+      responses:
+        "204": { description: Recorded }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
 components:
   responses:
     Error:
@@ -313,19 +411,41 @@ components:
             message: { type: string }
     User:
       type: object
-      required: [id, email, name, avatar, timezone]
+      required: [id, email, name, avatar, timezone, goal, onboarded]
       properties:
         id: { type: string, format: uuid }
         email: { type: string }
         name: { type: string }
         avatar: { type: string }
         timezone: { type: string }
+        goal: { type: string, enum: ["", zero, backend, interviews, ai] }
+        onboarded: { type: boolean }
     Me:
       type: object
-      required: [user, stats]
+      required: [user, stats, features]
       properties:
         user: { $ref: "#/components/schemas/User" }
         stats: { $ref: "#/components/schemas/Stats" }
+        features: { $ref: "#/components/schemas/Features" }
+    Features:
+      type: object
+      required: [tutor]
+      properties:
+        tutor: { type: boolean, description: The AI tutor is on (development only for now) }
+    TutorMessage:
+      type: object
+      required: [role, content, created_at]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string }
+        created_at: { type: string, format: date-time }
+    TutorThread:
+      type: object
+      required: [daily_limit, remaining, messages]
+      properties:
+        daily_limit: { type: integer }
+        remaining: { type: integer }
+        messages: { type: array, items: { $ref: "#/components/schemas/TutorMessage" } }
     SignedIn:
       type: object
       required: [user, next]

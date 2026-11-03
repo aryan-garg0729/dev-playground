@@ -19,6 +19,16 @@ type ActiveEffect struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
+type AnalyticsEvent struct {
+	ID        int64           `json:"id"`
+	UserID    uuid.NullUUID   `json:"user_id"`
+	AnonID    string          `json:"anon_id"`
+	Name      string          `json:"name"`
+	Props     json.RawMessage `json:"props"`
+	Path      string          `json:"path"`
+	CreatedAt time.Time       `json:"created_at"`
+}
+
 type Bet struct {
 	ID        uuid.UUID  `json:"id"`
 	UserID    uuid.UUID  `json:"user_id"`
@@ -54,6 +64,20 @@ type Chest struct {
 	Bytes    int32     `json:"bytes"`
 	Powerup  string    `json:"powerup"`
 	OpenedAt time.Time `json:"opened_at"`
+}
+
+type ClientError struct {
+	Fingerprint string      `json:"fingerprint"`
+	Day         time.Time   `json:"day"`
+	Message     string      `json:"message"`
+	Stack       string      `json:"stack"`
+	Url         string      `json:"url"`
+	UserAgent   string      `json:"user_agent"`
+	Release     string      `json:"release"`
+	Count       int32       `json:"count"`
+	Users       []uuid.UUID `json:"users"`
+	FirstSeen   time.Time   `json:"first_seen"`
+	LastSeen    time.Time   `json:"last_seen"`
 }
 
 type Counter struct {
@@ -193,14 +217,28 @@ type Submission struct {
 	HiddenInputs    json.RawMessage `json:"hidden_inputs"`
 }
 
+type TutorMessage struct {
+	ID           uuid.UUID `json:"id"`
+	UserID       uuid.UUID `json:"user_id"`
+	ExerciseID   string    `json:"exercise_id"`
+	Role         string    `json:"role"`
+	Content      string    `json:"content"`
+	InputTokens  int32     `json:"input_tokens"`
+	OutputTokens int32     `json:"output_tokens"`
+	Model        string    `json:"model"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	Email     string    `json:"email"`
-	Name      string    `json:"name"`
-	Avatar    string    `json:"avatar"`
-	Country   string    `json:"country"`
-	Timezone  string    `json:"timezone"`
-	CreatedAt time.Time `json:"created_at"`
+	ID          uuid.UUID  `json:"id"`
+	Email       string     `json:"email"`
+	Name        string     `json:"name"`
+	Avatar      string     `json:"avatar"`
+	Country     string     `json:"country"`
+	Timezone    string     `json:"timezone"`
+	CreatedAt   time.Time  `json:"created_at"`
+	Goal        string     `json:"goal"`
+	OnboardedAt *time.Time `json:"onboarded_at"`
 }
 
 type UserMedal struct {

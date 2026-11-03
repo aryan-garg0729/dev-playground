@@ -399,7 +399,7 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 
 | Table | Key columns |
 | --- | --- |
-| `users` | id (uuid), email, name, avatar, country, timezone, created_at |
+| `users` | id (uuid), email, name, avatar, country, timezone, goal (onboarding: zero, backend, interviews, ai), onboarded_at, created_at |
 | `sessions` | id (SHA-256 of the cookie value, never the value), user_id, expires_at, created_at |
 | `magic_links` | token_hash, email, next, expires_at, used_at (single use, 15 minutes) |
 | `oauth_identities` | provider, provider_user_id, user_id |
@@ -414,7 +414,9 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | `league_members` | week (Monday, UTC), user_id, tier, group_no, final_rank, result |
 | `league_weeks` | week, closed_at (a row means the week's results are final) |
 | `subscriptions` | user_id, provider, provider_ref, plan, status, current_period_end |
-| `tutor_messages` | id, user_id, exercise_id, role, content, created_at |
+| `tutor_messages` | id, user_id, exercise_id, role (user, assistant), content, input_tokens, output_tokens, model, created_at |
+| `analytics_events` | id, user_id (null when signed out), anon_id, name, props (flat jsonb), path, created_at; kept 90 days |
+| `client_errors` | fingerprint, day, message, stack, url, user_agent, release, count, users (uuid[], at most 100), first_seen, last_seen; kept 90 days |
 
 Game economy tables (medals, Bytes, inventory, quests) are listed under Game economy. `total_xp` and `bytes` are always derivable from their ledgers; treat `user_stats` as a cache.
 
@@ -428,8 +430,8 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/auth/github/start`, `/auth/github/callback` | GitHub OAuth web flow, sets the session cookie |
 | POST | `/auth/dev` | Sign in without email; only when `DEV_AUTH=1` (404 otherwise) |
 | POST | `/auth/logout` | End the session |
-| GET | `/me` | Current user and stats (XP, level, streak, league tier, daily goal); entitlement in Phase 5 |
-| PATCH | `/me` | Name, timezone, daily goal. XP, level, streak and league fields are rejected |
+| GET | `/me` | Current user (with `goal`, `onboarded`), stats (XP, level, streak, league tier, daily goal) and `features` (`tutor`); entitlement in Phase 5 |
+| PATCH | `/me` | Name, timezone, daily goal, title, onboarding goal, `onboarded: true`. XP, level, streak and league fields are rejected |
 | GET | `/home` | Continue card, today (goal, streak week), paths, league summary |
 | GET | `/courses` | Course list with progress |
 | GET | `/courses/{id}` | Chapters and exercises with lock state |
@@ -438,13 +440,16 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | POST | `/exercises/{id}/run` | Ungraded server Run (`run: server`): visible checks only, nothing stored; 60/min per user |
 | POST | `/exercises/{id}/submit` | Grade; returns `Result` + XP awarded + level/streak changes |
 | GET | `/submissions/{id}` | Poll a pending submission (owner only; `result` is null while pending) |
-| POST | `/exercises/{id}/hint` | AI tutor message |
+| GET | `/exercises/{id}/tutor` | The learner's tutor thread for the exercise and today's hints left |
+| POST | `/exercises/{id}/hint` | Ask the AI tutor; the reply streams as Server-Sent Events |
+| POST | `/events` | Self-hosted analytics events (batched, allow-listed names) |
+| POST | `/client-errors` | Browser error report (error monitoring) |
 | GET | `/leagues/current` | This week's league group standings (names only, never other users' emails) |
 | GET | `/medals` | Earned and available medals with progress |
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `tutor_unavailable` (404, the tutor is off), `limit_reached` (also 429 when today's tutor hints are used), `tutor_failed` (an SSE `error` event; the hint is refunded), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
 CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (browsers always send one on these methods; a missing one is refused) and `Content-Type: application/json` (a cross-site form cannot send it without a CORS preflight). The session cookie is also `SameSite=Lax`.
 
@@ -474,7 +479,7 @@ Rules for v1 (keep all numbers in `game/config.go`):
 
 All writes for one submission (submission row, progress, xp_events, user_stats, day_passes, league membership; medals and quests later) happen in a single DB transaction, which locks the user's `user_stats` row. The leaderboard update to Redis happens after commit and is idempotent (the group's set is rewritten from Postgres).
 
-Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home showed Daily quests and Review as disabled "Coming soon" placeholders (decision 2026-11-03); quests arrived with Phase 7, Review stays a placeholder until reviews exist.
+Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home showed Daily quests and Review as disabled "Coming soon" placeholders (decision 2026-11-03); quests arrived with Phase 7, Review stays a placeholder until reviews exist. The tutor button arrived in Phase 6 (development only; see AI tutor).
 
 ## Game economy: Bytes, power-ups, medals, quests
 
@@ -546,6 +551,16 @@ The tutor gives hints, never full solutions. It lives behind a `tutor.Provider` 
 - **Limits:** free users 5 hints/day, paid 50/day, enforced in Redis. Max 400 output tokens. Log token usage per user.
 - Using a hint sets `progress.used_hint = true` (removes the no-hint XP bonus).
 - Stream responses to the browser with Server-Sent Events.
+
+As built (Phase 6, decision 2026-11-03: **development only for now**, to avoid paying for an LLM this early):
+
+- Provider: `TUTOR_PROVIDER=ollama` with a local Ollama (`OLLAMA_URL`, `TUTOR_MODEL`, default `qwen2.5-coder:3b`), streamed from `/api/chat` over plain HTTP (no new dependency). Empty `TUTOR_PROVIDER` turns the tutor off. With `APP_ENV=production` the API refuses to start if `TUTOR_PROVIDER` is set; production gets a larger hosted model behind the same `tutor.Provider` interface when that is decided. Compose turns it on and reaches the host's Ollama at `host.docker.internal:11434`.
+- Off: `GET /me` has `features.tutor = false`, the tutor endpoints answer `404 tutor_unavailable`, the "Ask the tutor" button is disabled ("Coming soon") and Extra Hint stays "Coming soon" in the shop.
+- `POST /exercises/{id}/hint` takes `{message (≤ 2000 chars), code}` (the learner's current answer) and answers `text/event-stream`: `delta` `{text}` events, then `done` `{remaining, used_hint}` or `error` `{code, message}`. Errors before the stream (validation, limit, locked chapter) use the JSON envelope. It runs outside the 30 s request timeout with its own 2-minute limit.
+- Context: the exercise's public view (prompt or question, SQL setup), the learner's code with line numbers, their latest stored `Result` (check names, got/expected, feedback, stdout) and the last 6 messages. The system prompt carries the rules above; there is no output filtering yet.
+- Limit: `TUTOR_DAILY_LIMIT` (default 5) per user per local day, counted in Redis (`tutor:<user>:<date>`). Every user is on the free limit until Phase 5 adds plans. A reply that fails before any text refunds the hint and changes nothing; once text has streamed the hint counts, and the question, reply and token counts are saved (even if the browser left), with `progress.used_hint` set in the same transaction. Token usage is also logged per reply.
+- UI: `TutorPanel` at the bottom of the problem pane (code and sql renderers receive it as a `tutor(answerText)` render prop). It shows hints left, warns once that asking removes the no-hint bonus, and renders replies with `Markdown` (no `innerHTML`).
+- Deferred until the tutor goes to production: output guardrails (code-length caps, solution-leak checks) and the scripted "give me the answer" eval in the acceptance criteria.
 
 ## Payments and entitlements
 
@@ -634,11 +649,18 @@ Scope: billing interface, Stripe + Razorpay, entitlement checks, pricing page, P
 
 Scope: tutor with SSE streaming and limits, onboarding, landing page, analytics events, error monitoring.
 
-- [ ] Tutor never returns the reference solution for any sample exercise (scripted eval of 20 "give me the answer" prompts).
-- [ ] Daily hint limits enforced per plan.
-- [ ] Lighthouse score above 90 on the landing page.
+- [ ] Tutor never returns the reference solution for any sample exercise (scripted eval of 20 "give me the answer" prompts). **Deferred** (decision 2026-11-03): the tutor is development-only on a small local model; guardrails and this eval come with the production tutor.
+- [x] Daily hint limits enforced per plan (one plan until Phase 5: `TUTOR_DAILY_LIMIT`, integration-tested).
+- [x] Lighthouse score above 90 on the landing page (`make lighthouse`, part of `make test`: every category ≥ 90, mobile profile, production build).
 
-> Decision 2026-11-03: Phases 5 (payments) and 6 (AI tutor) are skipped for now and Phase 7 is built first, at the author's request. Phase 7 features that need them (Holiday Mode, Extra Hint, Pro's monthly Bytes, review quests and the Memory medals) show as unavailable or "coming soon" until those phases ship.
+As built:
+
+- **Landing** (`/` when signed out; `screens/landing.png`): hero with a static "Try it" lesson card (no runtime loads on this page), features, real courses from `GET /courses`, how a lesson works, FAQ. Pricing, "For teams", Privacy/Terms links and the cancellation FAQ are left out until Phase 5 and those pages exist. Every route except the landing page is a lazy chunk.
+- **Onboarding** (`/welcome`; `screens/onboarding.png`): step 1 is goal and time per day (10/20/40 min → daily goal 1/2/4), step 2 picks the first course (preselected for the goal). The design's "5-question check to skip what you know" is not built (no design or question bank). Finishing or skipping sets `users.onboarded_at`; `/` sends a signed-in learner who has not onboarded to `/welcome`. Accounts from before Phase 6 count as onboarded.
+- **Analytics** (self-hosted, no vendor): `track(name, props)` batches events to `POST /events` every 5 s or when the tab is hidden (`fetch` with `keepalive`). Names are allow-listed on the server (`page_view`, `landing_cta`, `sign_in`, `onboarding_step`, `onboarding_completed`, `lesson_opened`, `run_clicked`, `submit_clicked`, `tutor_opened`, `tutor_asked`, `shop_bought`); props are a flat object ≤ 1 KB; ≤ 20 events per batch; 60/min per user, 240/min per IP. Do Not Track and Global Privacy Control turn it off. A random `anon_id` in localStorage (`cq-anon`) counts signed-out visitors.
+- **Error monitoring** (self-hosted): `window` `error` and `unhandledrejection` handlers and a React `ErrorBoundary` send `POST /client-errors` (once per message per page, ≤ 20 per page; the URL fragment is dropped because it can hold a sign-in token). The API groups them by a fingerprint of the message and top stack frame (line numbers and bundle hashes removed) per day and logs each at error level. API panics are recovered, logged with stack and request id, and answered with `500 internal`. `VITE_RELEASE` tags reports. A vendor (e.g. Sentry) can be added later behind the same calls.
+
+> Decision 2026-11-03: Phases 5 (payments) and 6 (AI tutor) are skipped for now and Phase 7 is built first, at the author's request. Phase 6 was then built after Phase 7 (same day), with the tutor development-only; Phase 5 is still skipped. Phase 7 features that need them (Holiday Mode, Extra Hint, Pro's monthly Bytes, review quests and the Memory medals) show as unavailable or "coming soon" until those phases ship.
 
 ### Phase 7 — Game economy
 
@@ -655,7 +677,7 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 ## Conventions and rules for Claude Code
 
 - Work one phase at a time. Before coding, list the files you will create or change. After coding, run tests and report which acceptance criteria pass.
-- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `zod` (sandbox message validation), `pyodide`, `sql.js` (self-hosted browser runtimes), `@playwright/test` (browser tests, run from the official Docker image so no browsers are installed on the host), `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk). The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
+- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `zod` (sandbox message validation), `pyodide`, `sql.js` (self-hosted browser runtimes), `@playwright/test` (browser tests, run from the official Docker image so no browsers are installed on the host), `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk), `lighthouse` 13.5.0 (dev only: the landing page audit in `make lighthouse`, using the Playwright image's Chromium). The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
 - Go: standard layout above, `gofmt` + `golangci-lint`, errors wrapped with `fmt.Errorf("...: %w", err)`, `context.Context` first argument, table-driven tests, no global state except the plugin registries.
 - SQL only through `sqlc`-generated queries. Every schema change is a new migration; never edit an applied one.
 - React: function components, TypeScript strict mode, no `any` outside the renderer registry, server state through TanStack Query, components under 200 lines.
@@ -675,4 +697,4 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 - Dev Compose mounts the host Docker socket into the worker (root-equivalent). Production runs the worker on a dedicated host (later gVisor).
 - LangChain in the browser (Phase 3): Pyodide would need self-hosted `langchain-core` and `pydantic` wheels (CSP forbids fetching from PyPI). Decide whether these exercises are submit-only, graded on the server.
 - Exact prices per plan and per country tier. Needed before Phase 5.
-- LLM provider for the tutor. Needed before Phase 6.
+- ~~LLM provider for the tutor.~~ Development: local Ollama (Phase 6). The production provider and model are still open, along with the guardrails that come with them.
