@@ -69,6 +69,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getShop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getInventory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shop/{powerup}/buy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Spends Bytes, once per request_id (a replay returns the first response). 409 insufficient_bytes / limit_reached change nothing. */
+        post: operations["buyPowerup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/powerups/{powerup}/use": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Uses a held power-up (Streak Repair and Double or Nothing spend Bytes here), once per request_id. */
+        post: operations["usePowerup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getQuests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/quests/chest/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["openChest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/medals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMedals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/providers": {
         parameters: {
             query?: never;
@@ -324,11 +438,17 @@ export interface components {
             league_tier: components["schemas"]["Tier"];
             daily_goal: number;
             today_lessons: number;
+            bytes: number;
+            title: string;
+            longest_streak: number;
         };
         Breakdown: {
             base: number;
             first_try: number;
             no_hint: number;
+            boss: number;
+            /** @description Focus Boost (doubles the rest) */
+            boost: number;
         };
         /** @description What a graded submission did to the user's game state. */
         Outcome: {
@@ -344,6 +464,155 @@ export interface components {
             streak_extended: boolean;
             freezes_used: number;
             freeze_earned: boolean;
+            second_wind_kept: boolean;
+            focus_boost: boolean;
+            rewards: null | components["schemas"]["Rewards"];
+        };
+        Rewards: {
+            bytes: {
+                reason: string;
+                label: string;
+                amount: number;
+            }[];
+            medals: {
+                id: string;
+                name: string;
+                tier: string;
+                title: string;
+            }[];
+            quests_done: string[];
+            chest_ready: boolean;
+            chapter_complete: boolean;
+            boss: null | components["schemas"]["BossResult"];
+        };
+        BossResult: {
+            max_hp: number;
+            hp: number;
+            defeated: boolean;
+            chest: null | components["schemas"]["ChestDrop"];
+            unlocked_chapter: string;
+        };
+        ChestDrop: {
+            bytes: number;
+            powerup: string;
+        };
+        RequestID: {
+            request_id: string;
+        };
+        ShopItem: {
+            id: string;
+            name: string;
+            description: string;
+            note: string;
+            cost: number;
+            unavailable?: string;
+            owned: number;
+            /** @enum {string} */
+            state: "buy" | "max_held" | "streak_safe" | "repair" | "pro" | "coming_soon" | "bet_open" | "place_bet";
+            /** @enum {string} */
+            use: "auto" | "now" | "lessons" | "";
+            usable_now: boolean;
+        };
+        Bet: {
+            stake: number;
+            goal: number;
+            /** Format: date */
+            starts_on: string;
+            days_met: number;
+        };
+        Shop: {
+            balance: number;
+            earned_today: number;
+            items: components["schemas"]["ShopItem"][];
+            effects: {
+                effect: string;
+                ref_id: string;
+                /** Format: date-time */
+                expires_at: string;
+            }[];
+            bet: null | components["schemas"]["Bet"];
+            earn: {
+                label: string;
+                amount: string;
+            }[];
+        };
+        BuyResult: {
+            powerup: string;
+            owned: number;
+            balance: number;
+        };
+        UseResult: {
+            powerup: string;
+            remaining: number;
+            /** Format: date-time */
+            expires_at?: string;
+            /** @description The declared input of one failed hidden check. Never its expected output. */
+            peek?: {
+                check: number;
+                name: string;
+                input: string;
+            };
+            bet?: components["schemas"]["Bet"];
+            streak?: number;
+            balance: number;
+        };
+        Quest: {
+            id: string;
+            /** @enum {string} */
+            cadence: "daily" | "weekly";
+            name: string;
+            event: string;
+            target: number;
+            bytes: number;
+            progress: number;
+            done: boolean;
+        };
+        Quests: {
+            daily: components["schemas"]["Quest"][];
+            weekly: components["schemas"]["Quest"];
+            /** Format: date-time */
+            resets_at: string;
+            chest: {
+                ready: boolean;
+                opened: null | components["schemas"]["ChestDrop"];
+                odds: {
+                    powerup: string;
+                    weight: number;
+                }[];
+                bytes: number[];
+            };
+        };
+        MedalTier: {
+            tier: string;
+            gte: number;
+            title: string;
+            bytes: number;
+            earned_at: null | string;
+        };
+        Medal: {
+            id: string;
+            family: string;
+            name: string;
+            description: string;
+            unit: string;
+            secret: boolean;
+            coming_soon: boolean;
+            value: number;
+            tier: string;
+            next_tier: string;
+            next_gte: number;
+            tiers: components["schemas"]["MedalTier"][];
+        };
+        Medals: {
+            earned: number;
+            total: number;
+            medals: components["schemas"]["Medal"][];
+            families: {
+                id: string;
+                name: string;
+            }[];
+            titles: string[];
+            title: string;
         };
         CodeLine: {
             n: number;
@@ -397,6 +666,7 @@ export interface components {
             standings: {
                 rank: number;
                 name: string;
+                title: string;
                 weekly_xp: number;
                 you: boolean;
                 zone: components["schemas"]["LeagueZone"];
@@ -448,6 +718,8 @@ export interface components {
             chapters: {
                 id: string;
                 title: string;
+                /** @description Behind an earlier chapter's undefeated boss (lessons answer 403 chapter_locked) */
+                locked: boolean;
                 exercises: components["schemas"]["ExerciseSummary"][];
             }[];
         };
@@ -630,6 +902,8 @@ export interface operations {
                     /** @description IANA zone */
                     timezone?: string;
                     daily_goal?: number;
+                    /** @description One of the user's earned medal titles */
+                    title?: string;
                 };
             };
         };
@@ -684,6 +958,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["League"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    getShop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Power-ups with the user's state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shop"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    getInventory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Same as /shop */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shop"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    buyPowerup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                powerup: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestID"];
+            };
+        };
+        responses: {
+            /** @description Bought */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuyResult"];
+                };
+            };
+            400: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    usePowerup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                powerup: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    request_id: string;
+                    /** @description second_wind and peek */
+                    exercise_id?: string;
+                    /** @description double_or_nothing: 100-500 */
+                    stake?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Used */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UseResult"];
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getQuests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Today's quests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quests"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    openChest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestID"];
+            };
+        };
+        responses: {
+            /** @description The chest's contents (the same on every later call today) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChestDrop"];
+                };
+            };
+            409: components["responses"]["Error"];
+        };
+    };
+    getMedals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Medals with progress; unearned secret medals are masked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Medals"];
                 };
             };
             401: components["responses"]["Error"];

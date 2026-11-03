@@ -29,7 +29,8 @@ type leagueSummary struct {
 
 type leagueEntry struct {
 	Rank     int    `json:"rank"`
-	Name     string `json:"name"` // display name only; other users' emails are never sent
+	Name     string `json:"name"`  // display name only; other users' emails are never sent
+	Title    string `json:"title"` // their worn medal title
 	WeeklyXP int    `json:"weekly_xp"`
 	You      bool   `json:"you"`
 	Zone     string `json:"zone"`
@@ -62,7 +63,7 @@ func (a *api) league(ctx context.Context, user uuid.UUID, tier string) (leagueRe
 	out.Joined, out.Tier, out.Of = true, m.Tier, len(rows)
 	for i, r := range rows {
 		zone := map[string]string{game.Promoted: "promote", game.Demoted: "demote", game.Stayed: "stay"}[moves[i]]
-		e := leagueEntry{Rank: i + 1, Name: r.Name, WeeklyXP: int(r.WeeklyXp), You: r.UserID == user, Zone: zone}
+		e := leagueEntry{Rank: i + 1, Name: r.Name, Title: r.Title, WeeklyXP: int(r.WeeklyXp), You: r.UserID == user, Zone: zone}
 		if e.Name == "" {
 			e.Name = "Learner"
 		}

@@ -24,16 +24,17 @@ ON CONFLICT (week, user_id) DO NOTHING;
 
 -- name: LeagueStandings :many
 -- A group's members by weekly XP (ties: whoever reached it first, then id).
-SELECT m.user_id, u.name, u.email, u.avatar,
+SELECT m.user_id, u.name, u.email, u.avatar, COALESCE(us.title, '')::text AS title,
        COALESCE(sum(x.amount), 0)::int AS weekly_xp,
        COALESCE(max(x.created_at), '9999-01-01'::timestamptz)::timestamptz AS last_xp_at
 FROM league_members m
 JOIN users u ON u.id = m.user_id
+LEFT JOIN user_stats us ON us.user_id = m.user_id
 LEFT JOIN xp_events x ON x.user_id = m.user_id
     AND x.created_at >= m.week::timestamp AT TIME ZONE 'UTC'
     AND x.created_at < (m.week + 7)::timestamp AT TIME ZONE 'UTC'
 WHERE m.week = @week AND m.tier = @tier AND m.group_no = @group_no
-GROUP BY m.user_id, u.name, u.email, u.avatar
+GROUP BY m.user_id, u.name, u.email, u.avatar, us.title
 ORDER BY weekly_xp DESC, last_xp_at ASC, m.user_id;
 
 -- name: UnclosedLeagueWeeks :many

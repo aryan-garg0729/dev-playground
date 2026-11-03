@@ -16,11 +16,11 @@ func TestAwardFor(t *testing.T) {
 		want           Breakdown
 		wantTotal      int
 	}{
-		{"first try, no hint", 20, true, false, Breakdown{20, 10, 5}, 35},
-		{"retry, no hint", 20, false, false, Breakdown{20, 0, 5}, 25},
-		{"first try with hint", 20, true, true, Breakdown{20, 10, 0}, 30},
-		{"retry with hint", 20, false, true, Breakdown{20, 0, 0}, 20},
-		{"rounds half up", 10, true, false, Breakdown{10, 5, 3}, 18},
+		{"first try, no hint", 20, true, false, Breakdown{Base: 20, FirstTry: 10, NoHint: 5}, 35},
+		{"retry, no hint", 20, false, false, Breakdown{Base: 20, FirstTry: 0, NoHint: 5}, 25},
+		{"first try with hint", 20, true, true, Breakdown{Base: 20, FirstTry: 10, NoHint: 0}, 30},
+		{"retry with hint", 20, false, true, Breakdown{Base: 20, FirstTry: 0, NoHint: 0}, 20},
+		{"rounds half up", 10, true, false, Breakdown{Base: 10, FirstTry: 5, NoHint: 3}, 18},
 		{"zero xp", 0, true, false, Breakdown{}, 0},
 	}
 	for _, tt := range tests {
@@ -219,5 +219,42 @@ func TestMoves(t *testing.T) {
 	}
 	if got := []string{NextTier("bronze", Promoted), NextTier("gold", Demoted), NextTier("diamond", Promoted), NextTier("bronze", Demoted)}; !slices.Equal(got, []string{"silver", "silver", "diamond", "bronze"}) {
 		t.Errorf("NextTier = %v", got)
+	}
+}
+
+func TestRollover(t *testing.T) {
+	d := func(day int) time.Time { return date(2026, 11, day) }
+	tests := []struct {
+		name       string
+		in         Streak
+		today      time.Time
+		want       Streak
+		used, lost int
+	}{
+		{"active yesterday: nothing to do", Streak{Days: 3, Last: d(2)}, d(3), Streak{Days: 3, Last: d(2)}, 0, 0},
+		{"one missed day spends a freeze", Streak{Days: 3, Freezes: 1, Last: d(1)}, d(3), Streak{Days: 3, Freezes: 0, Last: d(2)}, 1, 0},
+		{"two missed, two freezes", Streak{Days: 3, Freezes: 2, Last: d(1)}, d(4), Streak{Days: 3, Freezes: 0, Last: d(3)}, 2, 0},
+		{"two missed, one freeze: lost, freeze kept", Streak{Days: 3, Freezes: 1, Last: d(1)}, d(4), Streak{Days: 0, Freezes: 1, Last: d(1)}, 0, 3},
+		{"no streak", Streak{}, d(4), Streak{}, 0, 0},
+	}
+	for _, tt := range tests {
+		got, used, lost := Rollover(tt.in, tt.today)
+		if got != tt.want || used != tt.used || lost != tt.lost {
+			t.Errorf("%s: Rollover = %+v used %d lost %d; want %+v %d %d", tt.name, got, used, lost, tt.want, tt.used, tt.lost)
+		}
+		// A pass after the rollover agrees with a pass without it.
+		if tt.lost == 0 && ApplyPass(got, tt.today).Days != ApplyPass(tt.in, tt.today).Days {
+			t.Errorf("%s: rollover then pass disagrees with a lazy pass", tt.name)
+		}
+	}
+}
+
+func TestBossAndBoost(t *testing.T) {
+	b := AwardFor(20, true, false).WithBoss()
+	if b.Total() != 20+10+5+100 {
+		t.Fatalf("boss total = %d", b.Total())
+	}
+	if boosted := b.WithBoost(); boosted.Boost != 135 || boosted.Total() != 270 {
+		t.Fatalf("boosted = %+v", boosted)
 	}
 }

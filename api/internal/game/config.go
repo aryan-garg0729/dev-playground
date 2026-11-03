@@ -24,6 +24,9 @@ const (
 	LeaguePromote   = 5
 	LeagueDemote    = 5
 
+	// BossBonus is extra XP for defeating a boss (its first pass).
+	BossBonus = 100
+
 	DefaultDailyGoal = 2
 	MaxDailyGoal     = 10
 )

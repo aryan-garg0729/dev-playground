@@ -26,9 +26,19 @@ const home: Home = {
   },
 };
 
+const quest = (id: string, name: string, progress: number, target: number, cadence: 'daily' | 'weekly' = 'daily') => ({
+  id, name, cadence, event: 'lessons', target, bytes: cadence === 'weekly' ? 150 : 0, progress, done: progress >= target,
+});
+const quests = {
+  daily: [quest('d.lessons2', 'Pass 2 lessons', 2, 2), quest('d.firsttry1', 'Pass one lesson on the first try', 1, 1), quest('d.quiz1', 'Pass a quiz', 0, 1)],
+  weekly: quest('w.lessons10', 'Pass 10 lessons this week', 4, 10, 'weekly'),
+  resets_at: new Date(Date.now() + 5 * 3600000 + 12 * 60000 + 30000).toISOString(),
+  chest: { ready: false, opened: null, odds: [{ powerup: 'focus_boost', weight: 40 }, { powerup: 'peek', weight: 60 }], bytes: [40, 80] },
+};
+
 describe('HomePage', () => {
   it('shows where to continue, today, paths, placeholders and the league', async () => {
-    stubApi({ 'GET /api/v1/home': [200, home], 'GET /api/v1/me': [200, me] });
+    stubApi({ 'GET /api/v1/home': [200, home], 'GET /api/v1/me': [200, me], 'GET /api/v1/quests': [200, quests] });
     renderRoute('/', '/', <HomePage />);
 
     expect(await screen.findByRole('heading', { level: 1, name: /, Ada$/ })).toBeInTheDocument();
@@ -44,7 +54,13 @@ describe('HomePage', () => {
     expect(within(today).getByLabelText('2026-11-04, today')).toBeInTheDocument();
     expect(within(today).getByLabelText('2026-11-02, practised')).toBeInTheDocument();
 
-    expect(screen.getByRole('region', { name: 'Daily quests' })).toHaveTextContent('Coming soon');
+    const q = await screen.findByRole('region', { name: 'Daily quests' });
+    expect(q).toHaveTextContent('resets in 5h 12m');
+    expect(within(q).getByLabelText('Pass 2 lessons: 2 of 2, done')).toBeInTheDocument();
+    expect(within(q).getByLabelText('Pass a quiz: 0 of 1')).toBeInTheDocument();
+    expect(q).toHaveTextContent('1 quest left');
+    expect(q).toHaveTextContent('Chest odds: Focus Boost 40% · Peek 60%');
+    expect(within(q).queryByRole('button', { name: 'Open' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start review' })).toBeDisabled();
 
     const league = screen.getByRole('region', { name: 'Gold league' });

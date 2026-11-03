@@ -114,7 +114,7 @@ func (q *Queries) EnsureUserStats(ctx context.Context, userID uuid.UUID) error {
 
 const getUserStats = `-- name: GetUserStats :one
 SELECT s.total_xp, s.level, s.bytes, s.streak_days, s.streak_freezes, s.last_active_date,
-       s.league_tier, s.title, s.daily_goal, u.timezone
+       s.league_tier, s.title, s.daily_goal, s.longest_streak, u.timezone
 FROM user_stats s JOIN users u ON u.id = s.user_id
 WHERE s.user_id = $1
 `
@@ -129,6 +129,7 @@ type GetUserStatsRow struct {
 	LeagueTier     string     `json:"league_tier"`
 	Title          string     `json:"title"`
 	DailyGoal      int32      `json:"daily_goal"`
+	LongestStreak  int32      `json:"longest_streak"`
 	Timezone       string     `json:"timezone"`
 }
 
@@ -145,6 +146,7 @@ func (q *Queries) GetUserStats(ctx context.Context, userID uuid.UUID) (GetUserSt
 		&i.LeagueTier,
 		&i.Title,
 		&i.DailyGoal,
+		&i.LongestStreak,
 		&i.Timezone,
 	)
 	return i, err
@@ -257,10 +259,11 @@ func (q *Queries) LockUserStats(ctx context.Context, userID uuid.UUID) (LockUser
 	return i, err
 }
 
-const recordDayPass = `-- name: RecordDayPass :exec
+const recordDayPass = `-- name: RecordDayPass :one
 INSERT INTO day_passes (user_id, day, exercise_id)
 VALUES ($1, $2, $3)
 ON CONFLICT DO NOTHING
+RETURNING day
 `
 
 type RecordDayPassParams struct {
@@ -269,9 +272,12 @@ type RecordDayPassParams struct {
 	ExerciseID string    `json:"exercise_id"`
 }
 
-func (q *Queries) RecordDayPass(ctx context.Context, arg RecordDayPassParams) error {
-	_, err := q.db.Exec(ctx, recordDayPass, arg.UserID, arg.Day, arg.ExerciseID)
-	return err
+// Returns no row when the exercise was already passed that day.
+func (q *Queries) RecordDayPass(ctx context.Context, arg RecordDayPassParams) (time.Time, error) {
+	row := q.db.QueryRow(ctx, recordDayPass, arg.UserID, arg.Day, arg.ExerciseID)
+	var day time.Time
+	err := row.Scan(&day)
+	return day, err
 }
 
 const setDailyGoal = `-- name: SetDailyGoal :exec

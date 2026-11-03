@@ -13,6 +13,13 @@ export type Outcome = Schemas['Outcome'];
 export type Home = Schemas['Home'];
 export type League = Schemas['League'];
 export type LeagueSummary = Schemas['LeagueSummary'];
+export type Shop = Schemas['Shop'];
+export type ShopItem = Schemas['ShopItem'];
+export type Quests = Schemas['Quests'];
+export type Medals = Schemas['Medals'];
+export type Medal = Schemas['Medal'];
+export type Rewards = Schemas['Rewards'];
+export type UseResult = Schemas['UseResult'];
 
 // Resolve fetch at call time so tests can stub globalThis.fetch.
 export const api = createClient<paths>({

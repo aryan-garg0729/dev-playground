@@ -5,6 +5,7 @@ title: Sum a list
 xp: 20
 difficulty: 2
 tags: [loops]
+boss: true
 spec:
   language: python
   runner: pyodide

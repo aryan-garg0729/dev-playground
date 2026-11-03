@@ -82,6 +82,7 @@ type TestFile struct {
 type TestCase struct {
 	Name     string `json:"name"`
 	Label    string `json:"label"` // first docstring line
+	Input    string `json:"input"` // the docstring's "input:" line, if any (for Peek)
 	Ran      bool   `json:"ran"`
 	Passed   bool   `json:"passed"`
 	Message  string `json:"message"` // assertion message

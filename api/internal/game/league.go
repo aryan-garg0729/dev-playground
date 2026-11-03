@@ -93,6 +93,24 @@ type Leagues struct {
 	Pool *pgxpool.Pool
 	Now  func() time.Time
 	Log  *slog.Logger
+	// Rewards, when set, runs in the close transaction (league Bytes, medals).
+	Rewards LeagueRewards
+}
+
+// LeagueResult is one member's week.
+type LeagueResult struct {
+	User    uuid.UUID
+	Tier    string // the week's tier
+	NewTier string
+	Rank    int
+	Of      int
+	Result  string // promoted | demoted | stayed
+	Shield  bool   // a League Shield turned a demotion into a stay
+}
+
+// LeagueRewards reacts to a closed week inside the close transaction.
+type LeagueRewards interface {
+	OnLeagueClosed(ctx context.Context, tx pgx.Tx, week time.Time, results []LeagueResult) error
 }
 
 // CloseDue closes every week before the current one that has members and is
@@ -135,6 +153,7 @@ func (l *Leagues) closeWeek(ctx context.Context, week time.Time) (bool, error) {
 		if err != nil {
 			return fmt.Errorf("groups: %w", err)
 		}
+		var results []LeagueResult
 		for _, g := range groups {
 			rows, err := q.LeagueStandings(ctx, store.LeagueStandingsParams{Week: week, Tier: g.Tier, GroupNo: g.GroupNo})
 			if err != nil {
@@ -142,14 +161,31 @@ func (l *Leagues) closeWeek(ctx context.Context, week time.Time) (bool, error) {
 			}
 			moves := Moves(g.Tier, len(rows))
 			for i, r := range rows {
+				res := LeagueResult{User: r.UserID, Tier: g.Tier, Rank: i + 1, Of: len(rows), Result: moves[i]}
+				if res.Result == Demoted {
+					shielded, err := q.IsLeagueShielded(ctx, store.IsLeagueShieldedParams{UserID: r.UserID, Week: week.Format(time.DateOnly)})
+					if err != nil {
+						return fmt.Errorf("shield: %w", err)
+					}
+					if shielded {
+						res.Result, res.Shield = Stayed, true
+					}
+				}
+				res.NewTier = NextTier(g.Tier, res.Result)
 				if err := q.SetLeagueResult(ctx, store.SetLeagueResultParams{
-					Week: week, UserID: r.UserID, FinalRank: int32(i + 1), Result: moves[i],
+					Week: week, UserID: r.UserID, FinalRank: int32(res.Rank), Result: res.Result,
 				}); err != nil {
 					return fmt.Errorf("result: %w", err)
 				}
-				if err := q.SetLeagueTier(ctx, store.SetLeagueTierParams{UserID: r.UserID, LeagueTier: NextTier(g.Tier, moves[i])}); err != nil {
+				if err := q.SetLeagueTier(ctx, store.SetLeagueTierParams{UserID: r.UserID, LeagueTier: res.NewTier}); err != nil {
 					return fmt.Errorf("tier: %w", err)
 				}
+				results = append(results, res)
+			}
+		}
+		if l.Rewards != nil {
+			if err := l.Rewards.OnLeagueClosed(ctx, tx, week, results); err != nil {
+				return fmt.Errorf("league rewards: %w", err)
 			}
 		}
 		did = true

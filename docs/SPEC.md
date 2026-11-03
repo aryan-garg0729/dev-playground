@@ -191,7 +191,7 @@ exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 - mcq: `question` names a markdown file; `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
 - Run location (decided in Phase 3): `code` and `sql` specs take `run: browser | server | off`. `browser` runs in the sandbox iframe (Pyodide for Python, sql.js for SQL); `server` sends the answer to `POST /exercises/{id}/run`, which runs it on the grading worker with visible checks only, ungraded and not stored; `off` hides Run. Defaults: `pyodide` → browser, `docker-python` → server, `sql` → browser. Changing it is a manifest edit plus `cq build`; content CI checks the solution's visible checks wherever `run:` points, so a lesson moved to `browser` whose packages don't load there fails CI.
 - code (decided in Phase 2): `language: python`; `runner: docker-python` (submit-only) or `pyodide` (server grades it on `docker-python`); `prompt` (markdown), `entry` (a module file name such as `main.py`), `starter` and `solution` are required files; `limits` default to 3000 ms / 128 MB, capped at 10000 ms / 512 MB; `examples`, `constraints` and `hints` are optional and public. At least one check. `solution.*` and `wrong/*.py` are read by `cq build`/`cq test` but never stored in `private_spec`; hidden test sources are stored there (server-only). Visible test files are sent to the browser as `visible_tests`.
-- Test files are Python modules with top-level `test_*` functions that import from the entry module. A test's docstring is its row name. `from cq import expect` gives `expect(got, expected)`, which compares exact types (so a learner object with a rigged `__eq__` cannot pass) and reports got/expected. Label hidden tests in words: a hidden label that looks like code (contains `()[]{}=`) is replaced by "Hidden test N". `cq.fakes` (fake chat models) is available to tests and learner code in the image.
+- Test files are Python modules with top-level `test_*` functions that import from the entry module. A test's docstring is its row name. `from cq import expect` gives `expect(got, expected)`, which compares exact types (so a learner object with a rigged `__eq__` cannot pass) and reports got/expected. Label hidden tests in words: a hidden label that looks like code (contains `()[]{}=`) is replaced by "Hidden test N". A hidden test may declare its input on a docstring line `input: <call>` (e.g. `input: fizzbuzz(15)[14]`); the harness parent reads it from the AST, the API keeps it server-side (`submissions.hidden_inputs`, never serialized in a `Result`) and only Peek reveals it, for one failed check. The API cuts it at `==`, `->` or `→`, so never write the expected value there. `cq.fakes` (fake chat models) is available to tests and learner code in the image.
 
 ## Exercise type plugin system
 
@@ -444,7 +444,7 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
 CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (browsers always send one on these methods; a missing one is refused) and `Content-Type: application/json` (a cross-site form cannot send it without a CORS preflight). The session cookie is also `SameSite=Lax`.
 
@@ -474,7 +474,7 @@ Rules for v1 (keep all numbers in `game/config.go`):
 
 All writes for one submission (submission row, progress, xp_events, user_stats, day_passes, league membership; medals and quests later) happen in a single DB transaction, which locks the user's `user_stats` row. The leaderboard update to Redis happens after commit and is idempotent (the group's set is rewritten from Postgres).
 
-Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home shows Daily quests and Review as disabled "Coming soon" placeholders until those ship (decision 2026-11-03).
+Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home showed Daily quests and Review as disabled "Coming soon" placeholders (decision 2026-11-03); quests arrived with Phase 7, Review stays a placeholder until reviews exist.
 
 ## Game economy: Bytes, power-ups, medals, quests
 
@@ -486,7 +486,8 @@ Designed screens: `screens/home.png` (daily quests), `screens/boss-fight.png`, `
 
 - Earn only, never sold. Pro grants a small monthly amount.
 - Ledger table `byte_events(id, user_id, amount, reason, ref_id, created_at)`, append-only like `xp_events`; balance cached in `user_stats.bytes`.
-- Starting values (in `economy/config.go`): daily chest 40–80, chapter complete 150, boss defeated 300, medal 50–500 by tier, league top 5: 200.
+- Starting values (in `economy/catalog.go`): daily chest 40–80, chapter complete 150, boss defeated 300, medal 50–500 by tier (bronze 50, silver 150, gold 300, diamond 500), league top 5: 200, weekly quest 150.
+- Every reward is a ledger row unique on `(user_id, reason, ref_id)` (e.g. `chapter`/chapter id, `medal`/`id:tier`, `buy:<powerup>`/request id), so each lands once; `user_stats.bytes` changes in the same statement batch and a `CHECK (bytes >= 0)` plus the guarded update make overspending impossible.
 
 ### Power-ups
 
@@ -502,14 +503,24 @@ Designed screens: `screens/home.png` (daily quests), `screens/boss-fight.png`, `
 | League Shield | No demotion this week | Not two weeks in a row | 400 |
 | Double or Nothing | Bet that the daily goal is hit 7 days running; win 2× | One active bet; 100–500 | Stake |
 
-- Tables: `inventory(user_id, powerup, count)`, `powerup_uses(id, user_id, powerup, ref_id, created_at)`, `active_effects(user_id, effect, expires_at)`, `bets(id, user_id, stake, starts_on, status)`.
-- Endpoints: `GET /shop`, `POST /shop/{powerup}/buy`, `POST /powerups/{powerup}/use`, `GET /inventory`. Buying and using are server-side, in one transaction with the Byte ledger, idempotent by request id.
+- Tables: `inventory(user_id, powerup, count)`, `powerup_uses(id, user_id, powerup, ref_id, created_at)`, `active_effects(user_id, effect, ref_id, expires_at)`, `bets(id, user_id, stake, goal, starts_on, status)`, `idempotency(user_id, request_id, action, response json)`. Held Streak Freezes stay in `user_stats.streak_freezes` (`CHECK` 0–2).
+- Endpoints: `GET /shop`, `POST /shop/{powerup}/buy`, `POST /powerups/{powerup}/use`, `GET /inventory` (same body as `/shop`). Buying and using are server-side, in one transaction with the Byte ledger, idempotent by request id: the first response is stored (as `json`, byte-for-byte) and replayed; a failed request stores nothing; reusing an id for another action is `409 request_reused`. The client sends a new UUID per click.
+- Rules as built (Phase 7):
+  - **Streak Freeze** is spent by the daily rollover on each missed day (or lazily by the next pass if the job has not run); a streak the freezes cannot cover is lost (recorded for Streak Repair, freezes kept).
+  - **Streak Repair** is used, not bought: 1,500 Bytes when a streak was lost within the last 2 days; it restores the lost length (plus any days since) and is allowed once per 30 days.
+  - **Focus Boost**: one use per local day, 15 minutes; the boost equals the rest of the award (2×).
+  - **Second Wind** is armed on an exercise right after exactly one failed submit (one per chapter); the next submit keeps the first-try bonus. **Peek** sets `progress.peeked`, which removes the first-try bonus even with Second Wind. Peek with no failed hidden check that declares an input is refused and costs nothing.
+  - **League Shield** is used for the current week (not if the previous week was shielded); at the close a demotion becomes a stay.
+  - **Double or Nothing**: stake 100–500, uses the daily goal at the time of the bet, starts today; settled at a pass, the rollover or a shop visit: lost once a finished day misses the goal, won (2× the stake back) when all 7 days meet it.
+  - **Holiday Mode** (Pro, Phase 5) and **Extra Hint** (tutor, Phase 6) show in the shop as unavailable ("Pro", "Coming soon") until those phases ship.
+  - Daily rollover job (API, every 10 minutes): users whose local date moved on and who were active in 14 days or hold an open bet; spends freezes, settles bets, evaluates medals; once per local date (`user_stats.rolled_over_on`).
 
 ### Medals
 
 - About 22 medals in families: Consistency, Mastery, Craft, Memory, League, Secret. Tiers Bronze → Silver → Gold, a few Diamond. Secret medals show "???" until earned.
 - `medals(id, family, name, secret, tiers jsonb)` where each tier holds a rule (`{"kind":"streak","gte":30}`), Bytes reward and optional title or cosmetic. `user_medals(user_id, medal_id, tier, earned_at)`.
 - Evaluated by the game engine after each graded submission, review, league close and daily rollover.
+- As built: 20 medals are defined in `economy/catalog.go` (synced to `medals` at startup) plus Reviewer (Memory), shown as "coming soon" until reviews exist. A rule is a stat and thresholds: user stats (`longest_streak`, `total_xp`) or `counters(user_id, key, value)` bumped on events: first passes (lessons, first_try, no_hint, comebacks, persistent, night 22:00–04:00 and early 05:00–08:00 local), flawless chapters, courses, bosses, goal days, league top 5 / podium / highest tier / shield saves, bets won. Each tier is awarded once (`user_medals` key) with its Bytes once (ledger key). Every tier grants a title ("Boss Slayer I"); the user wears one via `PATCH /me {title}` (only earned titles), shown on the profile and league rows. Cosmetics: not built yet.
 - Medals grant titles (shown on profile and league rows) and cosmetics (editor themes, avatar frames). Cosmetics are never sold.
 - Medal colors are design tokens: `medal-bronze`, `medal-silver`, `medal-gold`, `medal-diamond`.
 
@@ -517,12 +528,14 @@ Designed screens: `screens/home.png` (daily quests), `screens/boss-fight.png`, `
 
 - Three daily quests drawn from a pool (pass 2 lessons, one first-try pass, finish a review…) plus one weekly quest. `quests(id, cadence, rule jsonb, reward jsonb)`, `user_quests(user_id, quest_id, period, progress, done_at)`.
 - Completing all three opens the daily chest: Bytes plus a random power-up. Odds live in config and are shown to users.
+- As built: daily pool of five (pass 2 lessons, a first-try pass, earn 50 XP, pass a coding lesson, pass a quiz; "finish a review" waits for reviews), three per user per local day chosen by a hash of user and date (stable all day, nothing stored until progress); weekly pool of three (10 lessons, goal on 5 days, 300 XP), 150 Bytes on completion. Progress counts a lesson once per day (re-solving the same one does not add). The chest is opened with `POST /quests/chest/open` (once per local day, `chests` key): 40–80 Bytes and one power-up drawn from Focus Boost 40, Peek 30, Second Wind 20, League Shield 10 (weights, shown on Home). Randomness is server-side (`crypto/rand`).
 
 ### Boss fights
 
 - A boss is a `code` exercise with `boss: true`. Its checks are its HP; each passing check removes one HP. Same grader and `Result`; only the UI and rewards differ.
 - Defeat reward: +100 XP, boss chest, Boss Slayer progress, unlocks the next chapter.
 - Primary button reads "Attack"; results show HIT / BLOCK rows. HP bar uses the `boss-hp` token.
+- As built: a code exercise's public view carries `check_counts {visible, hidden}` (rows grading will produce; `cq test` fails if they differ), so the HP bar is right before the first attack. A chapter is locked while any earlier chapter of the course has a boss the user has not passed: its lessons answer `403 chapter_locked` (GET, Run, Submit, power-ups) and the course map shows it locked. The first defeat opens the boss chest (300 Bytes and a power-up) once.
 
 ## AI tutor
 
@@ -624,6 +637,8 @@ Scope: tutor with SSE streaming and limits, onboarding, landing page, analytics 
 - [ ] Tutor never returns the reference solution for any sample exercise (scripted eval of 20 "give me the answer" prompts).
 - [ ] Daily hint limits enforced per plan.
 - [ ] Lighthouse score above 90 on the landing page.
+
+> Decision 2026-11-03: Phases 5 (payments) and 6 (AI tutor) are skipped for now and Phase 7 is built first, at the author's request. Phase 7 features that need them (Holiday Mode, Extra Hint, Pro's monthly Bytes, review quests and the Memory medals) show as unavailable or "coming soon" until those phases ship.
 
 ### Phase 7 — Game economy
 

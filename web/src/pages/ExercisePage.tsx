@@ -6,6 +6,7 @@ import { AppHeader } from '../components/AppHeader';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons';
 import { LessonRail, type RailLesson } from '../components/LessonRail';
 import { PassCelebration } from '../components/PassCelebration';
+import { PowerUpsPanel } from '../components/PowerUpsPanel';
 import { DifficultyPill, Pill } from '../components/Pill';
 import { type RunMode, type RunOutput, renderers, sandboxJobs } from '../exercise-types';
 import { runInSandbox, warmSandbox } from '../runner-client/sandbox';
@@ -76,6 +77,12 @@ function useRun(ex: ExerciseDetail): ((answer: unknown) => Promise<RunOutput>) |
   return undefined;
 }
 
+/** What defeating this chapter's boss gives. */
+function bossInfo(course: CourseDetail | undefined, chapterNo: number) {
+  const unlocks = course && chapterNo > 0 && chapterNo < course.chapters.length ? ` · unlocks chapter ${chapterNo + 1}` : '';
+  return { reward: `Boss chest · Boss Slayer medal${unlocks}` };
+}
+
 /** The next lesson's link and title, from the course outline. */
 function nextLesson(ex: ExerciseDetail, course: CourseDetail | undefined) {
   if (!ex.next_id) return undefined;
@@ -95,7 +102,14 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
   const onRun = useRun(ex);
   const Renderer = renderers[ex.type];
 
-  const header = (
+  const chapterNo = (course?.chapters.findIndex((c) => c.id === ex.chapter.id) ?? -1) + 1;
+  const boss = ex.boss ? bossInfo(course, chapterNo) : undefined;
+  const header = ex.boss ? (
+    <div className="flex flex-col gap-2">
+      <p className="text-game-sm tracking-[0.15em] text-accent-text">BOSS · CHAPTER {chapterNo || ''}</p>
+      <h1 className="text-page-title text-text">{ex.title}</h1>
+    </div>
+  ) : (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-1.5">
         <DifficultyPill difficulty={ex.difficulty} />
@@ -113,6 +127,8 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
     <>
       <Renderer
         header={header}
+        boss={boss}
+        aside={<PowerUpsPanel exerciseId={ex.id} result={result} />}
         publicView={ex.public_view}
         draft={draft}
         result={result}

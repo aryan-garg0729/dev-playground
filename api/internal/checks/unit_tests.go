@@ -74,6 +74,9 @@ func (unitTests) Run(_ context.Context, in CheckInput) ([]exercise.CheckResult, 
 		}
 		if !row.Passed {
 			row.Feedback, row.Line = caseFeedback(tc, visible, syntax, timedOut)
+			if !visible {
+				row.Input = PeekInput(tc.Input) // server-side only (json:"-")
+			}
 			if visible && tc.Ran && tc.Error == "" {
 				row.Got, row.Expected = tc.Got, tc.Expected
 			}
@@ -111,6 +114,21 @@ func caseFeedback(tc TestCase, visible bool, syntax *SyntaxError, timedOut bool)
 	default:
 		return "Assertion failed", tc.Line
 	}
+}
+
+// PeekInput is what Peek may show of a hidden test's declared input: the call
+// only, cut before anything that could state the expected result.
+func PeekInput(s string) string {
+	for _, sep := range []string{"==", "->", "→", "\n"} {
+		if i := strings.Index(s, sep); i >= 0 {
+			s = s[:i]
+		}
+	}
+	s = strings.TrimSpace(s)
+	if len(s) > 200 {
+		s = s[:200]
+	}
+	return s
 }
 
 // looksLikeCode guards hidden test labels: authors should label hidden tests in

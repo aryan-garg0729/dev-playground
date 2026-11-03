@@ -18,6 +18,7 @@ import (
 
 	"github.com/aryangarg/codequest/api/internal/auth"
 	"github.com/aryangarg/codequest/api/internal/content"
+	"github.com/aryangarg/codequest/api/internal/economy"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all"
 	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
@@ -77,6 +78,7 @@ type opts struct {
 	devAuth       bool
 	github        *auth.GitHub
 	now           func() time.Time
+	rand          func(n int) int
 }
 
 func setup(t *testing.T, withUser bool) *env {
@@ -103,8 +105,12 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	}
 	rdb, prefix := testredis.New(t)
 	board := &game.Board{Redis: rdb, Prefix: prefix}
+	econ := &economy.Service{Pool: pool, Now: o.now, Rand: o.rand}
+	if err := econ.Sync(ctx); err != nil {
+		t.Fatal(err)
+	}
 	grader := grading.NewService(pool, o.runner, grading.Options{
-		Wait: o.wait, Log: slog.New(slog.DiscardHandler), Board: board, Game: &game.Engine{Now: o.now},
+		Wait: o.wait, Log: slog.New(slog.DiscardHandler), Board: board, Game: &game.Engine{Now: o.now, Rewards: econ},
 	})
 	t.Cleanup(grader.Close)
 	sessions := &auth.Sessions{Pool: pool}
@@ -112,7 +118,7 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	h := httpapi.New(httpapi.Deps{
 		Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grader, AllowedOrigins: []string{origin},
 		Sessions: sessions, Links: &auth.MagicLinks{Pool: pool, Mailer: mail, AppURL: origin},
-		GitHub: o.github, DevAuth: o.devAuth, Board: board, Now: o.now,
+		GitHub: o.github, DevAuth: o.devAuth, Board: board, Economy: econ, Now: o.now,
 		Limiter: &ratelimit.Limiter{Redis: rdb, Prefix: prefix}, SubmitPerUser: o.submitPerUser,
 	})
 	e := &env{t: t, pool: pool, h: h, mail: mail, rdb: rdb, prefix: prefix}
@@ -177,6 +183,7 @@ func submitBody(choices ...string) string {
 type courseDetail struct {
 	Chapters []struct {
 		ID        string `json:"id"`
+		Locked    bool   `json:"locked"`
 		Exercises []struct {
 			ID     string `json:"id"`
 			Status string `json:"status"`
@@ -227,8 +234,20 @@ func TestNoServerOnlyContentInAnyResponse(t *testing.T) {
 			for _, ch := range cd.Chapters {
 				for _, ex := range ch.Exercises {
 					p := "/api/v1/exercises/" + ex.ID
-					bodies[p] = e.getJSON(p, nil)
+					code, body := e.do(http.MethodGet, p, "", nil)
+					switch {
+					case code == http.StatusOK:
+					case code == http.StatusForbidden && ch.Locked && bytes.Contains(body, []byte("chapter_locked")):
+					default:
+						t.Fatalf("GET %s = %d: %s", p, code, body)
+					}
+					bodies[p] = body
 				}
+			}
+		}
+		if withUser {
+			for _, p := range []string{"/api/v1/me", "/api/v1/home", "/api/v1/shop", "/api/v1/quests", "/api/v1/medals", "/api/v1/leagues/current"} {
+				bodies[p] = e.getJSON(p, nil)
 			}
 		}
 		if _, ok := bodies["/api/v1/exercises/"+exID]; !ok {

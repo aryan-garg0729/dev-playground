@@ -77,16 +77,17 @@ func (q *Queries) IsLeagueWeekClosed(ctx context.Context, week time.Time) (bool,
 }
 
 const leagueStandings = `-- name: LeagueStandings :many
-SELECT m.user_id, u.name, u.email, u.avatar,
+SELECT m.user_id, u.name, u.email, u.avatar, COALESCE(us.title, '')::text AS title,
        COALESCE(sum(x.amount), 0)::int AS weekly_xp,
        COALESCE(max(x.created_at), '9999-01-01'::timestamptz)::timestamptz AS last_xp_at
 FROM league_members m
 JOIN users u ON u.id = m.user_id
+LEFT JOIN user_stats us ON us.user_id = m.user_id
 LEFT JOIN xp_events x ON x.user_id = m.user_id
     AND x.created_at >= m.week::timestamp AT TIME ZONE 'UTC'
     AND x.created_at < (m.week + 7)::timestamp AT TIME ZONE 'UTC'
 WHERE m.week = $1 AND m.tier = $2 AND m.group_no = $3
-GROUP BY m.user_id, u.name, u.email, u.avatar
+GROUP BY m.user_id, u.name, u.email, u.avatar, us.title
 ORDER BY weekly_xp DESC, last_xp_at ASC, m.user_id
 `
 
@@ -101,6 +102,7 @@ type LeagueStandingsRow struct {
 	Name     string    `json:"name"`
 	Email    string    `json:"email"`
 	Avatar   string    `json:"avatar"`
+	Title    string    `json:"title"`
 	WeeklyXp int32     `json:"weekly_xp"`
 	LastXpAt time.Time `json:"last_xp_at"`
 }
@@ -120,6 +122,7 @@ func (q *Queries) LeagueStandings(ctx context.Context, arg LeagueStandingsParams
 			&i.Name,
 			&i.Email,
 			&i.Avatar,
+			&i.Title,
 			&i.WeeklyXp,
 			&i.LastXpAt,
 		); err != nil {

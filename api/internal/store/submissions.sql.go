@@ -176,7 +176,7 @@ ON CONFLICT (user_id, exercise_id) DO UPDATE SET
     attempts = progress.attempts + 1,
     status = CASE WHEN progress.status = 'passed' OR $3::bool THEN 'passed' ELSE 'started' END,
     first_passed_at = COALESCE(progress.first_passed_at, EXCLUDED.first_passed_at)
-RETURNING attempts, used_hint
+RETURNING attempts, used_hint, peeked, first_try
 `
 
 type RecordAttemptParams struct {
@@ -188,12 +188,19 @@ type RecordAttemptParams struct {
 type RecordAttemptRow struct {
 	Attempts int32 `json:"attempts"`
 	UsedHint bool  `json:"used_hint"`
+	Peeked   bool  `json:"peeked"`
+	FirstTry bool  `json:"first_try"`
 }
 
 // Returns the progress after this attempt (attempts counts it).
 func (q *Queries) RecordAttempt(ctx context.Context, arg RecordAttemptParams) (RecordAttemptRow, error) {
 	row := q.db.QueryRow(ctx, recordAttempt, arg.UserID, arg.ExerciseID, arg.Passed)
 	var i RecordAttemptRow
-	err := row.Scan(&i.Attempts, &i.UsedHint)
+	err := row.Scan(
+		&i.Attempts,
+		&i.UsedHint,
+		&i.Peeked,
+		&i.FirstTry,
+	)
 	return i, err
 }

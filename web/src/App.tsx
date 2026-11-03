@@ -6,6 +6,8 @@ import { CoursesPage } from './pages/CoursesPage';
 import { ExercisePage } from './pages/ExercisePage';
 import { HomePage } from './pages/HomePage';
 import { LeaguePage } from './pages/LeaguePage';
+import { ProfilePage } from './pages/ProfilePage';
+import { ShopPage } from './pages/ShopPage';
 import { SignInPage } from './pages/SignInPage';
 import { LoadError } from './pages/states';
 import { VerifyPage } from './pages/VerifyPage';
@@ -22,6 +24,8 @@ export function App() {
       <Route path="/courses/:courseId" element={auth(<CoursePage />)} />
       <Route path="/learn/:courseId/:exerciseId" element={auth(<ExercisePage />)} />
       <Route path="/league" element={auth(<LeaguePage />)} />
+      <Route path="/shop" element={auth(<ShopPage />)} />
+      <Route path="/profile" element={auth(<ProfilePage />)} />
       <Route path="*" element={<LoadError error={new Error('Page not found')} />} />
     </Routes>
   );

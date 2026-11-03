@@ -1,0 +1,13 @@
+id: demo.more.after
+type: mcq
+version: 1
+title: After the boss
+xp: 5
+free: true
+spec:
+  question: prompt.md
+  options:
+    - { id: a, text: "Alpha" }
+    - { id: b, text: "Beta" }
+  answer: [b]
+  explain: Unlocked by the boss.

@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router';
 import type { Me } from '../api/client';
 import { useMe, useSignOut } from '../api/queries';
 import { GameStats } from './GameStats';
+import { Bytes } from './powerups';
 import { CodeIcon } from './icons';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -51,6 +52,12 @@ function AccountMenu({ me }: { me: Me }) {
       {open && (
         <div role="menu" className="absolute right-0 top-10 z-20 w-56 rounded-md border border-border bg-surface p-2">
           <p className="text-caption truncate px-2 py-1 text-text-muted">{me.user.email}</p>
+          <Link role="menuitem" to="/profile" className="text-small block rounded-md px-2 py-1.5 text-text hover:bg-surface-raised">
+            Profile and medals
+          </Link>
+          <Link role="menuitem" to="/shop" className="text-small block rounded-md px-2 py-1.5 text-text hover:bg-surface-raised">
+            Power-ups
+          </Link>
           <button
             type="button"
             role="menuitem"
@@ -97,6 +104,15 @@ export function AppHeader({ center }: { center?: ReactNode }) {
       </div>
       <div className="min-w-0">{center}</div>
       <div className="flex items-center justify-end gap-[14px]">
+        {s && (
+          <Link
+            to="/shop"
+            aria-label={`${s.bytes} Bytes: open the power-up shop`}
+            className="flex h-8 items-center rounded-md border border-border px-2.5 text-text hover:bg-surface-raised max-sm:hidden"
+          >
+            <Bytes n={s.bytes} className="text-game-sm" />
+          </Link>
+        )}
         {s && (
           <GameStats
             streakDays={s.streak_days}

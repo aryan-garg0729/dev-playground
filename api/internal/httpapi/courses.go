@@ -49,6 +49,7 @@ type exerciseSummary struct {
 type chapterDTO struct {
 	ID        string            `json:"id"`
 	Title     string            `json:"title"`
+	Locked    bool              `json:"locked"` // behind an earlier chapter's undefeated boss
 	Exercises []exerciseSummary `json:"exercises"`
 }
 
@@ -105,6 +106,11 @@ func (a *api) getCourse(w http.ResponseWriter, r *http.Request) {
 	if skills == nil {
 		skills = []string{}
 	}
+	locked, err := a.Economy.LockedChapters(ctx, currentUser(r), id)
+	if err != nil {
+		a.internal(w, r, err)
+		return
+	}
 	out := courseDetail{
 		ID: c.ID, Title: c.Title, Description: c.Description, Chapters: make([]chapterDTO, 0, len(chapters)),
 		Skills: skills, XPEarned: int(xp.Earned), XPTotal: int(xp.Total),
@@ -114,7 +120,7 @@ func (a *api) getCourse(w http.ResponseWriter, r *http.Request) {
 		if list == nil {
 			list = []exerciseSummary{}
 		}
-		out.Chapters = append(out.Chapters, chapterDTO{ID: ch.ID, Title: ch.Title, Exercises: list})
+		out.Chapters = append(out.Chapters, chapterDTO{ID: ch.ID, Title: ch.Title, Locked: locked[ch.ID], Exercises: list})
 	}
 	writeJSON(w, http.StatusOK, out)
 }

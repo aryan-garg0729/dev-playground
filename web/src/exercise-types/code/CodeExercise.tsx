@@ -17,6 +17,8 @@ export interface CodePublicView {
   constraints: string[];
   hints: string[];
   visible_tests: { file: string; source: string }[];
+  /** How many result rows grading produces: a boss's HP. */
+  check_counts?: { visible: number; hidden: number };
 }
 
 export interface CodeAnswer {
@@ -51,8 +53,10 @@ function Hints({ hints }: { hints: string[] }) {
   );
 }
 
-export function CodeExercise({ header, publicView: pv, draft, onChange, onRun, onSubmit, result }: ExerciseRendererProps<CodePublicView, CodeAnswer>) {
+export function CodeExercise(props: ExerciseRendererProps<CodePublicView, CodeAnswer>) {
+  const { header, publicView: pv, draft, onChange, onRun, onSubmit, result, aside, boss } = props;
   const code = draft?.files[pv.entry] ?? pv.starter;
+  const counts = pv.check_counts;
   const answer: CodeAnswer = { files: { [pv.entry]: code } };
   return (
     <Workspace
@@ -78,6 +82,8 @@ export function CodeExercise({ header, publicView: pv, draft, onChange, onRun, o
       onRun={onRun && (() => onRun(answer))}
       onSubmit={() => onSubmit(answer)}
       result={result}
+      aside={aside}
+      boss={boss && counts ? { ...boss, maxHP: counts.visible + counts.hidden } : undefined}
     />
   );
 }

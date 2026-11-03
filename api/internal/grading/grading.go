@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 	"time"
 
@@ -201,6 +202,9 @@ func (s *Service) store(ctx context.Context, user uuid.UUID, ex exercise.Exercis
 		if err != nil {
 			return fmt.Errorf("store submission: %w", err)
 		}
+		if err := storeHiddenInputs(ctx, tx, created.ID, res); err != nil {
+			return err
+		}
 		g = Graded{SubmissionID: created.ID, Result: res, Outcome: out, CreatedAt: created.CreatedAt}
 		return nil
 	})
@@ -220,7 +224,7 @@ func (s *Service) applyGame(ctx context.Context, tx pgx.Tx, user uuid.UUID, ex e
 	if err != nil {
 		return game.Outcome{}, nil, fmt.Errorf("record progress: %w", err)
 	}
-	out, err := s.opt.Game.OnGraded(ctx, tx, user, ex, res, game.Progress{Attempts: int(p.Attempts), UsedHint: p.UsedHint})
+	out, err := s.opt.Game.OnGraded(ctx, tx, user, ex, res, game.Progress{Attempts: int(p.Attempts), UsedHint: p.UsedHint, Peeked: p.Peeked})
 	if err != nil {
 		return game.Outcome{}, nil, fmt.Errorf("game: %w", err)
 	}
@@ -272,13 +276,35 @@ func (s *Service) finish(id, user uuid.UUID, ex exercise.Exercise, o outcome) {
 		}); err != nil {
 			return fmt.Errorf("finish submission: %w", err)
 		}
-		return nil
+		return storeHiddenInputs(ctx, tx, id, res)
 	})
 	if err != nil {
 		s.opt.Log.Error("store background result", "submission", id, "err", err)
 		return
 	}
 	s.afterCommit(ctx, out)
+}
+
+// storeHiddenInputs keeps the declared inputs of failed hidden checks
+// ({"<row index>": input}) in a server-only column, for Peek.
+func storeHiddenInputs(ctx context.Context, tx pgx.Tx, id uuid.UUID, res exercise.Result) error {
+	inputs := map[string]string{}
+	for i, c := range res.Checks {
+		if !c.Passed && !c.Visible && c.Input != "" {
+			inputs[strconv.Itoa(i)] = c.Input
+		}
+	}
+	if len(inputs) == 0 {
+		return nil
+	}
+	b, err := json.Marshal(inputs)
+	if err != nil {
+		return fmt.Errorf("encode hidden inputs: %w", err)
+	}
+	if err := store.New(tx).SetHiddenInputs(ctx, store.SetHiddenInputsParams{ID: id, HiddenInputs: b}); err != nil {
+		return fmt.Errorf("store hidden inputs: %w", err)
+	}
+	return nil
 }
 
 // ErrorResult is a Result for a grading failure that is not the learner's.

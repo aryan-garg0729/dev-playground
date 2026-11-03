@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import type { CourseDetail, Schemas } from '../../api/client';
-import { CheckIcon, StarIcon } from '../../components/icons';
+import { CheckIcon, LockIcon, StarIcon } from '../../components/icons';
 
 type Chapter = CourseDetail['chapters'][number];
 type Status = Schemas['ProgressStatus'];
-type ChapterState = 'done' | 'current' | 'todo';
+type ChapterState = 'done' | 'current' | 'todo' | 'locked';
 
 const typeLabel: Record<string, string> = { mcq: 'Quiz', code: 'Exercise', sql: 'SQL' };
 const bar: Record<Status, string> = { passed: 'bg-success', started: 'bg-border-strong', not_started: 'bg-border-strong' };
@@ -17,6 +17,13 @@ export function currentChapter(chapters: Chapter[]): number {
 }
 
 function Node({ state }: { state: ChapterState }) {
+  if (state === 'locked') {
+    return (
+      <span className="relative z-[1] flex h-8 w-8 items-center justify-center rounded-pill border-[3px] border-border-strong bg-bg text-text-muted">
+        <LockIcon size={12} />
+      </span>
+    );
+  }
   if (state === 'done') {
     return (
       <span className="relative z-[1] flex h-8 w-8 items-center justify-center rounded-pill bg-success-soft text-success">
@@ -77,10 +84,20 @@ export function ChapterTimeline({ course }: { course: CourseDetail }) {
       <span aria-hidden="true" className="absolute bottom-4 left-[15px] top-4 w-0.5 bg-border" />
       {course.chapters.map((ch, i) => {
         const done = ch.exercises.filter((e) => e.status === 'passed').length;
-        const state: ChapterState = done === ch.exercises.length && ch.exercises.length > 0 ? 'done' : i === current ? 'current' : 'todo';
+        const state: ChapterState = ch.locked
+          ? 'locked'
+          : done === ch.exercises.length && ch.exercises.length > 0
+            ? 'done'
+            : i === current
+              ? 'current'
+              : 'todo';
         const xp = ch.exercises.reduce((n, e) => n + e.xp, 0);
-        const isOpen = open.has(i);
-        const summary = state === 'done' ? `${ch.exercises.length} lessons · all done` : `${ch.exercises.length} lessons · ${done} done`;
+        const isOpen = open.has(i) && !ch.locked;
+        const summary = ch.locked
+          ? `${ch.exercises.length} lessons · defeat chapter ${i}'s boss to unlock`
+          : state === 'done'
+            ? `${ch.exercises.length} lessons · all done`
+            : `${ch.exercises.length} lessons · ${done} done`;
         return (
           <li key={ch.id} className="flex gap-5">
             <Node state={state} />
@@ -88,6 +105,7 @@ export function ChapterTimeline({ course }: { course: CourseDetail }) {
               <button
                 type="button"
                 aria-expanded={isOpen}
+                disabled={ch.locked}
                 onClick={() => toggle(i)}
                 className="flex w-full items-start justify-between gap-3 text-left"
               >

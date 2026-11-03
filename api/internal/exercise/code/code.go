@@ -104,6 +104,51 @@ type PublicView struct {
 	Constraints  []string   `json:"constraints"`
 	Hints        []string   `json:"hints"`
 	VisibleTests []TestFile `json:"visible_tests"`
+	// Checks counts the rows a Result will have (a boss's HP). cq test checks it.
+	CheckCounts CheckCounts `json:"check_counts"`
+}
+
+// CheckCounts is how many result rows are visible and hidden.
+type CheckCounts struct {
+	Visible int `json:"visible"`
+	Hidden  int `json:"hidden"`
+}
+
+// testFuncRe matches a top-level test function, as the harness discovers them.
+var testFuncRe = regexp.MustCompile(`(?m)^(?:async\s+)?def\s+test_\w*\s*\(`)
+
+// checkCounts counts result rows per check: one per test function for
+// unit_tests, one for every other kind.
+func (s Spec) checkCounts() CheckCounts {
+	var n CheckCounts
+	for _, c := range s.Checks {
+		if c.Kind != "unit_tests" {
+			var cfg struct {
+				Visible *bool `json:"visible"`
+			}
+			_ = json.Unmarshal(c.Config, &cfg)
+			if cfg.Visible == nil || *cfg.Visible || c.Kind == "forbidden_calls" {
+				n.Visible++
+			} else {
+				n.Hidden++
+			}
+			continue
+		}
+		var cfg checks.UnitTestsConfig
+		_ = json.Unmarshal(c.Config, &cfg)
+		count := 0
+		for _, t := range s.Tests {
+			if t.File == cfg.File {
+				count += len(testFuncRe.FindAllString(t.Source, -1))
+			}
+		}
+		if cfg.Visible != nil && *cfg.Visible {
+			n.Visible += count
+		} else {
+			n.Hidden += count
+		}
+	}
+	return n
 }
 
 // Answer is the learner's answer shape: exactly one file, the entry.
@@ -346,7 +391,7 @@ func (codeType) PublicView(ex exercise.Exercise) (json.RawMessage, error) {
 	b, err := json.Marshal(PublicView{
 		Language: s.Language, Runner: s.Runner, Run: s.Run, Prompt: s.Prompt, Entry: s.Entry, Starter: s.Starter,
 		TimeoutMs: s.Limits.TimeoutMs, Examples: orEmpty(s.Examples), Constraints: orEmpty(s.Constraints),
-		Hints: orEmpty(s.Hints), VisibleTests: s.visibleTests(),
+		Hints: orEmpty(s.Hints), VisibleTests: s.visibleTests(), CheckCounts: s.checkCounts(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("code: public view: %w", err)

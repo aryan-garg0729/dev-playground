@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { Home, LeagueSummary } from '../../api/client';
+import { useOpenChest, useQuests } from '../../api/queries';
 import { Button } from '../../components/Button';
+import { powerupName } from '../../components/powerups';
 import { CheckIcon, ChestIcon } from '../../components/icons';
 import { timeLeft, tierAbove, tierBelow, tierTitle } from './format';
 
@@ -61,25 +63,57 @@ export function TodayCard({ today }: { today: Home['today'] }) {
 
 const soon = <span className="text-caption rounded-pill bg-surface-raised px-2 py-0.5 text-text-muted">Coming soon</span>;
 
-/** Placeholder until quests and chests ship (Phase 7). */
+/** Today's three quests and the daily chest they open (screens/home.png). */
 export function QuestsCard() {
-  const quests = ['Pass 2 lessons', 'Pass one lesson on the first try', 'Finish a review'];
+  const { data } = useQuests();
+  const open = useOpenChest();
+  if (!data) return null;
+  const done = data.daily.filter((q) => q.done).length;
+  const chest = data.chest;
   return (
-    <Card title="Daily quests" aside={soon}>
-      <ul className="flex flex-col gap-3 opacity-60" aria-disabled="true">
-        {quests.map((q) => (
-          <li key={q} className="text-body flex items-center gap-3 text-text-muted">
-            <span className="flex h-5 w-5 items-center justify-center rounded-sm border border-border-strong" aria-hidden="true">
-              <CheckIcon size={12} className="invisible" />
+    <Card title="Daily quests" aside={`resets in ${timeLeft(data.resets_at)}`}>
+      <ul className="flex flex-col gap-3">
+        {[...data.daily, data.weekly].map((q) => (
+          <li key={q.id} className="text-body flex items-center gap-3" aria-label={`${q.name}: ${q.progress} of ${q.target}${q.done ? ', done' : ''}`}>
+            <span
+              aria-hidden="true"
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-sm ${q.done ? 'bg-success text-bg' : 'border border-border-strong'}`}
+            >
+              {q.done && <CheckIcon size={12} />}
             </span>
-            {q}
+            <span className={`flex-1 ${q.done ? 'text-text-muted line-through' : 'text-text'}`}>
+              {q.name}
+              {q.cadence === 'weekly' && <span className="text-caption ml-2 text-text-muted">weekly · +{q.bytes}</span>}
+            </span>
+            <span className="text-game-sm text-text-secondary">
+              {q.progress}/{q.target}
+            </span>
           </li>
         ))}
       </ul>
-      <div className="flex items-center gap-3 rounded-md border border-dashed border-border p-4 opacity-60">
-        <ChestIcon size={22} className="text-text-muted" />
-        <p className="text-small text-text-muted">Daily chests with Bytes and power-ups arrive with quests.</p>
+      <div className="flex items-center gap-3 rounded-md border border-accent-line bg-accent-soft p-4">
+        <ChestIcon size={22} className="text-accent-text" />
+        <div className="flex flex-1 flex-col">
+          <span className="text-section text-text">Daily chest</span>
+          <span className="text-small text-text-secondary">
+            {chest.opened
+              ? `Opened: +${chest.opened.bytes} Bytes and ${powerupName(chest.opened.powerup)}`
+              : chest.ready
+                ? 'Ready to open'
+                : `${3 - done} quest${3 - done === 1 ? '' : 's'} left · Bytes and a random power-up`}
+          </span>
+        </div>
+        {chest.ready && !chest.opened ? (
+          <Button variant="primary" disabled={open.isPending} onClick={() => open.mutate()}>
+            Open
+          </Button>
+        ) : (
+          <span className="text-game-sm text-accent-text">{done}/3</span>
+        )}
       </div>
+      <p className="text-caption text-text-muted">
+        Chest odds: {chest.odds.map((o) => `${powerupName(o.powerup)} ${o.weight}%`).join(' · ')}
+      </p>
     </Card>
   );
 }

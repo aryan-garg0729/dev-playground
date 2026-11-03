@@ -95,7 +95,11 @@ def scan(files, forbidden):
 
 
 def discover(tests):
-    """Top-level test_* functions of each test file, in source order, with docstring labels."""
+    """Top-level test_* functions of each test file, in source order, with docstring labels.
+
+    A docstring line "input: <call>" declares the test's input (for Peek, which
+    may reveal it for a failed hidden test; never its expected output).
+    """
     out = []
     for t in tests:
         tree = ast.parse(t["source"], filename=t["file"])  # validated by cq build
@@ -103,7 +107,8 @@ def discover(tests):
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
                 doc = (ast.get_docstring(node) or "").strip().splitlines()
-                cases.append({"name": node.name, "label": doc[0] if doc else ""})
+                inp = next((l.split(":", 1)[1].strip() for l in doc[1:] if l.strip().lower().startswith("input:")), "")
+                cases.append({"name": node.name, "label": doc[0] if doc else "", "input": inp[:200]})
         out.append({"file": t["file"], "cases": cases})
     return out
 
@@ -196,7 +201,7 @@ def run_tests(entry, tests, plan, timeout_s, limit):
         cases = []
         for c in p["cases"]:
             rec = got.get((p["file"], c["name"]))
-            case = {"name": c["name"], "label": c["label"], "ran": rec is not None, "passed": False,
+            case = {"name": c["name"], "label": c["label"], "input": c["input"], "ran": rec is not None, "passed": False,
                     "message": "", "error": "", "got": "", "expected": "", "line": 0}
             if rec is not None:
                 case["passed"] = rec.get("passed") is True
@@ -269,7 +274,7 @@ def main():
         report["tests"] = {"stdout": "", "stderr": "", "exit_code": 0, "timed_out": False, "runtime_ms": 0,
                            "completed": False,
                            "files": [{"file": p["file"], "cases": [
-                               {"name": c["name"], "label": c["label"], "ran": False, "passed": False,
+                               {"name": c["name"], "label": c["label"], "input": c["input"], "ran": False, "passed": False,
                                 "message": "", "error": "", "got": "", "expected": "", "line": 0}
                                for c in p["cases"]]} for p in plan]}
     report["runtime_ms"] = int((time.monotonic() - t0) * 1000)

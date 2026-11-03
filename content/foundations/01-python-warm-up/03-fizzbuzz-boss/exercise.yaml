@@ -1,0 +1,31 @@
+id: fd.py.fizzbuzz-boss
+type: code
+version: 1
+title: FizzBuzz
+xp: 50
+difficulty: 2
+tags: [loops, conditionals]
+free: true
+boss: true
+spec:
+  language: python
+  runner: pyodide
+  run: browser
+  prompt: prompt.md
+  entry: main.py
+  starter: starter.py
+  solution: solution.py
+  limits: { timeout_ms: 3000, memory_mb: 128 }
+  examples:
+    - { input: "n = 5", output: '["1", "2", "Fizz", "4", "Buzz"]' }
+  constraints:
+    - "0 ≤ n ≤ 10⁴"
+  hints:
+    - Which test has to come first, divisible by 3 or by 15?
+    - "% gives the remainder: i % 3 == 0 means i is a multiple of 3."
+  checks:
+    - kind: unit_tests
+      file: tests_visible.py
+      visible: true
+    - kind: unit_tests
+      file: tests_hidden.py

@@ -4,6 +4,7 @@ import type { Outcome, Result } from '../api/client';
 import { Button } from './Button';
 import { levelProgress } from './GameStats';
 import { CheckIcon, FlameIcon } from './icons';
+import { powerupName } from './powerups';
 
 interface Props {
   outcome: Outcome;
@@ -12,6 +13,29 @@ interface Props {
   next?: { to: string; title: string };
   courseTo: string;
   onClose: () => void;
+}
+
+/** Bytes, medals, quests and boss loot from the economy, if any. */
+function RewardsList({ outcome }: { outcome: Outcome }) {
+  const r = outcome.rewards;
+  const lines: string[] = [];
+  if (outcome.second_wind_kept) lines.push('Second Wind kept your first-try bonus');
+  if (r?.boss?.defeated && r.boss.chest) lines.push(`Boss chest: +${r.boss.chest.bytes} Bytes and ${powerupName(r.boss.chest.powerup)}`);
+  if (r?.boss?.unlocked_chapter) lines.push('Next chapter unlocked');
+  for (const m of r?.medals ?? []) lines.push(`Medal: ${m.name} (${m.tier}) · title "${m.title}"`);
+  for (const q of r?.quests_done ?? []) lines.push(`Quest done: ${q}`);
+  if (r?.chest_ready) lines.push('Daily chest ready to open on Home');
+  for (const g of r?.bytes ?? []) if (g.reason !== 'boss' && g.reason !== 'medal') lines.push(`${g.label}: +${g.amount} Bytes`);
+  if (lines.length === 0) return null;
+  return (
+    <ul aria-label="Rewards" className="flex flex-col gap-1.5">
+      {lines.map((l) => (
+        <li key={l} className="text-small text-text-secondary">
+          {l}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 function Row({ label, xp }: { label: string; xp: number }) {
@@ -76,6 +100,8 @@ export function PassCelebration({ outcome, result, next, courseTo, onClose }: Pr
             <Row label="Lesson complete" xp={b.base} />
             {b.first_try > 0 && <Row label="First-try bonus" xp={b.first_try} />}
             {b.no_hint > 0 && <Row label="No hints used" xp={b.no_hint} />}
+            {b.boss > 0 && <Row label="Boss defeated" xp={b.boss} />}
+            {b.boost > 0 && <Row label="Focus Boost ×2" xp={b.boost} />}
             <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
               <span className="text-section text-text">Total</span>
               <span className="text-game text-[24px] leading-[28px] text-accent-text">+{outcome.xp_awarded} XP</span>
@@ -110,6 +136,8 @@ export function PassCelebration({ outcome, result, next, courseTo, onClose }: Pr
             />
           </div>
         </div>
+
+        <RewardsList outcome={outcome} />
 
         <div className="flex flex-col gap-2">
           <Link

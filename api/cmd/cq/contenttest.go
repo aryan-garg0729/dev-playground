@@ -96,11 +96,42 @@ func contentTest(ctx context.Context, b *content.Bundle, run runner.Runner, out 
 		case !r.tc.wantPass && r.res.Status == exercise.StatusPass:
 			sayf(out, "FAIL %s: wrong answer passed every check\n", id)
 			failed++
+		case countMismatch(r) != "":
+			sayf(out, "FAIL %s: %s\n", id, countMismatch(r))
+			failed++
 		default:
 			sayf(out, "ok   %s: %s\n", id, r.res.Status)
 		}
 	}
 	return failed
+}
+
+// countMismatch checks a public view's declared check counts (a boss's HP)
+// against the rows grading produced.
+func countMismatch(r caseResult) string {
+	pv, err := r.tc.typ.PublicView(r.tc.ex)
+	if err != nil {
+		return "public view: " + err.Error()
+	}
+	var v struct {
+		Checks *struct{ Visible, Hidden int } `json:"check_counts"`
+	}
+	if json.Unmarshal(pv, &v) != nil || v.Checks == nil {
+		return ""
+	}
+	vis, hid := 0, 0
+	for _, c := range r.res.Checks {
+		if c.Visible {
+			vis++
+		} else {
+			hid++
+		}
+	}
+	if vis != v.Checks.Visible || hid != v.Checks.Hidden {
+		return fmt.Sprintf("public view declares %d visible + %d hidden checks, grading produced %d + %d",
+			v.Checks.Visible, v.Checks.Hidden, vis, hid)
+	}
+	return ""
 }
 
 func failing(r exercise.Result) string {

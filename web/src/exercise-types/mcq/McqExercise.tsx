@@ -15,7 +15,7 @@ export interface McqAnswer {
   choices: string[];
 }
 
-export function McqExercise({ header, publicView, draft, onChange, onSubmit, result }: ExerciseRendererProps<McqPublicView, McqAnswer>) {
+export function McqExercise({ header, publicView, draft, onChange, onSubmit, result, aside }: ExerciseRendererProps<McqPublicView, McqAnswer>) {
   const { question, multiple, options } = publicView;
   const choices = draft?.choices ?? [];
   const [pending, setPending] = useState(false);
@@ -71,6 +71,7 @@ export function McqExercise({ header, publicView, draft, onChange, onSubmit, res
           );
         })}
       </fieldset>
+      {aside}
 
       <div className="flex items-center gap-3">
         <Button variant="primary" onClick={submit} disabled={pending || choices.length === 0}>

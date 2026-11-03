@@ -10,7 +10,7 @@ FOR UPDATE OF s;
 
 -- name: GetUserStats :one
 SELECT s.total_xp, s.level, s.bytes, s.streak_days, s.streak_freezes, s.last_active_date,
-       s.league_tier, s.title, s.daily_goal, u.timezone
+       s.league_tier, s.title, s.daily_goal, s.longest_streak, u.timezone
 FROM user_stats s JOIN users u ON u.id = s.user_id
 WHERE s.user_id = @user_id;
 
@@ -36,10 +36,12 @@ VALUES (@user_id, @amount, @reason, @ref_id)
 ON CONFLICT (user_id, reason, ref_id) DO NOTHING
 RETURNING id;
 
--- name: RecordDayPass :exec
+-- name: RecordDayPass :one
+-- Returns no row when the exercise was already passed that day.
 INSERT INTO day_passes (user_id, day, exercise_id)
 VALUES (@user_id, @day, @exercise_id)
-ON CONFLICT DO NOTHING;
+ON CONFLICT DO NOTHING
+RETURNING day;
 
 -- name: ListDayPasses :many
 -- Lessons passed per day in [from, to].

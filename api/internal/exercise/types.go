@@ -73,6 +73,9 @@ type CheckResult struct {
 	Line int `json:"line,omitempty"`
 	// Weight scales this row in Score; 0 counts as 1. Not sent to the browser.
 	Weight float64 `json:"-"`
+	// Input is a failed hidden check's declared input (its test's `input:`
+	// docstring line), kept server-side for Peek. Never sent to the browser.
+	Input string `json:"-"`
 }
 
 // Result statuses.

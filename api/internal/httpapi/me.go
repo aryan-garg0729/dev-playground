@@ -36,6 +36,9 @@ type statsDTO struct {
 	LeagueTier    string `json:"league_tier"`
 	DailyGoal     int    `json:"daily_goal"`
 	TodayLessons  int    `json:"today_lessons"`
+	Bytes         int    `json:"bytes"`
+	Title         string `json:"title"`
+	LongestStreak int    `json:"longest_streak"`
 }
 
 type meResponse struct {
@@ -67,6 +70,7 @@ func (a *api) userStats(ctx context.Context, user uuid.UUID) (statsDTO, time.Tim
 		LevelStartXP: game.LevelStart(int(s.Level)), NextLevelXP: game.LevelStart(int(s.Level) + 1),
 		StreakDays: game.Current(streak, today), StreakFreezes: int(s.StreakFreezes),
 		LeagueTier: s.LeagueTier, DailyGoal: int(s.DailyGoal),
+		Bytes: int(s.Bytes), Title: s.Title, LongestStreak: int(s.LongestStreak),
 	}
 	if len(days) > 0 {
 		out.TodayLessons = int(days[0].Lessons)
@@ -103,6 +107,7 @@ type updateMeRequest struct {
 	Name      *string `json:"name"`
 	Timezone  *string `json:"timezone"`
 	DailyGoal *int    `json:"daily_goal"`
+	Title     *string `json:"title"` // one of the user's earned medal titles, or "" for none
 }
 
 func (a *api) updateMe(w http.ResponseWriter, r *http.Request) {
@@ -126,6 +131,12 @@ func (a *api) updateMe(w http.ResponseWriter, r *http.Request) {
 	case req.Name != nil && len(*req.Name) > 80:
 		writeError(w, http.StatusBadRequest, "bad_request", "name is too long")
 		return
+	}
+	if req.Title != nil {
+		if err := a.Economy.SetTitle(r.Context(), u.UUID, *req.Title); err != nil {
+			a.econError(w, r, err)
+			return
+		}
 	}
 	err := pgx.BeginFunc(r.Context(), a.Pool, func(tx pgx.Tx) error {
 		q := store.New(tx)

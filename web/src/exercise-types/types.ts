@@ -28,6 +28,15 @@ export interface ExerciseRendererProps<V = unknown, A = unknown> {
   onRun?: (answer: A) => Promise<RunOutput>; // ungraded run; absent when run is off
   onSubmit: (answer: A) => Promise<GradeResult>;
   result: GradeResult | undefined;
+  /** Page content for the bottom of the problem pane (the lesson's power-ups). */
+  aside?: ReactNode;
+  /** Set when the lesson is a chapter boss: renderers that support it show HP and "Attack". */
+  boss?: BossInfo;
+}
+
+/** A boss lesson: what defeating it gives. Its HP is its number of checks. */
+export interface BossInfo {
+  reward: string; // e.g. "Boss chest · Boss Slayer medal · unlocks chapter 2"
 }
 
 /** Builds the sandbox job for a browser Run of this type. */

@@ -227,3 +227,38 @@ func TestLeagueGroupsFillUp(t *testing.T) {
 		t.Fatalf("group sizes = %v", groups)
 	}
 }
+
+// Second Wind keeps the first-try bonus on the attempt after one failed
+// submit; Peek removes it; Focus Boost doubles the award.
+func TestPowerUpBonuses(t *testing.T) {
+	pool := setup(t)
+	clk := &clock{t: time.Date(2026, 11, 3, 10, 0, 0, 0, time.UTC)}
+	e := &game.Engine{Now: clk.Now}
+	effect := func(user uuid.UUID, name, ref string) {
+		if _, err := pool.Exec(context.Background(), `INSERT INTO active_effects (user_id, effect, ref_id, expires_at) VALUES ($1, $2, $3, $4)`,
+			user, name, ref, clk.Now().Add(time.Hour)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := newUser(t, pool, "sw@example.com", "UTC")
+	effect(a, "second_wind", sum.ID)
+	if out := graded(t, pool, e, a, sum, pass, 2); !out.FirstTry || !out.SecondWindKept || out.XPAwarded != 35 {
+		t.Fatalf("second wind: %+v", out)
+	}
+	c := newUser(t, pool, "pk2@example.com", "UTC")
+	effect(c, "second_wind", sum.ID)
+	var peekOut game.Outcome
+	err := pgx.BeginFunc(context.Background(), pool, func(tx pgx.Tx) error {
+		var err error
+		peekOut, err = e.OnGraded(context.Background(), tx, c, sum, pass, game.Progress{Attempts: 2, Peeked: true})
+		return err
+	})
+	if err != nil || peekOut.FirstTry || peekOut.XPAwarded != 25 {
+		t.Fatalf("peeked: %+v %v", peekOut, err)
+	}
+	d := newUser(t, pool, "fb@example.com", "UTC")
+	effect(d, "focus_boost", "")
+	if out := graded(t, pool, e, d, sum, pass, 1); !out.FocusBoost || out.XPAwarded != 70 {
+		t.Fatalf("focus boost: %+v", out)
+	}
+}

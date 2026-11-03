@@ -3,7 +3,8 @@ import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
 import { Splitter } from '../../components/Splitter';
 import { PANE_LIMITS, usePanes } from '../../stores/panes';
-import type { GradeResult, RunOutput } from '../types';
+import type { BossInfo, GradeResult, RunOutput } from '../types';
+import { BossHP, BossResults, DefeatReward } from './Boss';
 import { Results, type Shown } from './Results';
 
 const CodeEditor = lazy(() => import('../code/CodeEditor'));
@@ -21,6 +22,10 @@ interface Props {
   onRun?: () => Promise<RunOutput>;
   onSubmit: () => Promise<GradeResult>;
   result: GradeResult | undefined;
+  /** Page content for the bottom of the problem pane (power-ups). */
+  aside?: ReactNode;
+  /** Boss lesson: maxHP is its number of checks. */
+  boss?: BossInfo & { maxHP: number };
 }
 
 function message(e: unknown, what: string): string {
@@ -104,8 +109,15 @@ export function Workspace(p: Props) {
         className="flex w-[var(--problem-w)] shrink-0 flex-col gap-4 overflow-y-auto rounded-lg border border-border bg-surface px-6 py-5 max-[900px]:w-auto"
       >
         {p.header}
+        {p.boss && <BossHP maxHP={p.boss.maxHP} result={p.result?.result} />}
         {p.problem}
-        {p.problemFooter && <div className="mt-auto flex flex-col gap-3 pt-4">{p.problemFooter}</div>}
+        {p.aside}
+        {(p.problemFooter || p.boss) && (
+          <div className="mt-auto flex flex-col gap-3 pt-4">
+            {p.problemFooter}
+            {p.boss && <DefeatReward reward={p.boss.reward} />}
+          </div>
+        )}
       </section>
 
       <Splitter
@@ -134,7 +146,7 @@ export function Workspace(p: Props) {
               {busy === 'run' ? 'Running…' : 'Run'}
             </Button>
             <Button variant="primary" onClick={() => act('submit')} disabled={busy !== undefined}>
-              {busy === 'submit' ? 'Checking…' : 'Submit'}
+              {busy === 'submit' ? (p.boss ? 'Attacking…' : 'Checking…') : p.boss ? 'Attack' : 'Submit'}
             </Button>
           </div>
           <div className="min-h-0 flex-1">
@@ -164,7 +176,7 @@ export function Workspace(p: Props) {
           aria-live="polite"
           className={`flex shrink-0 flex-col gap-2 overflow-y-auto ${shown ? 'h-[var(--results-h)] max-[900px]:h-auto max-[900px]:max-h-[60vh]' : ''}`}
         >
-          <Results shown={shown} />
+          {p.boss && shown?.kind === 'submit' ? <BossResults result={shown.graded.result} /> : <Results shown={shown} />}
         </div>
       </div>
     </div>

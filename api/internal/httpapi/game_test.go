@@ -184,7 +184,7 @@ func TestCourseXP(t *testing.T) {
 		XPTotal  int `json:"xp_total"`
 	}
 	e.getJSON("/api/v1/courses/demo", &c)
-	if c.XPEarned != 9 || c.XPTotal != 35 {
+	if c.XPEarned != 9 || c.XPTotal != 40 {
 		t.Fatalf("course xp = %+v", c)
 	}
 }

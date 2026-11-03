@@ -14,7 +14,7 @@ ON CONFLICT (user_id, exercise_id) DO UPDATE SET
     attempts = progress.attempts + 1,
     status = CASE WHEN progress.status = 'passed' OR @passed::bool THEN 'passed' ELSE 'started' END,
     first_passed_at = COALESCE(progress.first_passed_at, EXCLUDED.first_passed_at)
-RETURNING attempts, used_hint;
+RETURNING attempts, used_hint, peeked, first_try;
 
 -- name: GetLatestSubmission :one
 SELECT id, exercise_version, answer, status, score, result, created_at

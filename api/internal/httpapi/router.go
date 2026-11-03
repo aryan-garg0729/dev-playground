@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aryangarg/codequest/api/internal/auth"
+	"github.com/aryangarg/codequest/api/internal/economy"
 	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
@@ -38,6 +39,8 @@ type Deps struct {
 	SecureCookies bool
 	// Board is the Redis league board. Required.
 	Board *game.Board
+	// Economy is the shop, quests, medals and chapter locks. Required.
+	Economy *economy.Service
 	// Now is the clock (time.Now when nil).
 	Now func() time.Time
 	// Limiter rate-limits submissions per user and per client IP. Required.
@@ -93,9 +96,17 @@ func New(d Deps) http.Handler {
 		}
 		r.Get("/courses", a.listCourses)
 		r.Get("/courses/{courseID}", a.getCourse)
-		r.Get("/exercises/{exerciseID}", a.getExercise)
-		r.With(a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
-		r.With(a.limitRuns).Post("/exercises/{exerciseID}/run", a.run)
+		r.With(a.requireUnlocked).Get("/exercises/{exerciseID}", a.getExercise)
+		r.With(a.requireUnlocked, a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
+		r.With(a.requireUnlocked, a.limitRuns).Post("/exercises/{exerciseID}/run", a.run)
+
+		r.Get("/shop", a.shop)
+		r.Get("/inventory", a.shop)
+		r.Post("/shop/{powerup}/buy", a.buy)
+		r.Post("/powerups/{powerup}/use", a.usePowerup)
+		r.Get("/quests", a.quests)
+		r.Post("/quests/chest/open", a.openChest)
+		r.Get("/medals", a.medals)
 		r.Get("/submissions/{submissionID}", a.getSubmission)
 	})
 	return r

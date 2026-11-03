@@ -7,6 +7,9 @@ export const keys = {
   home: ['home'] as const,
   league: ['league'] as const,
   providers: ['auth-providers'] as const,
+  shop: ['shop'] as const,
+  quests: ['quests'] as const,
+  medals: ['medals'] as const,
   courses: ['courses'] as const,
   course: (id: string) => ['course', id] as const,
   exercise: (id: string) => ['exercise', id] as const,
@@ -47,6 +50,7 @@ const POLL_MS = 1000;
 export const noOutcome: GradeResult['outcome'] = {
   xp_awarded: 0, breakdown: null, first_try: false, total_xp: 0, level: 0, level_up: false,
   level_start_xp: 0, next_level_xp: 0, streak_days: 0, streak_extended: false, freezes_used: 0, freeze_earned: false,
+  second_wind_kept: false, focus_boost: false, rewards: null,
 };
 const POLL_LIMIT_MS = 3 * 60 * 1000;
 
@@ -85,6 +89,9 @@ export function useSubmit(exerciseId: string, courseId: string | undefined) {
       void qc.invalidateQueries({ queryKey: keys.me });
       void qc.invalidateQueries({ queryKey: keys.home });
       void qc.invalidateQueries({ queryKey: keys.league });
+      void qc.invalidateQueries({ queryKey: keys.shop });
+      void qc.invalidateQueries({ queryKey: keys.quests });
+      void qc.invalidateQueries({ queryKey: keys.medals });
       if (courseId) void qc.invalidateQueries({ queryKey: keys.course(courseId) });
     },
   });
@@ -160,5 +167,62 @@ export function useSignOut() {
       if (!response.ok) throw new ApiError(response.status, 'http_error', 'Sign out failed');
     },
     onSuccess: () => qc.clear(),
+  });
+}
+
+export function useShop() {
+  return useQuery({ queryKey: keys.shop, queryFn: () => unwrap(api.GET('/shop')) });
+}
+
+export function useQuests() {
+  return useQuery({ queryKey: keys.quests, queryFn: () => unwrap(api.GET('/quests')) });
+}
+
+export function useMedals() {
+  return useQuery({ queryKey: keys.medals, queryFn: () => unwrap(api.GET('/medals')) });
+}
+
+/** A fresh idempotency key per action: a retried request cannot spend twice. */
+const requestId = () => crypto.randomUUID();
+
+function useEconomyMutation<T, V>(fn: (v: V, id: string) => Promise<T>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: V) => fn(v, requestId()),
+    onSettled: () => {
+      for (const k of [keys.shop, keys.me, keys.quests, keys.home, keys.medals]) void qc.invalidateQueries({ queryKey: k });
+    },
+  });
+}
+
+export function useBuy() {
+  return useEconomyMutation((powerup: string, id) =>
+    unwrap(api.POST('/shop/{powerup}/buy', { params: { path: { powerup } }, body: { request_id: id } })),
+  );
+}
+
+export function useUsePowerup() {
+  return useEconomyMutation((v: { powerup: string; exerciseId?: string; stake?: number }, id) =>
+    unwrap(
+      api.POST('/powerups/{powerup}/use', {
+        params: { path: { powerup: v.powerup } },
+        body: { request_id: id, exercise_id: v.exerciseId, stake: v.stake },
+      }),
+    ),
+  );
+}
+
+export function useOpenChest() {
+  return useEconomyMutation((_: void, id) => unwrap(api.POST('/quests/chest/open', { body: { request_id: id } })));
+}
+
+export function useSetTitle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (title: string) => unwrap(api.PATCH('/me', { body: { title } })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.me });
+      void qc.invalidateQueries({ queryKey: keys.medals });
+    },
   });
 }

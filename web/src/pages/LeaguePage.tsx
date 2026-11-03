@@ -38,6 +38,7 @@ export function LeaguePage() {
                     <span className="text-game w-8 text-text-muted">{s.rank}</span>
                     <span className={`text-body flex-1 truncate ${s.you ? 'font-semibold text-text' : 'text-text-secondary'}`}>
                       {s.you ? `${s.name} (you)` : s.name}
+                      {s.title && <span className="text-game-sm ml-2 rounded-sm bg-surface-raised px-1.5 py-0.5 text-text-secondary">{s.title}</span>}
                     </span>
                     <span className="text-game-sm text-text">{s.weekly_xp} XP</span>
                   </li>

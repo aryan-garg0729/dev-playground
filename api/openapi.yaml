@@ -34,6 +34,7 @@ paths:
                 name: { type: string, maxLength: 80 }
                 timezone: { type: string, description: IANA zone, e.g. Asia/Kolkata }
                 daily_goal: { type: integer, minimum: 1, maximum: 10 }
+                title: { type: string, description: One of the user's earned medal titles, or "" to wear none }
       responses:
         "200":
           description: Updated user
@@ -55,6 +56,69 @@ paths:
         "200":
           description: This week's league group (joined after the first XP of the week)
           content: { application/json: { schema: { $ref: "#/components/schemas/League" } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /shop:
+    get:
+      operationId: getShop
+      responses:
+        "200": { description: Power-ups with the user's state, balance, effects, open bet, content: { application/json: { schema: { $ref: "#/components/schemas/Shop" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /inventory:
+    get:
+      operationId: getInventory
+      responses:
+        "200": { description: Same as /shop, content: { application/json: { schema: { $ref: "#/components/schemas/Shop" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /shop/{powerup}/buy:
+    post:
+      operationId: buyPowerup
+      description: Spends Bytes, once per request_id (a replay returns the first response). 409 insufficient_bytes / limit_reached change nothing.
+      parameters: [{ name: powerup, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RequestID" } } } }
+      responses:
+        "200": { description: Bought, content: { application/json: { schema: { $ref: "#/components/schemas/BuyResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /powerups/{powerup}/use:
+    post:
+      operationId: usePowerup
+      description: Uses a held power-up (Streak Repair and Double or Nothing spend Bytes here), once per request_id.
+      parameters: [{ name: powerup, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id]
+              additionalProperties: false
+              properties:
+                request_id: { type: string }
+                exercise_id: { type: string, description: second_wind and peek }
+                stake: { type: integer, description: "double_or_nothing: 100-500" }
+      responses:
+        "200": { description: Used, content: { application/json: { schema: { $ref: "#/components/schemas/UseResult" } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "403": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /quests:
+    get:
+      operationId: getQuests
+      responses:
+        "200": { description: Today's quests, this week's quest and the daily chest, content: { application/json: { schema: { $ref: "#/components/schemas/Quests" } } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /quests/chest/open:
+    post:
+      operationId: openChest
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/RequestID" } } } }
+      responses:
+        "200": { description: The chest's contents (the same on every later call today), content: { application/json: { schema: { $ref: "#/components/schemas/ChestDrop" } } } }
+        "409": { $ref: "#/components/responses/Error" }
+  /medals:
+    get:
+      operationId: getMedals
+      responses:
+        "200": { description: Medals with progress; unearned secret medals are masked, content: { application/json: { schema: { $ref: "#/components/schemas/Medals" } } } }
         "401": { $ref: "#/components/responses/Error" }
   /auth/providers:
     get:
@@ -273,7 +337,7 @@ components:
       enum: [bronze, silver, gold, diamond]
     Stats:
       type: object
-      required: [total_xp, level, level_start_xp, next_level_xp, streak_days, streak_freezes, league_tier, daily_goal, today_lessons]
+      required: [total_xp, level, level_start_xp, next_level_xp, streak_days, streak_freezes, league_tier, daily_goal, today_lessons, bytes, title, longest_streak]
       properties:
         total_xp: { type: integer }
         level: { type: integer }
@@ -284,17 +348,22 @@ components:
         league_tier: { $ref: "#/components/schemas/Tier" }
         daily_goal: { type: integer }
         today_lessons: { type: integer }
+        bytes: { type: integer }
+        title: { type: string }
+        longest_streak: { type: integer }
     Breakdown:
       type: object
-      required: [base, first_try, no_hint]
+      required: [base, first_try, no_hint, boss, boost]
       properties:
         base: { type: integer }
         first_try: { type: integer }
         no_hint: { type: integer }
+        boss: { type: integer }
+        boost: { type: integer, description: Focus Boost (doubles the rest) }
     Outcome:
       type: object
       description: What a graded submission did to the user's game state.
-      required: [xp_awarded, breakdown, first_try, total_xp, level, level_up, level_start_xp, next_level_xp, streak_days, streak_extended, freezes_used, freeze_earned]
+      required: [xp_awarded, breakdown, first_try, second_wind_kept, focus_boost, total_xp, level, level_up, level_start_xp, next_level_xp, streak_days, streak_extended, freezes_used, freeze_earned, rewards]
       properties:
         xp_awarded: { type: integer }
         breakdown:
@@ -311,6 +380,186 @@ components:
         streak_extended: { type: boolean }
         freezes_used: { type: integer }
         freeze_earned: { type: boolean }
+        second_wind_kept: { type: boolean }
+        focus_boost: { type: boolean }
+        rewards:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Rewards"
+    Rewards:
+      type: object
+      required: [bytes, medals, quests_done, chest_ready, chapter_complete, boss]
+      properties:
+        bytes:
+          type: array
+          items: { type: object, required: [reason, label, amount], properties: { reason: { type: string }, label: { type: string }, amount: { type: integer } } }
+        medals:
+          type: array
+          items: { type: object, required: [id, name, tier, title], properties: { id: { type: string }, name: { type: string }, tier: { type: string }, title: { type: string } } }
+        quests_done: { type: array, items: { type: string } }
+        chest_ready: { type: boolean }
+        chapter_complete: { type: boolean }
+        boss:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/BossResult"
+    BossResult:
+      type: object
+      required: [max_hp, hp, defeated, chest, unlocked_chapter]
+      properties:
+        max_hp: { type: integer }
+        hp: { type: integer }
+        defeated: { type: boolean }
+        chest:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ChestDrop"
+        unlocked_chapter: { type: string }
+    ChestDrop:
+      type: object
+      required: [bytes, powerup]
+      properties:
+        bytes: { type: integer }
+        powerup: { type: string }
+    RequestID:
+      type: object
+      required: [request_id]
+      additionalProperties: false
+      properties:
+        request_id: { type: string, maxLength: 64 }
+    ShopItem:
+      type: object
+      required: [id, name, description, note, cost, owned, state, use, usable_now]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        note: { type: string }
+        cost: { type: integer }
+        unavailable: { type: string }
+        owned: { type: integer }
+        state: { type: string, enum: [buy, max_held, streak_safe, repair, pro, coming_soon, bet_open, place_bet] }
+        use: { type: string, enum: [auto, now, lessons, ""] }
+        usable_now: { type: boolean }
+    Bet:
+      type: object
+      required: [stake, goal, starts_on, days_met]
+      properties:
+        stake: { type: integer }
+        goal: { type: integer }
+        starts_on: { type: string, format: date }
+        days_met: { type: integer }
+    Shop:
+      type: object
+      required: [balance, earned_today, items, effects, bet, earn]
+      properties:
+        balance: { type: integer }
+        earned_today: { type: integer }
+        items: { type: array, items: { $ref: "#/components/schemas/ShopItem" } }
+        effects:
+          type: array
+          items: { type: object, required: [effect, ref_id, expires_at], properties: { effect: { type: string }, ref_id: { type: string }, expires_at: { type: string, format: date-time } } }
+        bet:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Bet"
+        earn:
+          type: array
+          items: { type: object, required: [label, amount], properties: { label: { type: string }, amount: { type: string } } }
+    BuyResult:
+      type: object
+      required: [powerup, owned, balance]
+      properties:
+        powerup: { type: string }
+        owned: { type: integer }
+        balance: { type: integer }
+    UseResult:
+      type: object
+      required: [powerup, remaining, balance]
+      properties:
+        powerup: { type: string }
+        remaining: { type: integer }
+        expires_at: { type: string, format: date-time }
+        peek:
+          type: object
+          required: [check, name, input]
+          description: The declared input of one failed hidden check. Never its expected output.
+          properties:
+            check: { type: integer }
+            name: { type: string }
+            input: { type: string }
+        bet: { $ref: "#/components/schemas/Bet" }
+        streak: { type: integer }
+        balance: { type: integer }
+    Quest:
+      type: object
+      required: [id, cadence, name, event, target, bytes, progress, done]
+      properties:
+        id: { type: string }
+        cadence: { type: string, enum: [daily, weekly] }
+        name: { type: string }
+        event: { type: string }
+        target: { type: integer }
+        bytes: { type: integer }
+        progress: { type: integer }
+        done: { type: boolean }
+    Quests:
+      type: object
+      required: [daily, weekly, resets_at, chest]
+      properties:
+        daily: { type: array, items: { $ref: "#/components/schemas/Quest" } }
+        weekly: { $ref: "#/components/schemas/Quest" }
+        resets_at: { type: string, format: date-time }
+        chest:
+          type: object
+          required: [ready, opened, odds, bytes]
+          properties:
+            ready: { type: boolean }
+            opened:
+              oneOf:
+                - type: "null"
+                - $ref: "#/components/schemas/ChestDrop"
+            odds:
+              type: array
+              items: { type: object, required: [powerup, weight], properties: { powerup: { type: string }, weight: { type: integer } } }
+            bytes: { type: array, items: { type: integer }, minItems: 2, maxItems: 2 }
+    MedalTier:
+      type: object
+      required: [tier, gte, title, bytes, earned_at]
+      properties:
+        tier: { type: string }
+        gte: { type: integer }
+        title: { type: string }
+        bytes: { type: integer }
+        earned_at: { oneOf: [{ type: "null" }, { type: string, format: date-time }] }
+    Medal:
+      type: object
+      required: [id, family, name, description, unit, secret, coming_soon, value, tier, next_tier, next_gte, tiers]
+      properties:
+        id: { type: string }
+        family: { type: string }
+        name: { type: string }
+        description: { type: string }
+        unit: { type: string }
+        secret: { type: boolean }
+        coming_soon: { type: boolean }
+        value: { type: integer }
+        tier: { type: string }
+        next_tier: { type: string }
+        next_gte: { type: integer }
+        tiers: { type: array, items: { $ref: "#/components/schemas/MedalTier" } }
+    Medals:
+      type: object
+      required: [earned, total, medals, families, titles, title]
+      properties:
+        earned: { type: integer }
+        total: { type: integer }
+        medals: { type: array, items: { $ref: "#/components/schemas/Medal" } }
+        families:
+          type: array
+          items: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
+        titles: { type: array, items: { type: string } }
+        title: { type: string }
     CodeLine:
       type: object
       required: [n, text]
@@ -381,10 +630,11 @@ components:
               type: array
               items:
                 type: object
-                required: [rank, name, weekly_xp, you, zone]
+                required: [rank, name, title, weekly_xp, you, zone]
                 properties:
                   rank: { type: integer }
                   name: { type: string }
+                  title: { type: string }
                   weekly_xp: { type: integer }
                   you: { type: boolean }
                   zone: { $ref: "#/components/schemas/LeagueZone" }
@@ -453,10 +703,11 @@ components:
           type: array
           items:
             type: object
-            required: [id, title, exercises]
+            required: [id, title, locked, exercises]
             properties:
               id: { type: string }
               title: { type: string }
+              locked: { type: boolean, description: Behind an earlier chapter's undefeated boss (lessons answer 403 chapter_locked) }
               exercises: { type: array, items: { $ref: "#/components/schemas/ExerciseSummary" } }
     Result:
       type: object

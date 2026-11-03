@@ -11,10 +11,18 @@ type Breakdown struct {
 	Base     int `json:"base"`
 	FirstTry int `json:"first_try"`
 	NoHint   int `json:"no_hint"`
+	Boss     int `json:"boss"`  // boss defeated
+	Boost    int `json:"boost"` // Focus Boost: equal to everything else (2x)
 }
 
 // Total is the sum of the parts.
-func (b Breakdown) Total() int { return b.Base + b.FirstTry + b.NoHint }
+func (b Breakdown) Total() int { return b.Base + b.FirstTry + b.NoHint + b.Boss + b.Boost }
+
+// WithBoss adds the boss-defeat bonus; WithBoost then doubles the whole award.
+func (b Breakdown) WithBoss() Breakdown { b.Boss = BossBonus; return b }
+
+// WithBoost doubles the award (Focus Boost).
+func (b Breakdown) WithBoost() Breakdown { b.Boost = b.Base + b.FirstTry + b.NoHint + b.Boss; return b }
 
 // AwardFor is the XP for a first pass of an exercise worth base XP.
 func AwardFor(base int, firstTry, usedHint bool) Breakdown {
@@ -103,6 +111,29 @@ func ApplyPass(s Streak, today time.Time) StreakChange {
 		c.FreezeEarned = true
 	}
 	return c
+}
+
+// Rollover settles the missed days before today, as the daily rollover job
+// does: each missed day spends a Streak Freeze (the streak survives and Last
+// moves to yesterday); if the freezes cannot cover them all the streak is lost
+// (Days becomes 0, freezes kept) and lost reports its length.
+func Rollover(s Streak, today time.Time) (out Streak, used, lost int) {
+	if s.Last.IsZero() || s.Days == 0 {
+		return s, 0, 0
+	}
+	missed := daysBetween(s.Last, today) - 1
+	switch {
+	case missed <= 0:
+		return s, 0, 0
+	case missed <= s.Freezes:
+		s.Freezes -= missed
+		s.Last = today.AddDate(0, 0, -1)
+		return s, missed, 0
+	default:
+		lost = s.Days
+		s.Days = 0
+		return s, 0, lost
+	}
 }
 
 // Current is the streak to show on local date today: still alive when the

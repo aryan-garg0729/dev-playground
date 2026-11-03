@@ -18,6 +18,7 @@ import (
 
 	"github.com/aryangarg/codequest/api/internal/auth"
 	"github.com/aryangarg/codequest/api/internal/config"
+	"github.com/aryangarg/codequest/api/internal/economy"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all" // register exercise types
 	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
@@ -57,7 +58,13 @@ func run(log *slog.Logger) error {
 	defer func() { _ = rdb.Close() }()
 
 	board := &game.Board{Redis: rdb}
-	grader := grading.NewService(pool, &runner.Queue{Redis: rdb}, grading.Options{Log: log, Board: board})
+	econ := &economy.Service{Pool: pool, Log: log}
+	if err := econ.Sync(ctx); err != nil {
+		return err
+	}
+	grader := grading.NewService(pool, &runner.Queue{Redis: rdb}, grading.Options{
+		Log: log, Board: board, Game: &game.Engine{Rewards: econ},
+	})
 	defer grader.Close()
 	// Anything still pending from before this start was lost with the old process.
 	if n, err := grader.FailStale(ctx, 5*time.Minute); err != nil {
@@ -79,8 +86,10 @@ func run(log *slog.Logger) error {
 	}
 
 	// Close finished league weeks now and every minute (safe on many replicas).
-	leagues := &game.Leagues{Pool: pool, Log: log}
+	leagues := &game.Leagues{Pool: pool, Log: log, Rewards: econ}
 	go leagues.Run(ctx, time.Minute)
+	// Daily rollover: spends freezes on missed days, settles bets, evaluates medals.
+	go econ.RunDaily(ctx, 10*time.Minute)
 	go cleanAuth(ctx, pool, log)
 
 	srv := &http.Server{
@@ -90,7 +99,7 @@ func run(log *slog.Logger) error {
 			AllowedOrigins: cfg.AllowedOrigins,
 			Sessions:       &auth.Sessions{Pool: pool},
 			Links:          &auth.MagicLinks{Pool: pool, Mailer: mailer, AppURL: cfg.AppURL},
-			GitHub:         gh, DevAuth: cfg.DevAuth, SecureCookies: cfg.SecureCookies(), Board: board,
+			GitHub:         gh, DevAuth: cfg.DevAuth, SecureCookies: cfg.SecureCookies(), Board: board, Economy: econ,
 			Limiter: &ratelimit.Limiter{Redis: rdb},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,

@@ -12,12 +12,54 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ActiveEffect struct {
+	UserID    uuid.UUID `json:"user_id"`
+	Effect    string    `json:"effect"`
+	RefID     string    `json:"ref_id"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+type Bet struct {
+	ID        uuid.UUID  `json:"id"`
+	UserID    uuid.UUID  `json:"user_id"`
+	Stake     int32      `json:"stake"`
+	Goal      int32      `json:"goal"`
+	StartsOn  time.Time  `json:"starts_on"`
+	Status    string     `json:"status"`
+	SettledAt *time.Time `json:"settled_at"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+type ByteEvent struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Amount    int32     `json:"amount"`
+	Reason    string    `json:"reason"`
+	RefID     string    `json:"ref_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Chapter struct {
 	ID         string `json:"id"`
 	CourseID   string `json:"course_id"`
 	Title      string `json:"title"`
 	OrderIndex int32  `json:"order_index"`
 	Published  bool   `json:"published"`
+}
+
+type Chest struct {
+	UserID   uuid.UUID `json:"user_id"`
+	Kind     string    `json:"kind"`
+	RefID    string    `json:"ref_id"`
+	Bytes    int32     `json:"bytes"`
+	Powerup  string    `json:"powerup"`
+	OpenedAt time.Time `json:"opened_at"`
+}
+
+type Counter struct {
+	UserID uuid.UUID `json:"user_id"`
+	Key    string    `json:"key"`
+	Value  int32     `json:"value"`
 }
 
 type Course struct {
@@ -51,6 +93,20 @@ type Exercise struct {
 	Published   bool            `json:"published"`
 }
 
+type Idempotency struct {
+	UserID    uuid.UUID `json:"user_id"`
+	RequestID string    `json:"request_id"`
+	Action    string    `json:"action"`
+	Response  []byte    `json:"response"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Inventory struct {
+	UserID  uuid.UUID `json:"user_id"`
+	Powerup string    `json:"powerup"`
+	Count   int32     `json:"count"`
+}
+
 type LeagueMember struct {
 	Week      time.Time   `json:"week"`
 	UserID    uuid.UUID   `json:"user_id"`
@@ -74,11 +130,28 @@ type MagicLink struct {
 	CreatedAt time.Time  `json:"created_at"`
 }
 
+type Medal struct {
+	ID     string          `json:"id"`
+	Family string          `json:"family"`
+	Name   string          `json:"name"`
+	Secret bool            `json:"secret"`
+	Tiers  json.RawMessage `json:"tiers"`
+	Ord    int32           `json:"ord"`
+}
+
 type OauthIdentity struct {
 	Provider       string    `json:"provider"`
 	ProviderUserID string    `json:"provider_user_id"`
 	UserID         uuid.UUID `json:"user_id"`
 	CreatedAt      time.Time `json:"created_at"`
+}
+
+type PowerupUse struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Powerup   string    `json:"powerup"`
+	RefID     string    `json:"ref_id"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Progress struct {
@@ -88,6 +161,15 @@ type Progress struct {
 	FirstPassedAt *time.Time `json:"first_passed_at"`
 	Attempts      int32      `json:"attempts"`
 	UsedHint      bool       `json:"used_hint"`
+	Peeked        bool       `json:"peeked"`
+	FirstTry      bool       `json:"first_try"`
+}
+
+type Quest struct {
+	ID      string          `json:"id"`
+	Cadence string          `json:"cadence"`
+	Rule    json.RawMessage `json:"rule"`
+	Reward  json.RawMessage `json:"reward"`
 }
 
 type Session struct {
@@ -108,6 +190,7 @@ type Submission struct {
 	Result          json.RawMessage `json:"result"`
 	CreatedAt       time.Time       `json:"created_at"`
 	Outcome         json.RawMessage `json:"outcome"`
+	HiddenInputs    json.RawMessage `json:"hidden_inputs"`
 }
 
 type User struct {
@@ -118,6 +201,21 @@ type User struct {
 	Country   string    `json:"country"`
 	Timezone  string    `json:"timezone"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+type UserMedal struct {
+	UserID   uuid.UUID `json:"user_id"`
+	MedalID  string    `json:"medal_id"`
+	Tier     string    `json:"tier"`
+	EarnedAt time.Time `json:"earned_at"`
+}
+
+type UserQuest struct {
+	UserID   uuid.UUID  `json:"user_id"`
+	QuestID  string     `json:"quest_id"`
+	Period   time.Time  `json:"period"`
+	Progress int32      `json:"progress"`
+	DoneAt   *time.Time `json:"done_at"`
 }
 
 type UserStat struct {
@@ -131,6 +229,10 @@ type UserStat struct {
 	LeagueTier     string     `json:"league_tier"`
 	Title          string     `json:"title"`
 	DailyGoal      int32      `json:"daily_goal"`
+	LongestStreak  int32      `json:"longest_streak"`
+	LostStreakDays int32      `json:"lost_streak_days"`
+	LostOn         *time.Time `json:"lost_on"`
+	RolledOverOn   *time.Time `json:"rolled_over_on"`
 }
 
 type XpEvent struct {
