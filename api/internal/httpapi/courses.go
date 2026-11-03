@@ -10,38 +10,6 @@ import (
 	"github.com/aryangarg/codequest/api/internal/store"
 )
 
-type userDTO struct {
-	ID       string `json:"id"`
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Avatar   string `json:"avatar"`
-	Timezone string `json:"timezone"`
-}
-
-type meResponse struct {
-	User userDTO `json:"user"`
-}
-
-func (a *api) me(w http.ResponseWriter, r *http.Request) {
-	u := currentUser(r)
-	if !u.Valid {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "sign in first")
-		return
-	}
-	row, err := store.New(a.Pool).GetUser(r.Context(), u.UUID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "sign in first")
-		return
-	}
-	if err != nil {
-		a.internal(w, r, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, meResponse{User: userDTO{
-		ID: row.ID.String(), Email: row.Email, Name: row.Name, Avatar: row.Avatar, Timezone: row.Timezone,
-	}})
-}
-
 type courseSummary struct {
 	ID            string `json:"id"`
 	Title         string `json:"title"`
@@ -89,6 +57,9 @@ type courseDetail struct {
 	Title       string       `json:"title"`
 	Description string       `json:"description"`
 	Chapters    []chapterDTO `json:"chapters"`
+	Skills      []string     `json:"skills"`    // distinct lesson tags, in course order
+	XPEarned    int          `json:"xp_earned"` // from the user's XP ledger
+	XPTotal     int          `json:"xp_total"`  // base XP of all lessons (bonuses not included)
 }
 
 func (a *api) getCourse(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +92,23 @@ func (a *api) getCourse(w http.ResponseWriter, r *http.Request) {
 			Free: e.Free, Boss: e.Boss, Status: progressStatus(e.ProgressStatus),
 		})
 	}
-	out := courseDetail{ID: c.ID, Title: c.Title, Description: c.Description, Chapters: make([]chapterDTO, 0, len(chapters))}
+	xp, err := q.CourseXP(ctx, store.CourseXPParams{UserID: currentUser(r), CourseID: id})
+	if err != nil {
+		a.internal(w, r, err)
+		return
+	}
+	skills, err := q.CourseTags(ctx, id)
+	if err != nil {
+		a.internal(w, r, err)
+		return
+	}
+	if skills == nil {
+		skills = []string{}
+	}
+	out := courseDetail{
+		ID: c.ID, Title: c.Title, Description: c.Description, Chapters: make([]chapterDTO, 0, len(chapters)),
+		Skills: skills, XPEarned: int(xp.Earned), XPTotal: int(xp.Total),
+	}
 	for _, ch := range chapters {
 		list := byChapter[ch.ID]
 		if list == nil {

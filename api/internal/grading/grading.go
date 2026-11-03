@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/aryangarg/codequest/api/internal/exercise"
+	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/runner"
 	"github.com/aryangarg/codequest/api/internal/store"
 )
@@ -32,6 +33,7 @@ var (
 type Graded struct {
 	SubmissionID uuid.UUID
 	Result       exercise.Result
+	Outcome      game.Outcome
 	CreatedAt    time.Time
 	Pending      bool
 }
@@ -43,6 +45,10 @@ type Options struct {
 	// MaxGrade bounds one grading run, queue time included (2m).
 	MaxGrade time.Duration
 	Log      *slog.Logger
+	// Game applies XP, levels and streaks in the grading transaction (a
+	// default Engine when nil). Board, when set, gets the league update after commit.
+	Game  *game.Engine
+	Board *game.Board
 }
 
 // Service grades and records submissions.
@@ -64,6 +70,9 @@ func NewService(pool *pgxpool.Pool, run runner.Runner, opt Options) *Service {
 	}
 	if opt.Log == nil {
 		opt.Log = slog.Default()
+	}
+	if opt.Game == nil {
+		opt.Game = &game.Engine{}
 	}
 	return &Service{pool: pool, runner: run, opt: opt}
 }
@@ -157,7 +166,7 @@ func (s *Service) Submit(ctx context.Context, user uuid.UUID, sub exercise.Submi
 		if o.err != nil {
 			return Graded{}, fmt.Errorf("grade %s: %w", row.ID, o.err)
 		}
-		return s.store(ctx, user, row.ID, row.Version, sub.Answer, o.res)
+		return s.store(ctx, user, ex, sub.Answer, o.res)
 	case <-timer.C:
 	case <-ctx.Done():
 	}
@@ -170,48 +179,77 @@ func (s *Service) Submit(ctx context.Context, user uuid.UUID, sub exercise.Submi
 	if err != nil {
 		return Graded{}, fmt.Errorf("store pending submission: %w", err)
 	}
-	s.wg.Go(func() { s.finish(created.ID, user, row.ID, <-done) })
+	s.wg.Go(func() { s.finish(created.ID, user, ex, <-done) })
 	return Graded{SubmissionID: created.ID, CreatedAt: created.CreatedAt, Pending: true}, nil
 }
 
-func (s *Service) store(ctx context.Context, user uuid.UUID, exID string, version int32, answer json.RawMessage, res exercise.Result) (Graded, error) {
+func (s *Service) store(ctx context.Context, user uuid.UUID, ex exercise.Exercise, answer json.RawMessage, res exercise.Result) (Graded, error) {
 	resultJSON, err := json.Marshal(res)
 	if err != nil {
 		return Graded{}, fmt.Errorf("encode result: %w", err)
 	}
 	var g Graded
 	err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		tq := store.New(tx)
-		created, err := tq.CreateSubmission(ctx, store.CreateSubmissionParams{
-			UserID: user, ExerciseID: exID, ExerciseVersion: version,
-			Answer: answer, Status: res.Status, Score: res.Score, Result: resultJSON,
+		out, outJSON, err := s.applyGame(ctx, tx, user, ex, res)
+		if err != nil {
+			return err
+		}
+		created, err := store.New(tx).CreateSubmission(ctx, store.CreateSubmissionParams{
+			UserID: user, ExerciseID: ex.ID, ExerciseVersion: int32(ex.Version),
+			Answer: answer, Status: res.Status, Score: res.Score, Result: resultJSON, Outcome: outJSON,
 		})
 		if err != nil {
 			return fmt.Errorf("store submission: %w", err)
 		}
-		if err := tq.RecordAttempt(ctx, store.RecordAttemptParams{
-			UserID: user, ExerciseID: exID, Passed: res.Status == exercise.StatusPass,
-		}); err != nil {
-			return fmt.Errorf("record progress: %w", err)
-		}
-		// Phase 4: game.Engine.OnGraded runs here, in the same transaction.
-		g = Graded{SubmissionID: created.ID, Result: res, CreatedAt: created.CreatedAt}
+		g = Graded{SubmissionID: created.ID, Result: res, Outcome: out, CreatedAt: created.CreatedAt}
 		return nil
 	})
 	if err != nil {
 		return Graded{}, err
 	}
+	s.afterCommit(ctx, g.Outcome)
 	return g, nil
+}
+
+// applyGame records the attempt and runs the game engine, in tx. The engine
+// reads the Result; nothing here changes it.
+func (s *Service) applyGame(ctx context.Context, tx pgx.Tx, user uuid.UUID, ex exercise.Exercise, res exercise.Result) (game.Outcome, json.RawMessage, error) {
+	p, err := store.New(tx).RecordAttempt(ctx, store.RecordAttemptParams{
+		UserID: user, ExerciseID: ex.ID, Passed: res.Status == exercise.StatusPass,
+	})
+	if err != nil {
+		return game.Outcome{}, nil, fmt.Errorf("record progress: %w", err)
+	}
+	out, err := s.opt.Game.OnGraded(ctx, tx, user, ex, res, game.Progress{Attempts: int(p.Attempts), UsedHint: p.UsedHint})
+	if err != nil {
+		return game.Outcome{}, nil, fmt.Errorf("game: %w", err)
+	}
+	outJSON, err := json.Marshal(out)
+	if err != nil {
+		return game.Outcome{}, nil, fmt.Errorf("encode outcome: %w", err)
+	}
+	return out, outJSON, nil
+}
+
+// afterCommit updates the league board. It is idempotent (the board is
+// rebuilt from Postgres), so a retry or a duplicate call is harmless.
+func (s *Service) afterCommit(ctx context.Context, out game.Outcome) {
+	if s.opt.Board == nil || out.League == nil {
+		return
+	}
+	if err := s.opt.Board.Sync(context.WithoutCancel(ctx), s.pool, *out.League); err != nil {
+		s.opt.Log.Error("league board", "err", err)
+	}
 }
 
 // finish completes a pending submission. Grading failures are stored as an
 // error result and do not count as an attempt.
-func (s *Service) finish(id, user uuid.UUID, exID string, o outcome) {
+func (s *Service) finish(id, user uuid.UUID, ex exercise.Exercise, o outcome) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	res, attempt := o.res, true
 	if o.err != nil {
-		s.opt.Log.Error("background grading failed", "submission", id, "exercise", exID, "err", o.err)
+		s.opt.Log.Error("background grading failed", "submission", id, "exercise", ex.ID, "err", o.err)
 		res = ErrorResult("Grading failed; submit again")
 		attempt = false
 	}
@@ -220,23 +258,27 @@ func (s *Service) finish(id, user uuid.UUID, exID string, o outcome) {
 		s.opt.Log.Error("encode result", "submission", id, "err", err)
 		return
 	}
+	var out game.Outcome
 	err = pgx.BeginFunc(ctx, s.pool, func(tx pgx.Tx) error {
-		tq := store.New(tx)
-		if err := tq.FinishSubmission(ctx, store.FinishSubmissionParams{
-			ID: id, Status: res.Status, Score: res.Score, Result: resultJSON,
+		var outJSON json.RawMessage
+		if attempt {
+			var err error
+			if out, outJSON, err = s.applyGame(ctx, tx, user, ex, res); err != nil {
+				return err
+			}
+		}
+		if err := store.New(tx).FinishSubmission(ctx, store.FinishSubmissionParams{
+			ID: id, Status: res.Status, Score: res.Score, Result: resultJSON, Outcome: outJSON,
 		}); err != nil {
 			return fmt.Errorf("finish submission: %w", err)
 		}
-		if !attempt {
-			return nil
-		}
-		return tq.RecordAttempt(ctx, store.RecordAttemptParams{
-			UserID: user, ExerciseID: exID, Passed: res.Status == exercise.StatusPass,
-		})
+		return nil
 	})
 	if err != nil {
 		s.opt.Log.Error("store background result", "submission", id, "err", err)
+		return
 	}
+	s.afterCommit(ctx, out)
 }
 
 // ErrorResult is a Result for a grading failure that is not the learner's.
@@ -254,6 +296,7 @@ type Submission struct {
 	Version   int
 	Status    string
 	Result    json.RawMessage // nil while pending
+	Outcome   json.RawMessage // game.Outcome; nil while pending or after an error
 	CreatedAt time.Time
 }
 
@@ -271,7 +314,7 @@ func (s *Service) Get(ctx context.Context, user, id uuid.UUID) (Submission, erro
 	}
 	return Submission{
 		ID: r.ID, Exercise: r.ExerciseID, Version: int(r.ExerciseVersion), Status: r.Status,
-		Result: r.Result, CreatedAt: r.CreatedAt,
+		Result: r.Result, Outcome: r.Outcome, CreatedAt: r.CreatedAt,
 	}, nil
 }
 

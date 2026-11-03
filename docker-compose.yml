@@ -40,7 +40,13 @@ services:
       DATABASE_URL: postgres://codequest:codequest@postgres:5432/codequest?sslmode=disable
       HTTP_ADDR: ":8080"
       ALLOWED_ORIGINS: http://localhost:5173
-      DEV_USER_EMAIL: ${DEV_USER_EMAIL:-dev@codequest.local}
+      APP_URL: http://localhost:5173
+      # Development sign-in without email (POST /auth/dev); refused when APP_ENV=production.
+      DEV_AUTH: ${DEV_AUTH:-1}
+      # Without SMTP_ADDR, magic-link emails are written to this service's log.
+      SMTP_ADDR: ${SMTP_ADDR:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       REDIS_URL: redis://redis:6379/0
     ports: ["8080:8080"]
     healthcheck:

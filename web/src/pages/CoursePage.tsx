@@ -1,83 +1,91 @@
 import { Link, useParams } from 'react-router';
-import type { Schemas } from '../api/client';
 import { useCourse } from '../api/queries';
 import { AppHeader } from '../components/AppHeader';
-import { CheckIcon } from '../components/icons';
+import { ChapterTimeline } from './course/ChapterTimeline';
 import { LoadError, Loading } from './states';
 
-type Status = Schemas['ProgressStatus'];
-
-const segment: Record<Status, string> = {
-  passed: 'bg-success',
-  started: 'bg-progress-current',
-  not_started: 'bg-border-strong',
-};
-
-const statusLabel: Record<Status, string> = { passed: 'done', started: 'started', not_started: 'not started' };
-
-const typeLabel: Record<string, string> = { mcq: 'Quiz', code: 'Exercise', sql: 'SQL' };
-
+/** The course map (screens/course-map.png). */
 export function CoursePage() {
   const { courseId = '' } = useParams();
   const { data, error, isPending } = useCourse(courseId);
   const lessons = data?.chapters.flatMap((c) => c.exercises) ?? [];
   const done = lessons.filter((e) => e.status === 'passed').length;
+  const pct = lessons.length ? Math.round((done / lessons.length) * 100) : 0;
+  const next = lessons.find((e) => e.status !== 'passed');
 
   return (
     <>
       <AppHeader />
-      <main className="mx-auto flex max-w-[960px] flex-col gap-6 px-5 py-8">
-        {isPending && <Loading label="course" />}
-        {error && <LoadError error={error} />}
-        {data && (
-          <>
-            <div className="flex flex-col gap-2">
-              <nav aria-label="Breadcrumb" className="text-small text-text-muted">
-                <Link to="/" className="hover:text-text">
-                  Courses
-                </Link>{' '}
-                › {data.title}
-              </nav>
-              <h1 className="text-[32px] font-bold leading-[40px] text-text">{data.title}</h1>
-              <p className="text-body max-w-[640px] text-text-secondary">{data.description}</p>
-              <p className="text-small text-text-muted">
-                {data.chapters.length} chapters · {lessons.length} lessons · {done} done
-              </p>
+      {isPending && <Loading label="course" />}
+      {error && <LoadError error={error} />}
+      {data && (
+        <>
+          <section className="border-b border-border">
+            <div className="mx-auto grid max-w-[1200px] gap-6 px-5 py-8 lg:grid-cols-[1fr_380px] lg:items-end">
+              <div className="flex flex-col gap-3">
+                <nav aria-label="Breadcrumb" className="text-small text-text-muted">
+                  <Link to="/courses" className="hover:text-text">
+                    Courses
+                  </Link>{' '}
+                  › {data.title}
+                </nav>
+                <h1 className="text-[32px] font-bold leading-[40px] text-text">{data.title}</h1>
+                <p className="text-body max-w-[640px] text-text-secondary">{data.description}</p>
+                <p className="text-small flex gap-5 text-text-muted">
+                  <span>{data.chapters.length} chapters</span>
+                  <span>{lessons.length} lessons</span>
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <p className="text-small flex justify-between text-text-secondary">
+                  <span>
+                    {done} of {lessons.length} lessons
+                  </span>
+                  <span className="font-semibold text-success">{pct}%</span>
+                </p>
+                <span role="img" aria-label={`${pct}% complete`} className="block h-[6px] overflow-hidden rounded-pill bg-border">
+                  <span className="block h-full rounded-pill bg-success" style={{ width: `${pct}%` }} />
+                </span>
+                {next && (
+                  <Link
+                    to={`/learn/${data.id}/${next.id}`}
+                    className="text-control flex h-11 items-center justify-center rounded-md bg-accent text-accent-ink"
+                  >
+                    {done === 0 ? 'Start' : 'Continue'}: {next.title}
+                  </Link>
+                )}
+              </div>
             </div>
-
-            <ol className="flex flex-col gap-2">
-              {data.chapters.map((ch, ci) => (
-                <li key={ch.id} className="rounded-lg border border-border bg-surface p-5">
-                  <h2 className="text-section text-text">
-                    {ci + 1}. {ch.title}
-                  </h2>
-                  <p className="text-caption mt-1 text-text-muted">{ch.exercises.length} lessons</p>
-                  <ol className="mt-3 flex flex-col">
-                    {ch.exercises.map((ex, ei) => (
-                      <li key={ex.id} className="border-t border-border first:border-t-0">
-                        <Link
-                          to={`/learn/${data.id}/${ex.id}`}
-                          className="flex min-h-[var(--touch-min)] items-center gap-3 rounded-md px-2 hover:bg-surface-raised"
-                          aria-label={`${ei + 1}. ${ex.title}, ${statusLabel[ex.status]}`}
-                        >
-                          <span className={`h-4 w-1 shrink-0 rounded-pill ${segment[ex.status]}`} aria-hidden="true" />
-                          <span className="text-body flex-1 text-text">
-                            {ei + 1}. {ex.title}
-                          </span>
-                          {ex.status === 'passed' && <CheckIcon className="text-success" />}
-                          <span className="text-caption text-text-muted">
-                            {typeLabel[ex.type] ?? ex.type} · {ex.xp} XP
-                          </span>
-                        </Link>
+          </section>
+          <main className="mx-auto grid max-w-[1200px] gap-8 px-5 py-8 lg:grid-cols-[1fr_380px]">
+            <ChapterTimeline course={data} />
+            <aside className="flex flex-col gap-4">
+              {data.skills.length > 0 && (
+                <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6">
+                  <h2 className="text-section text-text">Skills you'll leave with</h2>
+                  <ul className="flex flex-wrap gap-2">
+                    {data.skills.map((s) => (
+                      <li key={s} className="text-small rounded-pill bg-surface-raised px-3 py-1 text-text-secondary">
+                        {s}
                       </li>
                     ))}
-                  </ol>
-                </li>
-              ))}
-            </ol>
-          </>
-        )}
-      </main>
+                  </ul>
+                </section>
+              )}
+              <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-6">
+                <h2 className="text-section text-text">XP in this course</h2>
+                <p className="flex items-baseline gap-2">
+                  <span className="text-game text-[32px] leading-[36px] text-accent-text">{data.xp_earned}</span>
+                  <span className="text-body text-text-secondary">of about {data.xp_total}</span>
+                </p>
+                <p className="text-small text-text-muted">
+                  First-try passes give +50%, and passes without a hint +25%. Re-solving a lesson gives no XP.
+                </p>
+              </section>
+            </aside>
+          </main>
+        </>
+      )}
     </>
   );
 }

@@ -8,19 +8,22 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
+	"github.com/aryangarg/codequest/api/internal/auth"
 	"github.com/aryangarg/codequest/api/internal/content"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all"
+	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/httpapi"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
 	"github.com/aryangarg/codequest/api/internal/runner"
-	"github.com/aryangarg/codequest/api/internal/store"
 	"github.com/aryangarg/codequest/api/internal/testdb"
 	"github.com/aryangarg/codequest/api/internal/testredis"
 )
@@ -32,10 +35,38 @@ const (
 )
 
 type env struct {
-	t    *testing.T
-	pool *pgxpool.Pool
-	h    http.Handler
-	user uuid.NullUUID
+	t      *testing.T
+	pool   *pgxpool.Pool
+	h      http.Handler
+	user   uuid.NullUUID
+	cookie string // session cookie value when signed in
+	mail   *captureMailer
+	rdb    *redis.Client
+	prefix string
+}
+
+// captureMailer records sent emails instead of sending them.
+type captureMailer struct {
+	mu   sync.Mutex
+	sent []sentMail
+}
+
+type sentMail struct{ to, subject, body string }
+
+func (m *captureMailer) Send(_ context.Context, to, subject, body string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sent = append(m.sent, sentMail{to, subject, body})
+	return nil
+}
+
+func (m *captureMailer) last() sentMail {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.sent) == 0 {
+		return sentMail{}
+	}
+	return m.sent[len(m.sent)-1]
 }
 
 // opts tweak setup for one test.
@@ -43,6 +74,9 @@ type opts struct {
 	runner        runner.Runner
 	wait          time.Duration // grading wait before 202
 	submitPerUser int
+	devAuth       bool
+	github        *auth.GitHub
+	now           func() time.Time
 }
 
 func setup(t *testing.T, withUser bool) *env {
@@ -67,22 +101,40 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	if _, err := content.Build(ctx, pool, bundle); err != nil {
 		t.Fatalf("build: %v", err)
 	}
-	var dev uuid.NullUUID
-	if withUser {
-		u, err := store.New(pool).EnsureUserByEmail(ctx, store.EnsureUserByEmailParams{Email: "t@example.com", Name: "T"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		dev = uuid.NullUUID{UUID: u.ID, Valid: true}
-	}
 	rdb, prefix := testredis.New(t)
-	grader := grading.NewService(pool, o.runner, grading.Options{Wait: o.wait, Log: slog.New(slog.DiscardHandler)})
+	board := &game.Board{Redis: rdb, Prefix: prefix}
+	grader := grading.NewService(pool, o.runner, grading.Options{
+		Wait: o.wait, Log: slog.New(slog.DiscardHandler), Board: board, Game: &game.Engine{Now: o.now},
+	})
 	t.Cleanup(grader.Close)
+	sessions := &auth.Sessions{Pool: pool}
+	mail := &captureMailer{}
 	h := httpapi.New(httpapi.Deps{
-		Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grader, AllowedOrigins: []string{origin}, DevUser: dev,
+		Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grader, AllowedOrigins: []string{origin},
+		Sessions: sessions, Links: &auth.MagicLinks{Pool: pool, Mailer: mail, AppURL: origin},
+		GitHub: o.github, DevAuth: o.devAuth, Board: board, Now: o.now,
 		Limiter: &ratelimit.Limiter{Redis: rdb, Prefix: prefix}, SubmitPerUser: o.submitPerUser,
 	})
-	return &env{t: t, pool: pool, h: h, user: dev}
+	e := &env{t: t, pool: pool, h: h, mail: mail, rdb: rdb, prefix: prefix}
+	if withUser {
+		e.user, e.cookie = e.signIn("t@example.com", "T")
+	}
+	return e
+}
+
+// signIn creates (or finds) a user and a session for them.
+func (e *env) signIn(email, name string) (uuid.NullUUID, string) {
+	e.t.Helper()
+	ctx := context.Background()
+	u, err := auth.UserForEmail(ctx, e.pool, email, name, "")
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	raw, _, err := (&auth.Sessions{Pool: e.pool}).Create(ctx, u.ID)
+	if err != nil {
+		e.t.Fatal(err)
+	}
+	return uuid.NullUUID{UUID: u.ID, Valid: true}, raw
 }
 
 func (e *env) do(method, path, body string, hdr map[string]string) (int, []byte) {
@@ -91,6 +143,9 @@ func (e *env) do(method, path, body string, hdr map[string]string) (int, []byte)
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Origin", origin)
+	}
+	if e.cookie != "" {
+		req.AddCookie(&http.Cookie{Name: "cq_session", Value: e.cookie})
 	}
 	for k, v := range hdr {
 		req.Header.Set(k, v)

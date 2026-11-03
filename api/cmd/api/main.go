@@ -11,13 +11,15 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // user timezones work without OS zoneinfo
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/aryangarg/codequest/api/internal/auth"
 	"github.com/aryangarg/codequest/api/internal/config"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all" // register exercise types
+	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/httpapi"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
@@ -54,7 +56,8 @@ func run(log *slog.Logger) error {
 	rdb := redis.NewClient(ropt)
 	defer func() { _ = rdb.Close() }()
 
-	grader := grading.NewService(pool, &runner.Queue{Redis: rdb}, grading.Options{Log: log})
+	board := &game.Board{Redis: rdb}
+	grader := grading.NewService(pool, &runner.Queue{Redis: rdb}, grading.Options{Log: log, Board: board})
 	defer grader.Close()
 	// Anything still pending from before this start was lost with the old process.
 	if n, err := grader.FailStale(ctx, 5*time.Minute); err != nil {
@@ -63,21 +66,31 @@ func run(log *slog.Logger) error {
 		log.Warn("marked stale pending submissions as errors", "count", n)
 	}
 
-	var devUser uuid.NullUUID
-	if cfg.DevUserEmail != "" {
-		u, err := store.New(pool).EnsureUserByEmail(ctx, store.EnsureUserByEmailParams{Email: cfg.DevUserEmail, Name: "Dev User"})
-		if err != nil {
-			return fmt.Errorf("ensure dev user: %w", err)
-		}
-		devUser = uuid.NullUUID{UUID: u.ID, Valid: true}
-		log.Warn("DEV_USER_EMAIL is set: every request acts as this user; never use in production", "email", cfg.DevUserEmail)
+	var mailer auth.Mailer = auth.LogMailer{Log: log}
+	if cfg.SMTPAddr != "" {
+		mailer = auth.SMTPMailer{Addr: cfg.SMTPAddr, From: cfg.MailFrom, Username: cfg.SMTPUsername, Password: cfg.SMTPPassword}
 	}
+	var gh *auth.GitHub
+	if cfg.GitHubClientID != "" {
+		gh = &auth.GitHub{ClientID: cfg.GitHubClientID, ClientSecret: cfg.GitHubClientSecret, RedirectURL: cfg.AppURL + "/api/v1/auth/github/callback"}
+	}
+	if cfg.DevAuth {
+		log.Warn("DEV_AUTH=1: POST /auth/dev signs anyone in without email; development only")
+	}
+
+	// Close finished league weeks now and every minute (safe on many replicas).
+	leagues := &game.Leagues{Pool: pool, Log: log}
+	go leagues.Run(ctx, time.Minute)
+	go cleanAuth(ctx, pool, log)
 
 	srv := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.New(httpapi.Deps{
 			Pool: pool, Grader: grader, Log: log,
-			AllowedOrigins: cfg.AllowedOrigins, DevUser: devUser,
+			AllowedOrigins: cfg.AllowedOrigins,
+			Sessions:       &auth.Sessions{Pool: pool},
+			Links:          &auth.MagicLinks{Pool: pool, Mailer: mailer, AppURL: cfg.AppURL},
+			GitHub:         gh, DevAuth: cfg.DevAuth, SecureCookies: cfg.SecureCookies(), Board: board,
 			Limiter: &ratelimit.Limiter{Redis: rdb},
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
@@ -100,4 +113,20 @@ func run(log *slog.Logger) error {
 		return fmt.Errorf("shutdown: %w", err)
 	}
 	return nil
+}
+
+// cleanAuth deletes expired sessions and old magic links every hour.
+func cleanAuth(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		if err := store.New(pool).DeleteExpiredAuth(ctx); err != nil && ctx.Err() == nil {
+			log.Error("clean expired sessions", "err", err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }

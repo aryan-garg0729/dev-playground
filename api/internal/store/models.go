@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Chapter struct {
@@ -25,6 +26,12 @@ type Course struct {
 	Description string `json:"description"`
 	OrderIndex  int32  `json:"order_index"`
 	Published   bool   `json:"published"`
+}
+
+type DayPass struct {
+	UserID     uuid.UUID `json:"user_id"`
+	Day        time.Time `json:"day"`
+	ExerciseID string    `json:"exercise_id"`
 }
 
 type Exercise struct {
@@ -44,6 +51,36 @@ type Exercise struct {
 	Published   bool            `json:"published"`
 }
 
+type LeagueMember struct {
+	Week      time.Time   `json:"week"`
+	UserID    uuid.UUID   `json:"user_id"`
+	Tier      string      `json:"tier"`
+	GroupNo   int32       `json:"group_no"`
+	FinalRank pgtype.Int4 `json:"final_rank"`
+	Result    pgtype.Text `json:"result"`
+}
+
+type LeagueWeek struct {
+	Week     time.Time `json:"week"`
+	ClosedAt time.Time `json:"closed_at"`
+}
+
+type MagicLink struct {
+	TokenHash string     `json:"token_hash"`
+	Email     string     `json:"email"`
+	Next      string     `json:"next"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+type OauthIdentity struct {
+	Provider       string    `json:"provider"`
+	ProviderUserID string    `json:"provider_user_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
 type Progress struct {
 	UserID        uuid.UUID  `json:"user_id"`
 	ExerciseID    string     `json:"exercise_id"`
@@ -57,6 +94,7 @@ type Session struct {
 	ID        string    `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
 	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type Submission struct {
@@ -69,6 +107,7 @@ type Submission struct {
 	Score           float64         `json:"score"`
 	Result          json.RawMessage `json:"result"`
 	CreatedAt       time.Time       `json:"created_at"`
+	Outcome         json.RawMessage `json:"outcome"`
 }
 
 type User struct {
@@ -78,5 +117,27 @@ type User struct {
 	Avatar    string    `json:"avatar"`
 	Country   string    `json:"country"`
 	Timezone  string    `json:"timezone"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type UserStat struct {
+	UserID         uuid.UUID  `json:"user_id"`
+	TotalXp        int32      `json:"total_xp"`
+	Level          int32      `json:"level"`
+	Bytes          int32      `json:"bytes"`
+	StreakDays     int32      `json:"streak_days"`
+	StreakFreezes  int32      `json:"streak_freezes"`
+	LastActiveDate *time.Time `json:"last_active_date"`
+	LeagueTier     string     `json:"league_tier"`
+	Title          string     `json:"title"`
+	DailyGoal      int32      `json:"daily_goal"`
+}
+
+type XpEvent struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	Amount    int32     `json:"amount"`
+	Reason    string    `json:"reason"`
+	RefID     string    `json:"ref_id"`
 	CreatedAt time.Time `json:"created_at"`
 }

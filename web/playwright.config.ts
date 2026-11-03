@@ -13,4 +13,8 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
     viewport: { width: 1280, height: 800 },
   },
+  projects: [
+    { name: 'setup', testMatch: /auth\.setup\.ts/ },
+    { name: 'app', dependencies: ['setup'], use: { storageState: 'e2e/.auth/dev.json' } },
+  ],
 });

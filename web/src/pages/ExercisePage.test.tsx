@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderRoute, stubApi } from '../test/render';
 import { ExercisePage } from './ExercisePage';
+import { nothing } from '../test/fixtures';
 
 const detail = {
   id: 'lc.q', type: 'mcq', version: 3, title: 'Message roles', xp: 5, difficulty: 1, tags: ['messages'],
@@ -15,7 +16,7 @@ describe('ExercisePage', () => {
     const fetchSpy = stubApi({
       'GET /api/v1/exercises/lc.q': [200, detail],
       'POST /api/v1/exercises/lc.q/submit': [200, {
-        submission_id: 'x', xp_awarded: 0,
+        submission_id: 'x', xp_awarded: 0, outcome: nothing,
         result: { status: 'fail', score: 0, stdout: '', runtime_ms: 0, checks: [{ name: 'Correct answer', passed: false, visible: true, feedback: 'Because.' }] },
       }],
     });

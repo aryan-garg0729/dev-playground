@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { GradeResult } from '../../api/client';
 import type { RunOutput } from '../types';
 import { type CodeAnswer, CodeExercise, type CodePublicView, codeSandboxJob } from './CodeExercise';
+import { nothing } from '../../test/fixtures';
 
 // Monaco needs a real browser; a textarea stands in for it here.
 vi.mock('../code/CodeEditor', () => ({
@@ -21,7 +22,7 @@ const view: CodePublicView = {
 };
 
 const failing: GradeResult = {
-  submission_id: 's1', xp_awarded: 0,
+  submission_id: 's1', xp_awarded: 0, outcome: nothing,
   result: {
     status: 'fail', score: 0.5, stdout: 'debug print\n', runtime_ms: 84,
     checks: [

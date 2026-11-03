@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { GradeResult } from '../../api/client';
 import { McqExercise, type McqAnswer, type McqPublicView } from './McqExercise';
+import { nothing } from '../../test/fixtures';
 
 const view: McqPublicView = {
   question: 'Which message carries the **persona**?',
@@ -16,6 +17,7 @@ const view: McqPublicView = {
 const graded = (status: 'pass' | 'fail'): GradeResult => ({
   submission_id: '00000000-0000-0000-0000-000000000000',
   xp_awarded: 0,
+  outcome: nothing,
   result: {
     status, score: status === 'pass' ? 1 : 0, stdout: '', runtime_ms: 0,
     checks: [{ name: 'Correct answer', passed: status === 'pass', visible: true, feedback: 'SystemMessage holds instructions.' }],

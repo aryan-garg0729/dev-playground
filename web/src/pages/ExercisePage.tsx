@@ -1,10 +1,11 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { CourseDetail, ExerciseDetail, GradeResult } from '../api/client';
-import { runOnServer, useCourse, useExercise, useSubmit } from '../api/queries';
+import { noOutcome, runOnServer, useCourse, useExercise, useSubmit } from '../api/queries';
 import { AppHeader } from '../components/AppHeader';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons';
 import { LessonRail, type RailLesson } from '../components/LessonRail';
+import { PassCelebration } from '../components/PassCelebration';
 import { DifficultyPill, Pill } from '../components/Pill';
 import { type RunMode, type RunOutput, renderers, sandboxJobs } from '../exercise-types';
 import { runInSandbox, warmSandbox } from '../runner-client/sandbox';
@@ -75,12 +76,20 @@ function useRun(ex: ExerciseDetail): ((answer: unknown) => Promise<RunOutput>) |
   return undefined;
 }
 
-function Exercise({ ex }: { ex: ExerciseDetail }) {
+/** The next lesson's link and title, from the course outline. */
+function nextLesson(ex: ExerciseDetail, course: CourseDetail | undefined) {
+  if (!ex.next_id) return undefined;
+  const title = course?.chapters.flatMap((c) => c.exercises).find((e) => e.id === ex.next_id)?.title ?? 'next lesson';
+  return { to: `/learn/${ex.course_id}/${ex.next_id}`, title };
+}
+
+function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | undefined }) {
+  const [celebrate, setCelebrate] = useState<GradeResult>();
   const last = ex.last_submission;
   const sameVersion = last?.exercise_version === ex.version;
   const [draft, setDraft] = useState<unknown>(() => loadDraft(ex.id, ex.version) ?? (sameVersion ? last?.answer : undefined));
   const [result, setResult] = useState<GradeResult | undefined>(
-    sameVersion && last?.result ? { submission_id: last.submission_id, result: last.result, xp_awarded: 0 } : undefined,
+    sameVersion && last?.result ? { submission_id: last.submission_id, result: last.result, xp_awarded: 0, outcome: noOutcome } : undefined,
   );
   const submit = useSubmit(ex.id, ex.course_id);
   const onRun = useRun(ex);
@@ -101,23 +110,35 @@ function Exercise({ ex }: { ex: ExerciseDetail }) {
     return <p className="text-body text-text-muted">This lesson type ({ex.type}) is not supported yet.</p>;
   }
   return (
-    <Renderer
-      header={header}
-      publicView={ex.public_view}
-      draft={draft}
-      result={result}
-      onRun={onRun}
-      onChange={(a) => {
-        setDraft(a);
-        saveDraft(ex.id, ex.version, a);
-        if (ex.type === 'mcq') setResult(undefined); // a changed choice makes the shown verdict stale
-      }}
-      onSubmit={async (answer) => {
-        const r = await submit.mutateAsync({ version: ex.version, answer });
-        setResult(r);
-        return r;
-      }}
-    />
+    <>
+      <Renderer
+        header={header}
+        publicView={ex.public_view}
+        draft={draft}
+        result={result}
+        onRun={onRun}
+        onChange={(a) => {
+          setDraft(a);
+          saveDraft(ex.id, ex.version, a);
+          if (ex.type === 'mcq') setResult(undefined); // a changed choice makes the shown verdict stale
+        }}
+        onSubmit={async (answer) => {
+          const r = await submit.mutateAsync({ version: ex.version, answer });
+          setResult(r);
+          if (r.result.status === 'pass' && r.outcome.breakdown) setCelebrate(r); // first pass only
+          return r;
+        }}
+      />
+      {celebrate && (
+        <PassCelebration
+          outcome={celebrate.outcome}
+          result={celebrate.result}
+          next={nextLesson(ex, course)}
+          courseTo={`/courses/${ex.course_id}`}
+          onClose={() => setCelebrate(undefined)}
+        />
+      )}
+    </>
   );
 }
 
@@ -132,7 +153,7 @@ export function ExercisePage() {
         {data && course.data && <Rail course={course.data} ex={data} />}
         {isPending && <Loading label="lesson" />}
         {error && <LoadError error={error} />}
-        {data && <Exercise key={data.id} ex={data} />}
+        {data && <Exercise key={data.id} ex={data} course={course.data} />}
       </main>
     </div>
   );

@@ -4,6 +4,9 @@ import { api, ApiError, type GradeResult, unwrap } from './client';
 
 export const keys = {
   me: ['me'] as const,
+  home: ['home'] as const,
+  league: ['league'] as const,
+  providers: ['auth-providers'] as const,
   courses: ['courses'] as const,
   course: (id: string) => ['course', id] as const,
   exercise: (id: string) => ['exercise', id] as const,
@@ -39,6 +42,12 @@ export function useExercise(exerciseId: string) {
 }
 
 const POLL_MS = 1000;
+
+/** Outcome of a submission whose grading failed (nothing changed). */
+export const noOutcome: GradeResult['outcome'] = {
+  xp_awarded: 0, breakdown: null, first_try: false, total_xp: 0, level: 0, level_up: false,
+  level_start_xp: 0, next_level_xp: 0, streak_days: 0, streak_extended: false, freezes_used: 0, freeze_earned: false,
+};
 const POLL_LIMIT_MS = 3 * 60 * 1000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -61,7 +70,7 @@ export async function submitAndWait(exerciseId: string, version: number, answer:
     await sleep(pollMs);
     const s = await unwrap(api.GET('/submissions/{submissionId}', { params: { path: { submissionId: id } } }));
     if (s.status !== 'pending' && s.result) {
-      return { submission_id: s.submission_id, result: s.result, xp_awarded: s.xp_awarded };
+      return { submission_id: s.submission_id, result: s.result, xp_awarded: s.xp_awarded, outcome: s.outcome ?? noOutcome };
     }
   }
   throw new ApiError(504, 'timeout', 'Grading is taking too long. Reload the page later to see the result.');
@@ -73,6 +82,9 @@ export function useSubmit(exerciseId: string, courseId: string | undefined) {
     mutationFn: (body: { version: number; answer: unknown }) => submitAndWait(exerciseId, body.version, body.answer),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.courses });
+      void qc.invalidateQueries({ queryKey: keys.me });
+      void qc.invalidateQueries({ queryKey: keys.home });
+      void qc.invalidateQueries({ queryKey: keys.league });
       if (courseId) void qc.invalidateQueries({ queryKey: keys.course(courseId) });
     },
   });
@@ -95,4 +107,58 @@ export async function runOnServer(exerciseId: string, version: number, answer: u
     table: out.table,
     error: out.error,
   };
+}
+
+export function useHome() {
+  return useQuery({ queryKey: keys.home, queryFn: () => unwrap(api.GET('/home')) });
+}
+
+export function useLeague() {
+  return useQuery({ queryKey: keys.league, queryFn: () => unwrap(api.GET('/leagues/current')) });
+}
+
+export function useProviders() {
+  return useQuery({ queryKey: keys.providers, queryFn: () => unwrap(api.GET('/auth/providers')), staleTime: Infinity });
+}
+
+/** The browser's IANA timezone, saved on first sign-in (streak days follow it). */
+export function browserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+export function sendMagicLink(email: string, next: string) {
+  return unwrap(api.POST('/auth/magic-link', { body: { email, next } }));
+}
+
+/** Redeems a magic-link token; on success the session cookie is set. */
+export function useVerifyMagicLink() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => unwrap(api.POST('/auth/magic-link/verify', { body: { token, timezone: browserTimezone() } })),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/** Development sign-in (DEV_AUTH=1 only). */
+export function useDevSignIn() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.POST('/auth/dev', { body: { timezone: browserTimezone() } })),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+export function useSignOut() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { response } = await api.POST('/auth/logout', { body: {} });
+      if (!response.ok) throw new ApiError(response.status, 'http_error', 'Sign out failed');
+    },
+    onSuccess: () => qc.clear(),
+  });
 }

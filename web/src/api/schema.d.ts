@@ -33,6 +33,155 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** @description The user's own settings. XP, level, streak and league fields are not accepted (only grading writes them). */
+        patch: operations["updateMe"];
+        trace?: never;
+    };
+    "/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getHome"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leagues/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getCurrentLeague"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getAuthProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/magic-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Emails a single-use sign-in link (15 minutes). Same answer whether or not the account exists. */
+        post: operations["sendMagicLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/magic-link/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Redeems the token from the link's URL fragment and sets the session cookie. */
+        post: operations["verifyMagicLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/dev": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Development only (DEV_AUTH=1); 404 otherwise. Signs in without email. */
+        post: operations["devSignIn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/github/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Redirects to GitHub (browser navigation, not fetch). */
+        get: operations["githubStart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/github/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["githubCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -144,15 +293,128 @@ export interface components {
                 message: string;
             };
         };
+        User: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            avatar: string;
+            timezone: string;
+        };
         Me: {
-            user: {
-                /** Format: uuid */
-                id: string;
-                email: string;
-                name: string;
-                avatar: string;
-                timezone: string;
+            user: components["schemas"]["User"];
+            stats: components["schemas"]["Stats"];
+        };
+        SignedIn: {
+            user: components["schemas"]["User"];
+            next: string;
+        };
+        /** @enum {string} */
+        Tier: "bronze" | "silver" | "gold" | "diamond";
+        Stats: {
+            total_xp: number;
+            level: number;
+            /** @description Cumulative XP where this level began */
+            level_start_xp: number;
+            /** @description Cumulative XP for the next level */
+            next_level_xp: number;
+            /** @description Current streak (0 when missed days exceed freezes) */
+            streak_days: number;
+            streak_freezes: number;
+            league_tier: components["schemas"]["Tier"];
+            daily_goal: number;
+            today_lessons: number;
+        };
+        Breakdown: {
+            base: number;
+            first_try: number;
+            no_hint: number;
+        };
+        /** @description What a graded submission did to the user's game state. */
+        Outcome: {
+            xp_awarded: number;
+            breakdown: null | components["schemas"]["Breakdown"];
+            first_try: boolean;
+            total_xp: number;
+            level: number;
+            level_up: boolean;
+            level_start_xp: number;
+            next_level_xp: number;
+            streak_days: number;
+            streak_extended: boolean;
+            freezes_used: number;
+            freeze_earned: boolean;
+        };
+        CodeLine: {
+            n: number;
+            text: string;
+        };
+        LastAttempt: {
+            status: string;
+            passed: number;
+            total: number;
+            file: string;
+            lines: components["schemas"]["CodeLine"][];
+            error_line: number;
+        };
+        ContinueCard: {
+            course_id: string;
+            course_title: string;
+            chapter_title: string;
+            chapter_index: number;
+            exercise_id: string;
+            exercise_title: string;
+            exercise_type: string;
+            position: {
+                index: number;
+                total: number;
             };
+            lessons: components["schemas"]["ProgressStatus"][];
+            last: null | components["schemas"]["LastAttempt"];
+        };
+        DayCell: {
+            /** Format: date */
+            date: string;
+            active: boolean;
+            today: boolean;
+        };
+        LeagueSummary: {
+            joined: boolean;
+            tier: components["schemas"]["Tier"];
+            rank: number;
+            of: number;
+            weekly_xp: number;
+            /** Format: date-time */
+            ends_at: string;
+            promote: number;
+            demote: number;
+            xp_to_promote: number;
+            zone: components["schemas"]["LeagueZone"];
+        };
+        /** @enum {string} */
+        LeagueZone: "promote" | "stay" | "demote";
+        League: components["schemas"]["LeagueSummary"] & {
+            standings: {
+                rank: number;
+                name: string;
+                weekly_xp: number;
+                you: boolean;
+                zone: components["schemas"]["LeagueZone"];
+            }[];
+        };
+        Home: {
+            continue: null | components["schemas"]["ContinueCard"];
+            today: {
+                goal: number;
+                done: number;
+                streak_days: number;
+                week: components["schemas"]["DayCell"][];
+            };
+            paths: (components["schemas"]["CourseSummary"] & {
+                /** @enum {string} */
+                status: "not_started" | "in_progress" | "done";
+            })[];
+            league: components["schemas"]["LeagueSummary"];
         };
         CourseSummary: {
             id: string;
@@ -178,6 +440,11 @@ export interface components {
             id: string;
             title: string;
             description: string;
+            /** @description Distinct lesson tags in course order */
+            skills: string[];
+            xp_earned: number;
+            /** @description Base XP of all lessons (bonuses not included) */
+            xp_total: number;
             chapters: {
                 id: string;
                 title: string;
@@ -250,8 +517,8 @@ export interface components {
             /** Format: uuid */
             submission_id: string;
             result: components["schemas"]["Result"];
-            /** @description Always 0 until Phase 4 */
             xp_awarded: number;
+            outcome: components["schemas"]["Outcome"];
         };
         PendingResponse: {
             /** Format: uuid */
@@ -268,6 +535,7 @@ export interface components {
             status: "pending" | "pass" | "fail" | "error" | "timeout";
             result: null | components["schemas"]["Result"];
             xp_awarded: number;
+            outcome: null | components["schemas"]["Outcome"];
             /** Format: date-time */
             created_at: string;
         };
@@ -346,6 +614,255 @@ export interface operations {
                 };
             };
             401: components["responses"]["Error"];
+        };
+    };
+    updateMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    /** @description IANA zone */
+                    timezone?: string;
+                    daily_goal?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+        };
+    };
+    getHome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Continue card, today's goal and streak week, paths, league summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Home"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    getCurrentLeague: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description This week's league group (joined after the first XP of the week) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["League"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    getAuthProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enabled sign-in methods */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        magic_link: boolean;
+                        github: boolean;
+                        /** @description DEV_AUTH (development only) */
+                        dev: boolean;
+                    };
+                };
+            };
+        };
+    };
+    sendMagicLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email: string;
+                    /** @description Same-site path to open after sign-in */
+                    next?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: string;
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+        };
+    };
+    verifyMagicLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    /** @description The browser's IANA zone */
+                    timezone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedIn"];
+                };
+            };
+            400: components["responses"]["Error"];
+        };
+    };
+    devSignIn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    email?: string;
+                    name?: string;
+                    timezone?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignedIn"];
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Signed out */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    githubStart: {
+        parameters: {
+            query?: {
+                next?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to GitHub */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    githubCallback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect into the app (or /sign-in?error=github) */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     listCourses: {

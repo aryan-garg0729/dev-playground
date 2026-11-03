@@ -1,6 +1,8 @@
-import { lazy, type ReactNode, Suspense, useState } from 'react';
+import { type CSSProperties, lazy, type ReactNode, type RefObject, Suspense, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
+import { Splitter } from '../../components/Splitter';
+import { PANE_LIMITS, usePanes } from '../../stores/panes';
 import type { GradeResult, RunOutput } from '../types';
 import { Results, type Shown } from './Results';
 
@@ -27,7 +29,30 @@ function message(e: unknown, what: string): string {
   return `Could not ${what}. Check your connection and try again.`;
 }
 
-/** The lesson workspace: problem pane | editor with Run and Submit, then results. */
+/** Room the editor always keeps when a neighbouring pane grows (px). */
+const EDITOR_MIN_WIDTH = 360;
+const EDITOR_MIN_HEIGHT = 160;
+
+/** Tracks an element's size (0 until measured, or where ResizeObserver is missing). */
+function useSize(ref: RefObject<HTMLElement | null>) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return size;
+}
+
+/**
+ * The lesson workspace: problem pane | editor with Run and Submit, then results.
+ * Drag handles resize the problem pane and the checks pane; sizes are kept per
+ * device (stores/panes). Below 900px the panes stack and keep natural sizes.
+ */
 export function Workspace(p: Props) {
   const [busy, setBusy] = useState<'run' | 'submit'>();
   const [error, setError] = useState<string>();
@@ -55,19 +80,50 @@ export function Workspace(p: Props) {
     }
   }
 
+  const panes = usePanes();
+  const row = useRef<HTMLDivElement>(null);
+  const column = useRef<HTMLDivElement>(null);
+  const rowSize = useSize(row);
+  const columnSize = useSize(column);
+  const maxProblem = Math.max(
+    PANE_LIMITS.problemWidth.min,
+    Math.min(PANE_LIMITS.problemWidth.max, rowSize.width ? rowSize.width - EDITOR_MIN_WIDTH : Infinity),
+  );
+  const maxResults = Math.max(
+    PANE_LIMITS.resultsHeight.min,
+    Math.min(PANE_LIMITS.resultsHeight.max, columnSize.height ? columnSize.height - EDITOR_MIN_HEIGHT : Infinity),
+  );
+  const problemWidth = Math.min(panes.problemWidth, maxProblem);
+  const resultsHeight = Math.min(panes.resultsHeight, maxResults);
+  const sizes = { '--problem-w': `${problemWidth}px`, '--results-h': `${resultsHeight}px` } as CSSProperties;
+
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 gap-2 max-[900px]:flex-col">
+    <div ref={row} style={sizes} className="flex min-h-0 min-w-0 flex-1 max-[900px]:flex-col max-[900px]:gap-2">
       <section
         aria-label="Problem"
-        className="flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto rounded-lg border border-border bg-surface px-6 py-5 max-[900px]:w-auto"
+        className="flex w-[var(--problem-w)] shrink-0 flex-col gap-4 overflow-y-auto rounded-lg border border-border bg-surface px-6 py-5 max-[900px]:w-auto"
       >
         {p.header}
         {p.problem}
         {p.problemFooter && <div className="mt-auto flex flex-col gap-3 pt-4">{p.problemFooter}</div>}
       </section>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
-        <section aria-label="Editor" className="flex min-h-[320px] flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+      <Splitter
+        orientation="vertical"
+        label="Resize problem and editor"
+        value={problemWidth}
+        min={PANE_LIMITS.problemWidth.min}
+        max={maxProblem}
+        direction={1}
+        onChange={(px) => panes.setSize('problemWidth', Math.min(px, maxProblem))}
+        onReset={() => panes.reset('problemWidth')}
+      />
+
+      <div ref={column} className="flex min-h-0 min-w-0 flex-1 flex-col max-[900px]:gap-2">
+        <section
+          aria-label="Editor"
+          className="flex min-h-[160px] flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface max-[900px]:min-h-[320px]"
+        >
           <div className="flex h-[52px] shrink-0 items-center gap-2 border-b border-border pl-4 pr-2">
             <span className="text-code-sm flex-1 truncate text-text">{p.file}</span>
             <Button
@@ -88,11 +144,26 @@ export function Workspace(p: Props) {
           </div>
         </section>
         {error && (
-          <p role="alert" className="text-small rounded-lg border border-border bg-danger-soft px-4 py-2 text-danger">
+          <p role="alert" className="text-small mt-2 rounded-lg border border-border bg-danger-soft px-4 py-2 text-danger">
             {error}
           </p>
         )}
-        <div aria-live="polite" className="flex max-h-[45%] shrink-0 flex-col gap-2 overflow-y-auto">
+        {shown && (
+          <Splitter
+            orientation="horizontal"
+            label="Resize editor and checks"
+            value={resultsHeight}
+            min={PANE_LIMITS.resultsHeight.min}
+            max={maxResults}
+            direction={-1}
+            onChange={(px) => panes.setSize('resultsHeight', Math.min(px, maxResults))}
+            onReset={() => panes.reset('resultsHeight')}
+          />
+        )}
+        <div
+          aria-live="polite"
+          className={`flex shrink-0 flex-col gap-2 overflow-y-auto ${shown ? 'h-[var(--results-h)] max-[900px]:h-auto max-[900px]:max-h-[60vh]' : ''}`}
+        >
           <Results shown={shown} />
         </div>
       </div>

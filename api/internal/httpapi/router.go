@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/aryangarg/codequest/api/internal/auth"
+	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
 )
@@ -24,8 +26,20 @@ type Deps struct {
 	Grader         *grading.Service
 	Log            *slog.Logger
 	AllowedOrigins []string
-	// DevUser, when valid, is the user every request acts as (Phase 1, no auth).
-	DevUser uuid.NullUUID
+	// Sessions resolve the session cookie. Required.
+	Sessions *auth.Sessions
+	// Links sends and redeems magic links. Required.
+	Links *auth.MagicLinks
+	// GitHub is nil when GitHub sign-in is not configured.
+	GitHub *auth.GitHub
+	// DevAuth enables POST /auth/dev (sign in without email). Never in production.
+	DevAuth bool
+	// SecureCookies sets the Secure flag (when the app is served over https).
+	SecureCookies bool
+	// Board is the Redis league board. Required.
+	Board *game.Board
+	// Now is the clock (time.Now when nil).
+	Now func() time.Time
 	// Limiter rate-limits submissions per user and per client IP. Required.
 	Limiter *ratelimit.Limiter
 	// SubmitPerUser and SubmitPerIP are per-minute limits (defaults 30 and 120).
@@ -52,7 +66,7 @@ func New(d Deps) http.Handler {
 	r.Use(a.logRequests)
 	r.Use(middleware.Timeout(30 * time.Second))
 	r.Use(a.guardStateChanges)
-	r.Use(a.devUser)
+	r.Use(a.sessionUser)
 
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
@@ -64,6 +78,19 @@ func New(d Deps) http.Handler {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/healthz", a.healthz)
 		r.Get("/me", a.me)
+		r.Patch("/me", a.updateMe)
+		r.Get("/home", a.home)
+		r.Get("/leagues/current", a.currentLeague)
+
+		r.Get("/auth/providers", a.providers)
+		r.With(a.limitSignIns).Post("/auth/magic-link", a.sendMagicLink)
+		r.With(a.limitSignIns).Post("/auth/magic-link/verify", a.verifyMagicLink)
+		r.Get("/auth/github/start", a.githubStart)
+		r.Get("/auth/github/callback", a.githubCallback)
+		r.Post("/auth/logout", a.logout)
+		if d.DevAuth {
+			r.Post("/auth/dev", a.devSignIn)
+		}
 		r.Get("/courses", a.listCourses)
 		r.Get("/courses/{courseID}", a.getCourse)
 		r.Get("/exercises/{exerciseID}", a.getExercise)
@@ -84,18 +111,34 @@ func currentUser(r *http.Request) uuid.NullUUID {
 	return u
 }
 
-func (a *api) devUser(next http.Handler) http.Handler {
+// sessionUser resolves the session cookie to the signed-in user.
+func (a *api) sessionUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if a.DevUser.Valid {
-			r = r.WithContext(context.WithValue(r.Context(), userKey, a.DevUser))
+		if c, err := r.Cookie(sessionCookie); err == nil {
+			u, err := a.Sessions.Lookup(r.Context(), c.Value)
+			if err != nil {
+				a.internal(w, r, err)
+				return
+			}
+			if u.Valid {
+				r = r.WithContext(context.WithValue(r.Context(), userKey, u))
+			}
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-// guardStateChanges is the CSRF defence for non-GET requests: a JSON content
-// type (which a cross-site form cannot send without a CORS preflight) and, when
-// the browser sends one, an allowed Origin.
+func (a *api) now() time.Time {
+	if a.Now != nil {
+		return a.Now()
+	}
+	return time.Now()
+}
+
+// guardStateChanges is the CSRF defence for non-GET requests: an allowed
+// Origin header (browsers always send one on these methods) and a JSON content
+// type (which a cross-site form cannot send without a CORS preflight). The
+// session cookie is also SameSite=Lax.
 func (a *api) guardStateChanges(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -103,7 +146,7 @@ func (a *api) guardStateChanges(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if origin := r.Header.Get("Origin"); origin != "" && !slices.Contains(a.AllowedOrigins, origin) {
+		if origin := r.Header.Get("Origin"); !slices.Contains(a.AllowedOrigins, origin) {
 			writeError(w, http.StatusForbidden, "forbidden_origin", "origin not allowed")
 			return
 		}

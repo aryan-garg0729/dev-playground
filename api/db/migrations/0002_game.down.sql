@@ -1,0 +1,10 @@
+ALTER TABLE submissions DROP COLUMN outcome;
+DROP TABLE league_weeks;
+DROP TABLE league_members;
+DROP TABLE day_passes;
+DROP TABLE user_stats;
+DROP TABLE xp_events;
+DROP TABLE oauth_identities;
+DROP TABLE magic_links;
+DROP INDEX sessions_expires_at_idx;
+ALTER TABLE sessions DROP COLUMN created_at;

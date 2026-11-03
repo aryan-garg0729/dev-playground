@@ -70,3 +70,20 @@ export const PanelLeftIcon = (p: IconProps) => (
     <path d="M9 4v16M13 10l2 2-2 2" />
   </Icon>
 );
+export const FlameIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 3c.5 3 3.5 4.5 3.5 8.5a3.5 3.5 0 0 1-7 0c0-1.6.7-2.7 1.5-3.5.2 1.3.8 2 1.5 2.5C11 8.5 11 5.5 12 3Z" />
+    <path d="M6.5 13.5a5.5 5.5 0 0 0 11 0" />
+  </Icon>
+);
+export const ChestIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="3" y="8" width="18" height="12" rx="2" />
+    <path d="M3 13h18M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M11 13v2h2v-2" />
+  </Icon>
+);
+export const StarIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6-4.5-4.1 6-.7Z" />
+  </Icon>
+);

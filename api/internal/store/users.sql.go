@@ -11,6 +11,39 @@ import (
 	"github.com/google/uuid"
 )
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (email, name, avatar)
+VALUES ($1, $2, $3)
+RETURNING id, email, name, avatar, timezone
+`
+
+type CreateUserParams struct {
+	Email  string `json:"email"`
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
+}
+
+type CreateUserRow struct {
+	ID       uuid.UUID `json:"id"`
+	Email    string    `json:"email"`
+	Name     string    `json:"name"`
+	Avatar   string    `json:"avatar"`
+	Timezone string    `json:"timezone"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.Name, arg.Avatar)
+	var i CreateUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.Avatar,
+		&i.Timezone,
+	)
+	return i, err
+}
+
 const ensureUserByEmail = `-- name: EnsureUserByEmail :one
 INSERT INTO users (email, name)
 VALUES ($1, $2)
@@ -67,4 +100,76 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (GetUserRow, error)
 		&i.Timezone,
 	)
 	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, name, avatar, timezone FROM users WHERE email = $1
+`
+
+type GetUserByEmailRow struct {
+	ID       uuid.UUID `json:"id"`
+	Email    string    `json:"email"`
+	Name     string    `json:"name"`
+	Avatar   string    `json:"avatar"`
+	Timezone string    `json:"timezone"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i GetUserByEmailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.Avatar,
+		&i.Timezone,
+	)
+	return i, err
+}
+
+const setUserName = `-- name: SetUserName :exec
+UPDATE users SET name = $1 WHERE id = $2
+`
+
+type SetUserNameParams struct {
+	Name string    `json:"name"`
+	ID   uuid.UUID `json:"id"`
+}
+
+func (q *Queries) SetUserName(ctx context.Context, arg SetUserNameParams) error {
+	_, err := q.db.Exec(ctx, setUserName, arg.Name, arg.ID)
+	return err
+}
+
+const setUserTimezone = `-- name: SetUserTimezone :exec
+UPDATE users SET timezone = $1 WHERE id = $2
+`
+
+type SetUserTimezoneParams struct {
+	Timezone string    `json:"timezone"`
+	ID       uuid.UUID `json:"id"`
+}
+
+func (q *Queries) SetUserTimezone(ctx context.Context, arg SetUserTimezoneParams) error {
+	_, err := q.db.Exec(ctx, setUserTimezone, arg.Timezone, arg.ID)
+	return err
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :exec
+UPDATE users SET
+    name = CASE WHEN name = '' THEN $1 ELSE name END,
+    avatar = CASE WHEN avatar = '' THEN $2 ELSE avatar END
+WHERE id = $3
+`
+
+type UpdateUserProfileParams struct {
+	Name   string    `json:"name"`
+	Avatar string    `json:"avatar"`
+	ID     uuid.UUID `json:"id"`
+}
+
+// Fills name and avatar only where they are still empty (sign-in never overwrites edits).
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error {
+	_, err := q.db.Exec(ctx, updateUserProfile, arg.Name, arg.Avatar, arg.ID)
+	return err
 }

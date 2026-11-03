@@ -20,6 +20,135 @@ paths:
           description: Current user
           content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } }
         "401": { $ref: "#/components/responses/Error" }
+    patch:
+      operationId: updateMe
+      description: The user's own settings. XP, level, streak and league fields are not accepted (only grading writes them).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, maxLength: 80 }
+                timezone: { type: string, description: IANA zone, e.g. Asia/Kolkata }
+                daily_goal: { type: integer, minimum: 1, maximum: 10 }
+      responses:
+        "200":
+          description: Updated user
+          content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+  /home:
+    get:
+      operationId: getHome
+      responses:
+        "200":
+          description: Continue card, today's goal and streak week, paths, league summary
+          content: { application/json: { schema: { $ref: "#/components/schemas/Home" } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /leagues/current:
+    get:
+      operationId: getCurrentLeague
+      responses:
+        "200":
+          description: This week's league group (joined after the first XP of the week)
+          content: { application/json: { schema: { $ref: "#/components/schemas/League" } } }
+        "401": { $ref: "#/components/responses/Error" }
+  /auth/providers:
+    get:
+      operationId: getAuthProviders
+      responses:
+        "200":
+          description: Enabled sign-in methods
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [magic_link, github, dev]
+                properties:
+                  magic_link: { type: boolean }
+                  github: { type: boolean }
+                  dev: { type: boolean, description: DEV_AUTH (development only) }
+  /auth/magic-link:
+    post:
+      operationId: sendMagicLink
+      description: Emails a single-use sign-in link (15 minutes). Same answer whether or not the account exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              additionalProperties: false
+              properties:
+                email: { type: string }
+                next: { type: string, description: Same-site path to open after sign-in }
+      responses:
+        "202": { description: Sent, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string } } } } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /auth/magic-link/verify:
+    post:
+      operationId: verifyMagicLink
+      description: Redeems the token from the link's URL fragment and sets the session cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              additionalProperties: false
+              properties:
+                token: { type: string }
+                timezone: { type: string, description: The browser's IANA zone, saved on first sign-in }
+      responses:
+        "200":
+          description: Signed in
+          content: { application/json: { schema: { $ref: "#/components/schemas/SignedIn" } } }
+        "400": { $ref: "#/components/responses/Error" }
+  /auth/dev:
+    post:
+      operationId: devSignIn
+      description: Development only (DEV_AUTH=1); 404 otherwise. Signs in without email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                email: { type: string }
+                name: { type: string }
+                timezone: { type: string }
+      responses:
+        "200":
+          description: Signed in
+          content: { application/json: { schema: { $ref: "#/components/schemas/SignedIn" } } }
+        "404": { $ref: "#/components/responses/Error" }
+  /auth/logout:
+    post:
+      operationId: logout
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "204": { description: Signed out }
+  /auth/github/start:
+    get:
+      operationId: githubStart
+      description: Redirects to GitHub (browser navigation, not fetch).
+      parameters: [{ name: next, in: query, schema: { type: string } }]
+      responses:
+        "302": { description: Redirect to GitHub }
+        "404": { $ref: "#/components/responses/Error" }
+  /auth/github/callback:
+    get:
+      operationId: githubCallback
+      responses:
+        "302": { description: Redirect into the app (or /sign-in?error=github) }
   /courses:
     get:
       operationId: listCourses
@@ -118,19 +247,173 @@ components:
           properties:
             code: { type: string, description: "e.g. not_found, bad_request, invalid_answer, stale_version, run_unavailable, rate_limited, grader_unavailable, locked, unauthorized" }
             message: { type: string }
+    User:
+      type: object
+      required: [id, email, name, avatar, timezone]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string }
+        name: { type: string }
+        avatar: { type: string }
+        timezone: { type: string }
     Me:
       type: object
-      required: [user]
+      required: [user, stats]
       properties:
-        user:
+        user: { $ref: "#/components/schemas/User" }
+        stats: { $ref: "#/components/schemas/Stats" }
+    SignedIn:
+      type: object
+      required: [user, next]
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        next: { type: string }
+    Tier:
+      type: string
+      enum: [bronze, silver, gold, diamond]
+    Stats:
+      type: object
+      required: [total_xp, level, level_start_xp, next_level_xp, streak_days, streak_freezes, league_tier, daily_goal, today_lessons]
+      properties:
+        total_xp: { type: integer }
+        level: { type: integer }
+        level_start_xp: { type: integer, description: Cumulative XP where this level began }
+        next_level_xp: { type: integer, description: Cumulative XP for the next level }
+        streak_days: { type: integer, description: "Current streak (0 when missed days exceed freezes)" }
+        streak_freezes: { type: integer }
+        league_tier: { $ref: "#/components/schemas/Tier" }
+        daily_goal: { type: integer }
+        today_lessons: { type: integer }
+    Breakdown:
+      type: object
+      required: [base, first_try, no_hint]
+      properties:
+        base: { type: integer }
+        first_try: { type: integer }
+        no_hint: { type: integer }
+    Outcome:
+      type: object
+      description: What a graded submission did to the user's game state.
+      required: [xp_awarded, breakdown, first_try, total_xp, level, level_up, level_start_xp, next_level_xp, streak_days, streak_extended, freezes_used, freeze_earned]
+      properties:
+        xp_awarded: { type: integer }
+        breakdown:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Breakdown"
+        first_try: { type: boolean }
+        total_xp: { type: integer }
+        level: { type: integer }
+        level_up: { type: boolean }
+        level_start_xp: { type: integer }
+        next_level_xp: { type: integer }
+        streak_days: { type: integer }
+        streak_extended: { type: boolean }
+        freezes_used: { type: integer }
+        freeze_earned: { type: boolean }
+    CodeLine:
+      type: object
+      required: [n, text]
+      properties:
+        n: { type: integer }
+        text: { type: string }
+    LastAttempt:
+      type: object
+      required: [status, passed, total, file, lines, error_line]
+      properties:
+        status: { type: string }
+        passed: { type: integer }
+        total: { type: integer }
+        file: { type: string }
+        lines: { type: array, items: { $ref: "#/components/schemas/CodeLine" } }
+        error_line: { type: integer }
+    ContinueCard:
+      type: object
+      required: [course_id, course_title, chapter_title, chapter_index, exercise_id, exercise_title, exercise_type, position, lessons, last]
+      properties:
+        course_id: { type: string }
+        course_title: { type: string }
+        chapter_title: { type: string }
+        chapter_index: { type: integer }
+        exercise_id: { type: string }
+        exercise_title: { type: string }
+        exercise_type: { type: string }
+        position:
           type: object
-          required: [id, email, name, avatar, timezone]
+          required: [index, total]
+          properties: { index: { type: integer }, total: { type: integer } }
+        lessons: { type: array, items: { $ref: "#/components/schemas/ProgressStatus" } }
+        last:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/LastAttempt"
+    DayCell:
+      type: object
+      required: [date, active, today]
+      properties:
+        date: { type: string, format: date }
+        active: { type: boolean }
+        today: { type: boolean }
+    LeagueSummary:
+      type: object
+      required: [joined, tier, rank, of, weekly_xp, ends_at, promote, demote, xp_to_promote, zone]
+      properties:
+        joined: { type: boolean }
+        tier: { $ref: "#/components/schemas/Tier" }
+        rank: { type: integer }
+        of: { type: integer }
+        weekly_xp: { type: integer }
+        ends_at: { type: string, format: date-time }
+        promote: { type: integer }
+        demote: { type: integer }
+        xp_to_promote: { type: integer }
+        zone: { $ref: "#/components/schemas/LeagueZone" }
+    LeagueZone:
+      type: string
+      enum: [promote, stay, demote]
+    League:
+      allOf:
+        - $ref: "#/components/schemas/LeagueSummary"
+        - type: object
+          required: [standings]
           properties:
-            id: { type: string, format: uuid }
-            email: { type: string }
-            name: { type: string }
-            avatar: { type: string }
-            timezone: { type: string }
+            standings:
+              type: array
+              items:
+                type: object
+                required: [rank, name, weekly_xp, you, zone]
+                properties:
+                  rank: { type: integer }
+                  name: { type: string }
+                  weekly_xp: { type: integer }
+                  you: { type: boolean }
+                  zone: { $ref: "#/components/schemas/LeagueZone" }
+    Home:
+      type: object
+      required: [continue, today, paths, league]
+      properties:
+        continue:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ContinueCard"
+        today:
+          type: object
+          required: [goal, done, streak_days, week]
+          properties:
+            goal: { type: integer }
+            done: { type: integer }
+            streak_days: { type: integer }
+            week: { type: array, items: { $ref: "#/components/schemas/DayCell" } }
+        paths:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/CourseSummary"
+              - type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [not_started, in_progress, done] }
+        league: { $ref: "#/components/schemas/LeagueSummary" }
     CourseSummary:
       type: object
       required: [id, title, description, chapter_count, exercise_count, passed_count]
@@ -158,11 +441,14 @@ components:
         status: { $ref: "#/components/schemas/ProgressStatus" }
     CourseDetail:
       type: object
-      required: [id, title, description, chapters]
+      required: [id, title, description, chapters, skills, xp_earned, xp_total]
       properties:
         id: { type: string }
         title: { type: string }
         description: { type: string }
+        skills: { type: array, items: { type: string }, description: Distinct lesson tags in course order }
+        xp_earned: { type: integer }
+        xp_total: { type: integer, description: Base XP of all lessons (bonuses not included) }
         chapters:
           type: array
           items:
@@ -244,11 +530,12 @@ components:
         answer: { description: "Type-specific answer, e.g. mcq { choices: string[] }" }
     SubmitResponse:
       type: object
-      required: [submission_id, result, xp_awarded]
+      required: [submission_id, result, xp_awarded, outcome]
       properties:
         submission_id: { type: string, format: uuid }
         result: { $ref: "#/components/schemas/Result" }
-        xp_awarded: { type: integer, description: Always 0 until Phase 4 }
+        xp_awarded: { type: integer }
+        outcome: { $ref: "#/components/schemas/Outcome" }
     PendingResponse:
       type: object
       required: [submission_id, status]
@@ -257,7 +544,7 @@ components:
         status: { type: string, enum: [pending] }
     SubmissionStatus:
       type: object
-      required: [submission_id, exercise_id, exercise_version, status, result, xp_awarded, created_at]
+      required: [submission_id, exercise_id, exercise_version, status, result, xp_awarded, outcome, created_at]
       properties:
         submission_id: { type: string, format: uuid }
         exercise_id: { type: string }
@@ -268,6 +555,10 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/Result"
         xp_awarded: { type: integer }
+        outcome:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/Outcome"
         created_at: { type: string, format: date-time }
     Table:
       type: object

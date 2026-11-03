@@ -14,8 +14,8 @@ import (
 )
 
 const createSubmission = `-- name: CreateSubmission :one
-INSERT INTO submissions (user_id, exercise_id, exercise_version, answer, status, score, result)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO submissions (user_id, exercise_id, exercise_version, answer, status, score, result, outcome)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id, created_at
 `
 
@@ -27,6 +27,7 @@ type CreateSubmissionParams struct {
 	Status          string          `json:"status"`
 	Score           float64         `json:"score"`
 	Result          json.RawMessage `json:"result"`
+	Outcome         json.RawMessage `json:"outcome"`
 }
 
 type CreateSubmissionRow struct {
@@ -43,6 +44,7 @@ func (q *Queries) CreateSubmission(ctx context.Context, arg CreateSubmissionPara
 		arg.Status,
 		arg.Score,
 		arg.Result,
+		arg.Outcome,
 	)
 	var i CreateSubmissionRow
 	err := row.Scan(&i.ID, &i.CreatedAt)
@@ -65,15 +67,16 @@ func (q *Queries) FailStalePending(ctx context.Context, olderThanSecs float64) (
 }
 
 const finishSubmission = `-- name: FinishSubmission :exec
-UPDATE submissions SET status = $1, score = $2, result = $3
-WHERE id = $4 AND status = 'pending'
+UPDATE submissions SET status = $1, score = $2, result = $3, outcome = $4
+WHERE id = $5 AND status = 'pending'
 `
 
 type FinishSubmissionParams struct {
-	Status string          `json:"status"`
-	Score  float64         `json:"score"`
-	Result json.RawMessage `json:"result"`
-	ID     uuid.UUID       `json:"id"`
+	Status  string          `json:"status"`
+	Score   float64         `json:"score"`
+	Result  json.RawMessage `json:"result"`
+	Outcome json.RawMessage `json:"outcome"`
+	ID      uuid.UUID       `json:"id"`
 }
 
 func (q *Queries) FinishSubmission(ctx context.Context, arg FinishSubmissionParams) error {
@@ -81,6 +84,7 @@ func (q *Queries) FinishSubmission(ctx context.Context, arg FinishSubmissionPara
 		arg.Status,
 		arg.Score,
 		arg.Result,
+		arg.Outcome,
 		arg.ID,
 	)
 	return err
@@ -125,7 +129,7 @@ func (q *Queries) GetLatestSubmission(ctx context.Context, arg GetLatestSubmissi
 }
 
 const getSubmission = `-- name: GetSubmission :one
-SELECT id, exercise_id, exercise_version, status, score, result, created_at
+SELECT id, exercise_id, exercise_version, status, score, result, outcome, created_at
 FROM submissions
 WHERE id = $1 AND user_id = $2
 `
@@ -142,6 +146,7 @@ type GetSubmissionRow struct {
 	Status          string          `json:"status"`
 	Score           float64         `json:"score"`
 	Result          json.RawMessage `json:"result"`
+	Outcome         json.RawMessage `json:"outcome"`
 	CreatedAt       time.Time       `json:"created_at"`
 }
 
@@ -155,12 +160,13 @@ func (q *Queries) GetSubmission(ctx context.Context, arg GetSubmissionParams) (G
 		&i.Status,
 		&i.Score,
 		&i.Result,
+		&i.Outcome,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
-const recordAttempt = `-- name: RecordAttempt :exec
+const recordAttempt = `-- name: RecordAttempt :one
 INSERT INTO progress (user_id, exercise_id, status, first_passed_at, attempts)
 VALUES ($1, $2,
         CASE WHEN $3::bool THEN 'passed' ELSE 'started' END,
@@ -170,6 +176,7 @@ ON CONFLICT (user_id, exercise_id) DO UPDATE SET
     attempts = progress.attempts + 1,
     status = CASE WHEN progress.status = 'passed' OR $3::bool THEN 'passed' ELSE 'started' END,
     first_passed_at = COALESCE(progress.first_passed_at, EXCLUDED.first_passed_at)
+RETURNING attempts, used_hint
 `
 
 type RecordAttemptParams struct {
@@ -178,7 +185,15 @@ type RecordAttemptParams struct {
 	Passed     bool      `json:"passed"`
 }
 
-func (q *Queries) RecordAttempt(ctx context.Context, arg RecordAttemptParams) error {
-	_, err := q.db.Exec(ctx, recordAttempt, arg.UserID, arg.ExerciseID, arg.Passed)
-	return err
+type RecordAttemptRow struct {
+	Attempts int32 `json:"attempts"`
+	UsedHint bool  `json:"used_hint"`
+}
+
+// Returns the progress after this attempt (attempts counts it).
+func (q *Queries) RecordAttempt(ctx context.Context, arg RecordAttemptParams) (RecordAttemptRow, error) {
+	row := q.db.QueryRow(ctx, recordAttempt, arg.UserID, arg.ExerciseID, arg.Passed)
+	var i RecordAttemptRow
+	err := row.Scan(&i.Attempts, &i.UsedHint)
+	return i, err
 }

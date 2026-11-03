@@ -1,5 +1,5 @@
-// Screenshots of the lesson screen in both themes, for comparison with
-// docs/design/screens/lesson-*.png. Written to e2e/screenshots/.
+// Screenshots for comparison with docs/design/screens/*.png, written to
+// e2e/screenshots/: the lesson screen, Home and the course map in both themes.
 import { expect, test } from '@playwright/test';
 import { lesson, withDraft } from './helpers';
 
@@ -24,4 +24,18 @@ for (const theme of ['dark', 'light'] as const) {
       await page.screenshot({ path: `e2e/screenshots/lesson-${theme}${rail === 'open' ? '-outline-open' : ''}.png` });
     });
   }
+
+  test(`home, ${theme}`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem('cq-theme', t), theme);
+    await page.goto('/');
+    await expect(page.getByRole('region', { name: 'Today' })).toBeVisible();
+    await page.screenshot({ path: `e2e/screenshots/home-${theme}.png`, fullPage: true });
+  });
+
+  test(`course map, ${theme}`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem('cq-theme', t), theme);
+    await page.goto('/courses/foundations');
+    await expect(page.getByRole('list', { name: 'Chapters' })).toBeVisible();
+    await page.screenshot({ path: `e2e/screenshots/course-map-${theme}.png`, fullPage: true });
+  });
 }

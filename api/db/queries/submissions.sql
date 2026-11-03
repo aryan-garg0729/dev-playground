@@ -1,9 +1,10 @@
 -- name: CreateSubmission :one
-INSERT INTO submissions (user_id, exercise_id, exercise_version, answer, status, score, result)
-VALUES (@user_id, @exercise_id, @exercise_version, @answer, @status, @score, @result)
+INSERT INTO submissions (user_id, exercise_id, exercise_version, answer, status, score, result, outcome)
+VALUES (@user_id, @exercise_id, @exercise_version, @answer, @status, @score, @result, @outcome)
 RETURNING id, created_at;
 
--- name: RecordAttempt :exec
+-- name: RecordAttempt :one
+-- Returns the progress after this attempt (attempts counts it).
 INSERT INTO progress (user_id, exercise_id, status, first_passed_at, attempts)
 VALUES (@user_id, @exercise_id,
         CASE WHEN @passed::bool THEN 'passed' ELSE 'started' END,
@@ -12,7 +13,8 @@ VALUES (@user_id, @exercise_id,
 ON CONFLICT (user_id, exercise_id) DO UPDATE SET
     attempts = progress.attempts + 1,
     status = CASE WHEN progress.status = 'passed' OR @passed::bool THEN 'passed' ELSE 'started' END,
-    first_passed_at = COALESCE(progress.first_passed_at, EXCLUDED.first_passed_at);
+    first_passed_at = COALESCE(progress.first_passed_at, EXCLUDED.first_passed_at)
+RETURNING attempts, used_hint;
 
 -- name: GetLatestSubmission :one
 SELECT id, exercise_version, answer, status, score, result, created_at
@@ -22,11 +24,11 @@ ORDER BY created_at DESC
 LIMIT 1;
 
 -- name: FinishSubmission :exec
-UPDATE submissions SET status = @status, score = @score, result = @result
+UPDATE submissions SET status = @status, score = @score, result = @result, outcome = @outcome
 WHERE id = @id AND status = 'pending';
 
 -- name: GetSubmission :one
-SELECT id, exercise_id, exercise_version, status, score, result, created_at
+SELECT id, exercise_id, exercise_version, status, score, result, outcome, created_at
 FROM submissions
 WHERE id = @id AND user_id = @user_id;
 

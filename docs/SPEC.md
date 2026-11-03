@@ -400,14 +400,19 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | Table | Key columns |
 | --- | --- |
 | `users` | id (uuid), email, name, avatar, country, timezone, created_at |
-| `sessions` | id, user_id, expires_at |
+| `sessions` | id (SHA-256 of the cookie value, never the value), user_id, expires_at, created_at |
+| `magic_links` | token_hash, email, next, expires_at, used_at (single use, 15 minutes) |
+| `oauth_identities` | provider, provider_user_id, user_id |
 | `courses` | id (slug), title, description, order_index, published |
 | `chapters` | id, course_id, title, order_index, published |
 | `exercises` | id (manifest id), chapter_id, type, version, title, xp, difficulty, free, boss, tags (text[]), order_index, public_view (jsonb), private_spec (jsonb, server-only), published |
-| `submissions` | id, user_id, exercise_id, exercise_version, answer (jsonb), status, score, result (jsonb), created_at |
+| `submissions` | id, user_id, exercise_id, exercise_version, answer (jsonb), status, score, result (jsonb), outcome (jsonb, the game Outcome), created_at |
 | `progress` | user_id, exercise_id, status (started, passed), first_passed_at, attempts, used_hint |
-| `xp_events` | id, user_id, amount, reason, ref_id, created_at (append-only ledger) |
-| `user_stats` | user_id, total_xp, level, bytes, streak_days, streak_freezes, last_active_date, league_tier, title |
+| `xp_events` | id, user_id, amount, reason, ref_id, created_at (append-only ledger; unique (user_id, reason, ref_id), so a lesson's pass XP can exist once) |
+| `user_stats` | user_id, total_xp, level, bytes, streak_days, streak_freezes, last_active_date, league_tier, title, daily_goal |
+| `day_passes` | user_id, day (the user's local date), exercise_id: lessons passed per day (streak week, daily goal) |
+| `league_members` | week (Monday, UTC), user_id, tier, group_no, final_rank, result |
+| `league_weeks` | week, closed_at (a row means the week's results are final) |
 | `subscriptions` | user_id, provider, provider_ref, plan, status, current_period_end |
 | `tutor_messages` | id, user_id, exercise_id, role, content, created_at |
 
@@ -417,9 +422,15 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| POST | `/auth/magic-link` | Send login email |
-| GET | `/auth/callback` | Magic link / OAuth callback, sets session |
-| GET | `/me` | Current user, stats, entitlement |
+| GET | `/auth/providers` | Enabled sign-in methods (`magic_link`, `github`, `dev`) |
+| POST | `/auth/magic-link` | Email a sign-in link (same answer whether or not the account exists) |
+| POST | `/auth/magic-link/verify` | Redeem the link's token, set the session cookie |
+| GET | `/auth/github/start`, `/auth/github/callback` | GitHub OAuth web flow, sets the session cookie |
+| POST | `/auth/dev` | Sign in without email; only when `DEV_AUTH=1` (404 otherwise) |
+| POST | `/auth/logout` | End the session |
+| GET | `/me` | Current user and stats (XP, level, streak, league tier, daily goal); entitlement in Phase 5 |
+| PATCH | `/me` | Name, timezone, daily goal. XP, level, streak and league fields are rejected |
+| GET | `/home` | Continue card, today (goal, streak week), paths, league summary |
 | GET | `/courses` | Course list with progress |
 | GET | `/courses/{id}` | Chapters and exercises with lock state |
 | GET | `/exercises/{id}` | `public_view`, type, saved draft, last result; 402 if locked |
@@ -428,16 +439,22 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | POST | `/exercises/{id}/submit` | Grade; returns `Result` + XP awarded + level/streak changes |
 | GET | `/submissions/{id}` | Poll a pending submission (owner only; `result` is null while pending) |
 | POST | `/exercises/{id}/hint` | AI tutor message |
-| GET | `/leagues/current` | This week's league standings |
+| GET | `/leagues/current` | This week's league group standings (names only, never other users' emails) |
 | GET | `/medals` | Earned and available medals with progress |
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
-CSRF (until real sessions in Phase 4): every non-GET request must be `Content-Type: application/json`, and a browser `Origin` header, when present, must be in `ALLOWED_ORIGINS`.
+CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (browsers always send one on these methods; a missing one is refused) and `Content-Type: application/json` (a cross-site form cannot send it without a CORS preflight). The session cookie is also `SameSite=Lax`.
 
-Phase 1 has no auth. When `DEV_USER_EMAIL` is set, the API upserts that user at startup and every request acts as it; submissions and progress are stored, and no XP is awarded. Phase 4 removes this.
+### Accounts and sessions
+
+- **Sessions.** A random 32-byte value in the `cq_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when `APP_URL` is https, 30 days). Postgres stores only its SHA-256. Sign-out deletes the row. Expired sessions and links are deleted hourly.
+- **Magic links.** `POST /auth/magic-link` emails `APP_URL/sign-in/verify#token=…`. The token is in the URL fragment, so it never reaches a server or proxy log, and the page redeems it with `POST /auth/magic-link/verify` only after a click, so mail scanners that open links cannot use it up. Tokens are single use, expire after 15 minutes and are stored hashed. Limits: 5 emails per address per hour, 20 sign-in attempts per IP per hour. Without `SMTP_ADDR` (development) the email is written to the API log; production requires SMTP. The first sign-in saves the browser's timezone (streak days follow it).
+- **GitHub.** Hand-rolled OAuth web flow (no new dependency): a random `state` in a 10-minute `HttpOnly` cookie, compared in constant time; scopes `read:user user:email`; the primary verified email is required. A GitHub identity links to the account with that email, or creates one. Enabled when `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set.
+- **Post-sign-in redirect** (`next`) is accepted only as a same-site path (`/…`, not `//`, no backslashes, not under `/api/`).
+- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
 
 ## Gamification engine
 
@@ -450,14 +467,14 @@ func (e *Engine) OnGraded(ctx context.Context, tx pgx.Tx, u UserID, ex Exercise,
 
 Rules for v1 (keep all numbers in `game/config.go`):
 
-- **XP.** Award only on the first pass of an exercise. Base = exercise `xp`. Bonuses: +50% first-try pass, +25% no hint used. Re-solving a passed exercise gives 0 XP.
-- **Levels.** Level n needs `100 * n^1.5` cumulative XP (rounded). Return level-ups in `Outcome` for the UI celebration.
-- **Streak.** A day counts when the user passes at least one exercise, in the user's own timezone. Missing a day consumes a Streak Freeze if one is held, otherwise resets to 0. Earn 1 freeze per 7-day streak, max 2 held.
-- **Leagues.** Weekly, Monday 00:00 UTC. Users are bucketed into groups of up to 30 within a tier (Bronze, Silver, Gold, Diamond). Redis sorted set per group, scored by weekly XP. A weekly job promotes the top 5 and demotes the bottom 5.
+- **XP.** Award only on the first pass of an exercise. Base = exercise `xp`. Bonuses: +50% first-try pass (the first submission of that exercise passed), +25% no hint used. Each bonus is rounded half away from zero (5 XP → +3, +1). Re-solving a passed exercise gives 0 XP. The ledger's unique key makes "once" hold under concurrent submissions too.
+- **Levels.** Everyone starts at level 1; leaving level n needs `round(100 * n^1.5)` cumulative XP (level 2 at 100, level 3 at 283, level 8 at 1852). Return level-ups in `Outcome` for the UI celebration.
+- **Streak.** A day counts when the user passes at least one exercise (a re-solve counts too), on the user's own calendar (`users.timezone`, IANA). Each missed day consumes a Streak Freeze if one is held; if the missed days outnumber the freezes, the streak restarts at 1 with that pass and the freezes are kept. Freezes are spent when the next pass arrives; until then the shown streak is the stored one while the gap is coverable, else 0. Earn 1 freeze each time the streak reaches a multiple of 7, max 2 held. A pass dated on or before the last counted day (e.g. after moving timezone west) changes nothing.
+- **Leagues.** Weekly, Monday 00:00 UTC. A user joins the current week's group on their first XP of the week: the lowest-numbered group of their tier with fewer than 30 members, else a new group (an advisory lock serialises joins). Standings are by weekly XP, ties broken by who reached it first. Redis keeps a sorted set per group, rebuilt from Postgres after each commit (so the update is idempotent and a lost key heals); Postgres is the source of truth. The API closes finished weeks at startup and every minute (advisory lock plus a `league_weeks` row, so each week closes once even with many replicas): the top 5 of each group move up a tier and the bottom 5 of the rest move down (none above Diamond or below Bronze; in groups under 10, promotion is applied first). Users who earn no XP in a week keep their tier. A pass in the first minute after Monday 00:00 may join with the previous tier; accepted.
 
-All writes for one submission (submission row, progress, xp_events, user_stats, medals, quests) happen in a single DB transaction. The leaderboard update to Redis happens after commit and is idempotent (keyed by submission id).
+All writes for one submission (submission row, progress, xp_events, user_stats, day_passes, league membership; medals and quests later) happen in a single DB transaction, which locks the user's `user_stats` row. The leaderboard update to Redis happens after commit and is idempotent (the group's set is rewritten from Postgres).
 
-Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`.
+Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home shows Daily quests and Review as disabled "Coming soon" placeholders until those ship (decision 2026-11-03).
 
 ## Game economy: Bytes, power-ups, medals, quests
 
@@ -545,7 +562,8 @@ Lesson screen layout (`/learn/:courseId/:exerciseId`; `screens/lesson-*.png`):
 2. `LessonRail` on the left: collapsed (48px, one vertical segment per lesson) by default; clicking it opens the 236px outline. It is the only progress indicator. Remember open/closed per device.
 3. Problem pane: pills, title, statement, `ProblemExample` blocks (Example n: Input / Output / Explanation), Constraints, then hints and the tutor button at the bottom.
 4. Editor pane (remaining width): file tab with Run and Submit, Monaco editor themed from the code tokens with the failing line tinted `danger-soft`, then `CheckList` rendering the grader `Result`.
-5. Below 900px the panes stack in one column and the rail stays collapsed.
+5. Resizable panes (decision 2026-11-03): a drag handle between the problem and editor panes (problem width 240–720px, default 320, the editor keeps at least 360px) and one between the editor and the checks once a result is shown (checks height 96–720px, default 240, the editor keeps at least 160px). The handles are WAI-ARIA window splitters: pointer drag, arrow keys (Shift for larger steps), Home/End, and Enter or double-click to reset. Sizes are remembered per device (`cq-panes` in localStorage).
+6. Below 900px the panes stack in one column, the handles are hidden and the rail stays collapsed.
 
 Other screens and their references: Home (`home.png`), Course map (`course-map.png`), Pass celebration overlay (`pass-celebration.png`), Onboarding (`onboarding.png`), Landing (`landing.png`), Pricing (`pricing.png`), Boss fight (`boss-fight.png`), Power-ups (`power-ups-shop.png`), Profile medals (`profile-medals.png`). Only the lesson screen is drawn in both themes; build every screen from tokens so Light works everywhere.
 
@@ -638,7 +656,7 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 - ~~First course topic for launch.~~ Resolved (Phase 1): LangChain, sample course `content/langchain-basics`, adapted from the author's genai lesson notes; to be refined into the full course.
 - ~~LangChain `code` exercises (Phase 2).~~ Resolved: `codequest/python:3.12` ships the pinned LangChain packages and `cq.fakes`; the sample LangChain code exercises use `runner: docker-python` and fakes only.
 - sql manifest (Phase 3): `prompt`, `setup` (public data, shown to the learner), `solution` (stored in `private_spec` because hidden checks compare against it), optional `starter`, `run`, `limits.timeout_ms` (default 2000). Hidden datasets are server-only.
-- Phase 2 interim UI: Run became available in Phase 3; the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats waits for Phase 4.
+- Phase 2 interim UI: Run became available in Phase 3; the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats arrived in Phase 4.
 - Dev Compose mounts the host Docker socket into the worker (root-equivalent). Production runs the worker on a dedicated host (later gVisor).
 - LangChain in the browser (Phase 3): Pyodide would need self-hosted `langchain-core` and `pydantic` wheels (CSP forbids fetching from PyPI). Decide whether these exercises are submit-only, graded on the server.
 - Exact prices per plan and per country tier. Needed before Phase 5.

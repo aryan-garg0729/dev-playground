@@ -7,6 +7,12 @@ export type CourseDetail = Schemas['CourseDetail'];
 export type ExerciseDetail = Schemas['ExerciseDetail'];
 export type GradeResult = Schemas['SubmitResponse'];
 export type Result = Schemas['Result'];
+export type Me = Schemas['Me'];
+export type Stats = Schemas['Stats'];
+export type Outcome = Schemas['Outcome'];
+export type Home = Schemas['Home'];
+export type League = Schemas['League'];
+export type LeagueSummary = Schemas['LeagueSummary'];
 
 // Resolve fetch at call time so tests can stub globalThis.fetch.
 export const api = createClient<paths>({

@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aryangarg/codequest/api/internal/exercise"
+	"github.com/aryangarg/codequest/api/internal/game"
 	"github.com/aryangarg/codequest/api/internal/grading"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
 	"github.com/aryangarg/codequest/api/internal/runner"
@@ -122,7 +123,8 @@ func (a *api) getExercise(w http.ResponseWriter, r *http.Request) {
 type submitResponse struct {
 	SubmissionID string          `json:"submission_id"`
 	Result       exercise.Result `json:"result"`
-	XPAwarded    int             `json:"xp_awarded"` // always 0 until Phase 4
+	XPAwarded    int             `json:"xp_awarded"`
+	Outcome      game.Outcome    `json:"outcome"`
 }
 
 // pendingResponse is the 202 body: grading continues; poll GET /submissions/{id}.
@@ -205,7 +207,9 @@ func (a *api) submit(w http.ResponseWriter, r *http.Request) {
 	case g.Pending:
 		writeJSON(w, http.StatusAccepted, pendingResponse{SubmissionID: g.SubmissionID.String(), Status: "pending"})
 	default:
-		writeJSON(w, http.StatusOK, submitResponse{SubmissionID: g.SubmissionID.String(), Result: g.Result})
+		writeJSON(w, http.StatusOK, submitResponse{
+			SubmissionID: g.SubmissionID.String(), Result: g.Result, XPAwarded: g.Outcome.XPAwarded, Outcome: g.Outcome,
+		})
 	}
 }
 
@@ -216,6 +220,7 @@ type submissionResponse struct {
 	Status          string          `json:"status"` // pending | pass | fail | error | timeout
 	Result          json.RawMessage `json:"result"` // null while pending
 	XPAwarded       int             `json:"xp_awarded"`
+	Outcome         *game.Outcome   `json:"outcome"` // null while pending or after a grading error
 	CreatedAt       time.Time       `json:"created_at"`
 }
 
@@ -241,10 +246,22 @@ func (a *api) getSubmission(w http.ResponseWriter, r *http.Request) {
 		if len(res) == 0 {
 			res = json.RawMessage("null")
 		}
-		writeJSON(w, http.StatusOK, submissionResponse{
+		var out *game.Outcome
+		if len(s.Outcome) > 0 {
+			out = &game.Outcome{}
+			if err := json.Unmarshal(s.Outcome, out); err != nil {
+				a.internal(w, r, err)
+				return
+			}
+		}
+		resp := submissionResponse{
 			SubmissionID: s.ID.String(), ExerciseID: s.Exercise, ExerciseVersion: s.Version,
-			Status: s.Status, Result: res, CreatedAt: s.CreatedAt,
-		})
+			Status: s.Status, Result: res, Outcome: out, CreatedAt: s.CreatedAt,
+		}
+		if out != nil {
+			resp.XPAwarded = out.XPAwarded
+		}
+		writeJSON(w, http.StatusOK, resp)
 	}
 }
 
