@@ -13,7 +13,7 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 
 COPY harness/cq /usr/local/lib/python3.12/site-packages/cq
-COPY harness/harness.py harness/child.py /opt/cq/
+COPY harness/harness.py harness/child.py harness/sql_child.py /opt/cq/
 # The root filesystem is read-only at run time, so compile bytecode now.
 RUN python -m compileall -q /usr/local/lib/python3.12 /opt/cq \
  && useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin runner

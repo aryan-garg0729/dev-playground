@@ -1,13 +1,22 @@
 import type { ComponentType } from 'react';
-import { CodeExercise } from './code/CodeExercise';
+import { CodeExercise, codeSandboxJob } from './code/CodeExercise';
 import { McqExercise } from './mcq/McqExercise';
-import type { ExerciseRendererProps } from './types';
+import { SqlExercise, sqlSandboxJob } from './sql/SqlExercise';
+import type { ExerciseRendererProps, ToSandboxJob } from './types';
 
-export type { ExerciseRendererProps, RunOutput } from './types';
+export type { ExerciseRendererProps, RunMode, RunOutput } from './types';
 
 // The one place `any` is allowed: each renderer narrows its own view/answer types.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const renderers: Record<string, ComponentType<ExerciseRendererProps<any, any>>> = {
   code: CodeExercise,
   mcq: McqExercise,
+  sql: SqlExercise,
 };
+
+/** Types that can Run in the browser sandbox. */
+export const sandboxJobs: Record<string, ToSandboxJob<any, any>> = {
+  code: codeSandboxJob,
+  sql: sqlSandboxJob,
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */

@@ -1,12 +1,13 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { CourseDetail, ExerciseDetail, GradeResult } from '../api/client';
-import { useCourse, useExercise, useSubmit } from '../api/queries';
+import { runOnServer, useCourse, useExercise, useSubmit } from '../api/queries';
 import { AppHeader } from '../components/AppHeader';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons';
 import { LessonRail, type RailLesson } from '../components/LessonRail';
 import { DifficultyPill, Pill } from '../components/Pill';
-import { renderers } from '../exercise-types';
+import { type RunMode, type RunOutput, renderers, sandboxJobs } from '../exercise-types';
+import { runInSandbox, warmSandbox } from '../runner-client/sandbox';
 import { loadDraft, saveDraft } from './drafts';
 import { LoadError, Loading } from './states';
 
@@ -52,6 +53,28 @@ function Rail({ course, ex }: { course: CourseDetail; ex: ExerciseDetail }) {
   return <LessonRail courseId={course.id} chapterNumber={index + 1} chapterTitle={chapter.title} lessons={lessons} />;
 }
 
+function runModeOf(ex: ExerciseDetail): RunMode {
+  const mode = (ex.public_view as { run?: unknown } | null)?.run;
+  return mode === 'browser' || mode === 'server' ? mode : 'off';
+}
+
+/** Run for this exercise: in the sandbox iframe or on the server, per the manifest's `run:`. */
+function useRun(ex: ExerciseDetail): ((answer: unknown) => Promise<RunOutput>) | undefined {
+  const mode = runModeOf(ex);
+  const toJob = sandboxJobs[ex.type];
+  useEffect(() => {
+    if (mode === 'browser') void warmSandbox(); // start loading the runtime now
+  }, [mode]);
+  if (mode === 'server') return (answer) => runOnServer(ex.id, ex.version, answer);
+  if (mode === 'browser' && toJob) {
+    return async (answer) => {
+      const r = await runInSandbox(toJob(ex.public_view, answer));
+      return { stdout: r.stdout, stderr: r.stderr, checks: r.checks, runtimeMs: r.runtimeMs, timedOut: r.timedOut, table: r.table, error: r.error };
+    };
+  }
+  return undefined;
+}
+
 function Exercise({ ex }: { ex: ExerciseDetail }) {
   const last = ex.last_submission;
   const sameVersion = last?.exercise_version === ex.version;
@@ -60,6 +83,7 @@ function Exercise({ ex }: { ex: ExerciseDetail }) {
     sameVersion && last?.result ? { submission_id: last.submission_id, result: last.result, xp_awarded: 0 } : undefined,
   );
   const submit = useSubmit(ex.id, ex.course_id);
+  const onRun = useRun(ex);
   const Renderer = renderers[ex.type];
 
   const header = (
@@ -82,6 +106,7 @@ function Exercise({ ex }: { ex: ExerciseDetail }) {
       publicView={ex.public_view}
       draft={draft}
       result={result}
+      onRun={onRun}
       onChange={(a) => {
         setDraft(a);
         saveDraft(ex.id, ex.version, a);

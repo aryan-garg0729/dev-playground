@@ -2,17 +2,18 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import type { GradeResult } from '../../api/client';
-import { type CodeAnswer, CodeExercise, type CodePublicView } from './CodeExercise';
+import type { RunOutput } from '../types';
+import { type CodeAnswer, CodeExercise, type CodePublicView, codeSandboxJob } from './CodeExercise';
 
 // Monaco needs a real browser; a textarea stands in for it here.
-vi.mock('./CodeEditor', () => ({
+vi.mock('../code/CodeEditor', () => ({
   default: ({ value, onChange, ariaLabel, errorLine }: { value: string; onChange: (v: string) => void; ariaLabel: string; errorLine?: number }) => (
     <textarea aria-label={ariaLabel} data-error-line={errorLine ?? ''} value={value} onChange={(e) => onChange(e.target.value)} />
   ),
 }));
 
 const view: CodePublicView = {
-  language: 'python', runner: 'docker-python', prompt: 'Return the total of every integer in `nums`.',
+  language: 'python', runner: 'docker-python', run: 'server', prompt: 'Return the total of every integer in `nums`.',
   entry: 'main.py', starter: 'def sum_list(nums):\n    pass\n', timeout_ms: 3000,
   examples: [{ input: 'nums = [1, 2, 3]', output: '6', explanation: '1 + 2 + 3 = 6' }],
   constraints: ['0 ≤ len(nums) ≤ 10⁴'], hints: ['What should total start at?', 'Use a for loop.'],
@@ -30,7 +31,7 @@ const failing: GradeResult = {
   },
 };
 
-function Harness({ onSubmit }: { onSubmit: (a: CodeAnswer) => Promise<GradeResult> }) {
+function Harness({ onSubmit, onRun }: { onSubmit: (a: CodeAnswer) => Promise<GradeResult>; onRun?: (a: CodeAnswer) => Promise<RunOutput> }) {
   const [draft, setDraft] = useState<CodeAnswer>();
   const [result, setResult] = useState<GradeResult>();
   return (
@@ -40,6 +41,7 @@ function Harness({ onSubmit }: { onSubmit: (a: CodeAnswer) => Promise<GradeResul
       draft={draft}
       result={result}
       onChange={setDraft}
+      onRun={onRun}
       onSubmit={async (a) => { const r = await onSubmit(a); setResult(r); return r; }}
     />
   );
@@ -78,5 +80,35 @@ describe('CodeExercise', () => {
     expect(await screen.findByRole('heading', { name: '1 of 2 checks failing' })).toBeInTheDocument();
     expect(screen.getByLabelText('main.py editor')).toHaveAttribute('data-error-line', '4');
     expect(screen.getByText('debug print')).toBeInTheDocument();
+  });
+
+  it('runs the code and shows output and visible checks, ungraded', async () => {
+    const onRun = vi.fn<(a: CodeAnswer) => Promise<RunOutput>>().mockResolvedValue({
+      stdout: 'hi from main\n', stderr: '', runtimeMs: 12, timedOut: false,
+      checks: [{ name: 'sum_list([5])', passed: false, visible: true, got: '0', expected: '5' }],
+    });
+    render(<Harness onSubmit={vi.fn()} onRun={onRun} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+    expect(onRun).toHaveBeenCalledWith({ files: { 'main.py': view.starter } });
+    expect(await screen.findByText('Run · visible checks only, not graded')).toBeInTheDocument();
+    expect(screen.getByText('hi from main')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1 of 1 checks failing' })).toBeInTheDocument();
+  });
+
+  it('shows a timed-out run', async () => {
+    const onRun = vi.fn<(a: CodeAnswer) => Promise<RunOutput>>().mockResolvedValue({
+      stdout: '', stderr: '', runtimeMs: 3000, timedOut: true, checks: [], error: 'Stopped after 3000 ms',
+    });
+    render(<Harness onSubmit={vi.fn()} onRun={onRun} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Run' }));
+    expect(await screen.findByText('Stopped after 3000 ms')).toBeInTheDocument();
+  });
+
+  it('builds a Pyodide job with the visible tests only', () => {
+    const job = codeSandboxJob({ ...view, visible_tests: [{ file: 'tests_visible.py', source: 'def test_a(): pass' }] }, { files: { 'main.py': 'x = 1' } });
+    expect(job).toEqual({
+      runner: 'pyodide', entry: 'main.py', files: { 'main.py': 'x = 1' },
+      tests: [{ file: 'tests_visible.py', source: 'def test_a(): pass' }], timeoutMs: 3000,
+    });
   });
 });

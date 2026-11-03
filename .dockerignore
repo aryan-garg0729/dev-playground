@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+sandbox/public/vendor
+.git
+web
+api
+content
+docs

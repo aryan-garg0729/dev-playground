@@ -1,0 +1,9 @@
+id: foundations
+title: Foundations
+description: >
+  Quick warm-ups in Python and SQL. They run right in your browser, so you get
+  instant feedback before you submit.
+order: 2
+chapters:
+  - 01-python-warm-up
+  - 02-sql-basics

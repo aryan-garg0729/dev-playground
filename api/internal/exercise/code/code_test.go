@@ -249,3 +249,43 @@ func TestGradeRunnerOutcomes(t *testing.T) {
 		t.Error("grading without a runner in the context must fail")
 	}
 }
+
+func TestServerRunUsesVisibleTestsOnly(t *testing.T) {
+	typ, ex := mustExercise(t)
+	report := `{"version":1,"syntax_error":null,"forbidden":[],"timed_out":false,"runtime_ms":4,
+	 "program":{"stdout":"hello\n","stderr":"","exit_code":0,"timed_out":false,"runtime_ms":2},
+	 "tests":{"stdout":"","stderr":"","exit_code":0,"timed_out":false,"runtime_ms":3,"completed":true,"files":[
+	  {"file":"tests_visible.py","cases":[{"name":"test_one","label":"sum_list([5])","ran":true,"passed":true}]}]}}`
+	f := &fakeRunner{out: runner.Output{Stdout: strings.ReplaceAll(report, "\n", "") + "\n"}}
+	out, err := typ.(exercise.Runnable).Run(runner.NewContext(context.Background(), f), ex, json.RawMessage(`{"files":{"main.py":"x=1"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Stdout != "hello\n" || len(out.Checks) != 1 || !out.Checks[0].Passed {
+		t.Fatalf("out = %+v", out)
+	}
+	if strings.Contains(string(f.job.Stdin), "HIDDEN_SECRET") || strings.Contains(string(f.job.Stdin), "tests_hidden") {
+		t.Fatal("server Run must not send hidden tests to the runner")
+	}
+}
+
+func TestRunModeDefaultsAndBrowserRunRefused(t *testing.T) {
+	typ, spec, err := parse(t, strings.Replace(specYAML, "runner: docker-python", "runner: pyodide", 1), files())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ex := exercise.Exercise{ID: "t", Type: "code", Version: 1, Spec: spec}
+	pv, _ := typ.PublicView(ex)
+	if !strings.Contains(string(pv), `"run":"browser"`) {
+		t.Errorf("pyodide should default to run: browser: %s", pv)
+	}
+	_, err = typ.(exercise.Runnable).Run(runner.NewContext(context.Background(), &fakeRunner{}), ex, json.RawMessage(`{"files":{"main.py":"x"}}`))
+	if !errors.Is(err, exercise.ErrRunUnavailable) {
+		t.Fatalf("err = %v, want ErrRunUnavailable", err)
+	}
+	_, ex2 := mustExercise(t)
+	pv2, _ := typ.PublicView(ex2)
+	if !strings.Contains(string(pv2), `"run":"server"`) {
+		t.Errorf("docker-python should default to run: server: %s", pv2)
+	}
+}

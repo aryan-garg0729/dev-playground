@@ -100,6 +100,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exercises/{exerciseId}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Ungraded server Run for exercises with run "server". Visible checks only; nothing is stored. */
+        post: operations["runExercise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/submissions/{submissionId}": {
         parameters: {
             query?: never;
@@ -122,7 +139,7 @@ export interface components {
     schemas: {
         Error: {
             error: {
-                /** @description e.g. not_found, bad_request, invalid_answer, stale_version, rate_limited, grader_unavailable, locked, unauthorized */
+                /** @description e.g. not_found, bad_request, invalid_answer, stale_version, run_unavailable, rate_limited, grader_unavailable, locked, unauthorized */
                 code: string;
                 message: string;
             };
@@ -253,6 +270,20 @@ export interface components {
             xp_awarded: number;
             /** Format: date-time */
             created_at: string;
+        };
+        Table: {
+            columns: string[];
+            rows: (string | number | null)[][];
+            truncated: boolean;
+        };
+        RunOutput: {
+            stdout: string;
+            stderr: string;
+            checks: components["schemas"]["CheckResult"][];
+            runtime_ms: number;
+            timed_out: boolean;
+            table?: components["schemas"]["Table"];
+            error?: string;
         };
     };
     responses: {
@@ -425,6 +456,38 @@ export interface operations {
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             415: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    runExercise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exerciseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Submission"];
+            };
+        };
+        responses: {
+            /** @description Run output */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOutput"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
             429: components["responses"]["Error"];
             503: components["responses"]["Error"];
         };

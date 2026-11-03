@@ -1,0 +1,5 @@
+id: fd.python
+title: Python warm-up
+exercises:
+  - 01-sum-list
+  - 02-count-words

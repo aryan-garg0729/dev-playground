@@ -1,0 +1,1 @@
+SELECT name FROM t /* SERVER_ONLY_SENTINEL */;

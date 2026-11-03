@@ -19,6 +19,27 @@ type Report struct {
 	Tests       *TestPhase   `json:"tests"`
 	TimedOut    bool         `json:"timed_out"`
 	RuntimeMs   int          `json:"runtime_ms"`
+	SQL         *SQLPhase    `json:"sql"`   // mode "sql" only
+	Error       string       `json:"error"` // harness-level failure
+}
+
+// SQLPhase holds one result pair per dataset.
+type SQLPhase struct {
+	Results []SQLResult `json:"results"`
+}
+
+// SQLResult is the learner's (and optionally the reference) result on one dataset.
+type SQLResult struct {
+	Learner  SQLTable  `json:"learner"`
+	Solution *SQLTable `json:"solution"`
+}
+
+// SQLTable is a result set or an error.
+type SQLTable struct {
+	Columns   []string `json:"columns"`
+	Rows      [][]any  `json:"rows"`
+	Truncated bool     `json:"truncated"`
+	Error     string   `json:"error"`
 }
 
 // SyntaxError is the first syntax error in the learner's files.

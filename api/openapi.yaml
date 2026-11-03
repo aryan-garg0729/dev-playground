@@ -74,6 +74,24 @@ paths:
         "415": { $ref: "#/components/responses/Error" }
         "429": { $ref: "#/components/responses/Error" }
         "503": { $ref: "#/components/responses/Error" }
+  /exercises/{exerciseId}/run:
+    post:
+      operationId: runExercise
+      description: Ungraded server Run for exercises with run "server". Visible checks only; nothing is stored.
+      parameters: [{ name: exerciseId, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Submission" } } }
+      responses:
+        "200":
+          description: Run output
+          content: { application/json: { schema: { $ref: "#/components/schemas/RunOutput" } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "503": { $ref: "#/components/responses/Error" }
   /submissions/{submissionId}:
     get:
       operationId: getSubmission
@@ -98,7 +116,7 @@ components:
           type: object
           required: [code, message]
           properties:
-            code: { type: string, description: "e.g. not_found, bad_request, invalid_answer, stale_version, rate_limited, grader_unavailable, locked, unauthorized" }
+            code: { type: string, description: "e.g. not_found, bad_request, invalid_answer, stale_version, run_unavailable, rate_limited, grader_unavailable, locked, unauthorized" }
             message: { type: string }
     Me:
       type: object
@@ -251,3 +269,21 @@ components:
             - $ref: "#/components/schemas/Result"
         xp_awarded: { type: integer }
         created_at: { type: string, format: date-time }
+    Table:
+      type: object
+      required: [columns, rows, truncated]
+      properties:
+        columns: { type: array, items: { type: string } }
+        rows: { type: array, items: { type: array, items: { type: [string, number, "null"] } } }
+        truncated: { type: boolean }
+    RunOutput:
+      type: object
+      required: [stdout, stderr, checks, runtime_ms, timed_out]
+      properties:
+        stdout: { type: string }
+        stderr: { type: string }
+        checks: { type: array, items: { $ref: "#/components/schemas/CheckResult" } }
+        runtime_ms: { type: integer }
+        timed_out: { type: boolean }
+        table: { $ref: "#/components/schemas/Table" }
+        error: { type: string }

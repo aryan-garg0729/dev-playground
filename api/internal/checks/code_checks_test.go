@@ -184,3 +184,46 @@ func TestWeightedScore(t *testing.T) {
 		t.Fatalf("got %s %v, want fail 0.25", r.Status, r.Score)
 	}
 }
+
+func TestSameRows(t *testing.T) {
+	a := [][]any{{"x", 1.0}, {"y", 2.0}}
+	tests := []struct {
+		name    string
+		got     [][]any
+		ordered bool
+		want    bool
+	}{
+		{"same order", [][]any{{"x", 1.0}, {"y", 2.0}}, true, true},
+		{"other order, unordered", [][]any{{"y", 2.0}, {"x", 1.0}}, false, true},
+		{"other order, ordered", [][]any{{"y", 2.0}, {"x", 1.0}}, true, false},
+		{"int vs float", [][]any{{"x", 1}, {"y", 2.0000000000001}}, true, true},
+		{"string vs number", [][]any{{"x", "1"}, {"y", 2.0}}, true, false},
+		{"missing row", [][]any{{"x", 1.0}}, false, false},
+		{"duplicate instead", [][]any{{"x", 1.0}, {"x", 1.0}}, false, false},
+	}
+	for _, tt := range tests {
+		if got := SameRows(tt.got, a, tt.ordered); got != tt.want {
+			t.Errorf("%s: got %v", tt.name, got)
+		}
+	}
+}
+
+func TestSQLResultEquals(t *testing.T) {
+	rep := &Report{Version: 1, SQL: &SQLPhase{Results: []SQLResult{
+		{Learner: SQLTable{Columns: []string{"n"}, Rows: [][]any{{1.0}}}},
+		{Learner: SQLTable{Columns: []string{"n"}, Rows: [][]any{{2.0}}}, Solution: &SQLTable{Columns: []string{"n"}, Rows: [][]any{{3.0}}}},
+		{Learner: SQLTable{Error: "no such column: x"}, Solution: &SQLTable{Columns: []string{"n"}}},
+	}}}
+	if rows := run(t, "sql_result_equals", `{"expected":{"columns":["n"],"rows":[[1]]}}`, rep); !rows[0].Passed {
+		t.Errorf("visible match: %+v", rows[0])
+	}
+	if rows := run(t, "sql_result_equals", `{"expected":{"columns":["n"],"rows":[[9]]}}`, rep); rows[0].Passed || rows[0].Got != "[[1]]" || rows[0].Expected != "[[9]]" {
+		t.Errorf("visible mismatch: %+v", rows[0])
+	}
+	if rows := run(t, "sql_result_equals", `{"dataset":1,"visible":false}`, rep); rows[0].Passed || rows[0].Feedback != "Wrong result" || rows[0].Got != "" {
+		t.Errorf("hidden mismatch must not show values: %+v", rows[0])
+	}
+	if rows := run(t, "sql_result_equals", `{"dataset":2,"visible":false}`, rep); rows[0].Feedback != "no such column: x" {
+		t.Errorf("sql error: %+v", rows[0])
+	}
+}

@@ -220,3 +220,22 @@ func assertSubmissions(t *testing.T, e *env, want int) {
 		t.Fatalf("%d submissions stored, want %d", n, want)
 	}
 }
+
+func TestServerRun(t *testing.T) {
+	r := &gatedRunner{out: runner.Output{Stdout: `{"version":1,"timed_out":false,"runtime_ms":3,"error":"","sql":{"results":[{"learner":{"columns":["name"],"rows":[["a"],["b"]],"truncated":false},"solution":null}]}}` + "\n"}}
+	e := setupWith(t, true, opts{runner: r})
+	body := `{"exercise_id":"demo.basics.query","version":1,"answer":{"query":"SELECT name FROM t"}}`
+	code, resp := e.do(http.MethodPost, "/api/v1/exercises/demo.basics.query/run", body, nil)
+	if code != 200 || !strings.Contains(string(resp), `"table":{"columns":["name"]`) || !strings.Contains(string(resp), `"passed":true`) {
+		t.Fatalf("run = %d %s", code, resp)
+	}
+	if strings.Contains(string(resp), sentinel) {
+		t.Fatal("run output leaks server-only content")
+	}
+	// The browser-run fixture refuses server Run.
+	code, resp = e.do(http.MethodPost, "/api/v1/exercises/"+codeID+"/run", codeBody("x = 1"), nil)
+	if code != 400 || !strings.Contains(string(resp), "run_unavailable") {
+		t.Fatalf("browser exercise run = %d %s", code, resp)
+	}
+	assertSubmissions(t, e, 0)
+}

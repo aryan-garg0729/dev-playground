@@ -131,24 +131,62 @@ type pendingResponse struct {
 	Status       string `json:"status"` // "pending"
 }
 
+// readSubmission decodes and checks a submit/run body; it writes the error itself.
+func readSubmission(w http.ResponseWriter, r *http.Request) (exercise.Submission, bool) {
+	var sub exercise.Submission
+	if err := decodeJSON(w, r, &sub); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+		return sub, false
+	}
+	if sub.ExerciseID != chi.URLParam(r, "exerciseID") {
+		writeError(w, http.StatusBadRequest, "bad_request", "exercise_id does not match the URL")
+		return sub, false
+	}
+	if len(sub.Answer) == 0 || string(sub.Answer) == "null" {
+		writeError(w, http.StatusBadRequest, "bad_request", "answer is required")
+		return sub, false
+	}
+	return sub, true
+}
+
+// run is the ungraded server Run (`run: server`): nothing is stored.
+func (a *api) run(w http.ResponseWriter, r *http.Request) {
+	if !currentUser(r).Valid {
+		writeError(w, http.StatusUnauthorized, "unauthorized", "sign in to run code")
+		return
+	}
+	sub, ok := readSubmission(w, r)
+	if !ok {
+		return
+	}
+	out, err := a.Grader.Run(r.Context(), sub)
+	switch {
+	case errors.Is(err, grading.ErrNotFound):
+		writeError(w, http.StatusNotFound, "not_found", "exercise not found")
+	case errors.Is(err, grading.ErrStaleVersion):
+		writeError(w, http.StatusConflict, "stale_version", "this exercise changed; reload to get the latest version")
+	case errors.Is(err, exercise.ErrInvalidAnswer):
+		writeError(w, http.StatusBadRequest, "invalid_answer", err.Error())
+	case errors.Is(err, exercise.ErrRunUnavailable):
+		writeError(w, http.StatusBadRequest, "run_unavailable", err.Error())
+	case errors.Is(err, runner.ErrUnavailable):
+		a.Log.Error("runner unavailable", "err", err, "req_id", middleware.GetReqID(r.Context()))
+		writeError(w, http.StatusServiceUnavailable, "grader_unavailable", "the runner is busy or offline; try again shortly")
+	case err != nil:
+		a.internal(w, r, err)
+	default:
+		writeJSON(w, http.StatusOK, out)
+	}
+}
+
 func (a *api) submit(w http.ResponseWriter, r *http.Request) {
 	user := currentUser(r)
 	if !user.Valid {
 		writeError(w, http.StatusUnauthorized, "unauthorized", "sign in to submit")
 		return
 	}
-	var sub exercise.Submission
-	if err := decodeJSON(w, r, &sub); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
-		return
-	}
-	pathID := chi.URLParam(r, "exerciseID")
-	if sub.ExerciseID != pathID {
-		writeError(w, http.StatusBadRequest, "bad_request", "exercise_id does not match the URL")
-		return
-	}
-	if len(sub.Answer) == 0 || string(sub.Answer) == "null" {
-		writeError(w, http.StatusBadRequest, "bad_request", "answer is required")
+	sub, ok := readSubmission(w, r)
+	if !ok {
 		return
 	}
 	g, err := a.Grader.Submit(r.Context(), user.UUID, sub)
@@ -213,6 +251,15 @@ func (a *api) getSubmission(w http.ResponseWriter, r *http.Request) {
 // limitSubmits applies the per-user and per-IP submit limits. If Redis is
 // down, submits are refused rather than let through unlimited.
 func (a *api) limitSubmits(next http.Handler) http.Handler {
+	return a.limit("submit", a.SubmitPerUser, a.SubmitPerIP, "too many submissions; wait a moment", next)
+}
+
+// limitRuns applies the server Run limits (Run is ungraded but still uses a worker).
+func (a *api) limitRuns(next http.Handler) http.Handler {
+	return a.limit("run", 2*a.SubmitPerUser, 2*a.SubmitPerIP, "too many runs; wait a moment", next)
+}
+
+func (a *api) limit(name string, perUser, perIP int, msg string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
@@ -222,9 +269,9 @@ func (a *api) limitSubmits(next http.Handler) http.Handler {
 			rule ratelimit.Rule
 			key  string
 		}
-		checks := []limit{{ratelimit.Rule{Name: "submit-ip", Limit: a.SubmitPerIP, Window: time.Minute}, ip}}
+		checks := []limit{{ratelimit.Rule{Name: name + "-ip", Limit: perIP, Window: time.Minute}, ip}}
 		if u := currentUser(r); u.Valid {
-			checks = append(checks, limit{ratelimit.Rule{Name: "submit-user", Limit: a.SubmitPerUser, Window: time.Minute}, u.UUID.String()})
+			checks = append(checks, limit{ratelimit.Rule{Name: name + "-user", Limit: perUser, Window: time.Minute}, u.UUID.String()})
 		}
 		for _, c := range checks {
 			ok, retry, err := a.Limiter.Allow(r.Context(), c.rule, c.key)
@@ -235,7 +282,7 @@ func (a *api) limitSubmits(next http.Handler) http.Handler {
 			}
 			if !ok {
 				w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
-				writeError(w, http.StatusTooManyRequests, "rate_limited", "too many submissions; wait a moment")
+				writeError(w, http.StatusTooManyRequests, "rate_limited", msg)
 				return
 			}
 		}

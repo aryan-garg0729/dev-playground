@@ -1,0 +1,16 @@
+id: demo.basics.query
+type: sql
+version: 1
+title: Names
+xp: 10
+spec:
+  prompt: prompt.md
+  setup: setup.sql
+  solution: solution.sql
+  run: server
+  checks:
+    - kind: sql_result_equals
+      expected: { columns: [name], rows: [[a], [b]] }
+    - kind: sql_result_equals
+      setup: hidden.sql
+      visible: false

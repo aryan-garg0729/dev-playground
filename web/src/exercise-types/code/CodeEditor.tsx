@@ -2,6 +2,7 @@
 import Editor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/editor';
 import 'monaco-editor/languages/definitions/python/register';
+import 'monaco-editor/languages/definitions/sql/register';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import { useEffect, useRef } from 'react';
 import { useTheme } from '../../stores/theme';

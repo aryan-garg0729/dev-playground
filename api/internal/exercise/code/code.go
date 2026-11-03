@@ -61,6 +61,7 @@ type TestFile struct {
 type Spec struct {
 	Language    string     `json:"language"`
 	Runner      string     `json:"runner"`
+	Run         string     `json:"run"`    // where Run executes: browser | server | off
 	Prompt      string     `json:"prompt"` // markdown
 	Entry       string     `json:"entry"`
 	Starter     string     `json:"starter"`
@@ -78,6 +79,7 @@ type Spec struct {
 type manifest struct {
 	Language    string      `yaml:"language"`
 	Runner      string      `yaml:"runner"`
+	Run         string      `yaml:"run"`
 	Prompt      string      `yaml:"prompt"`
 	Entry       string      `yaml:"entry"`
 	Starter     string      `yaml:"starter"`
@@ -93,6 +95,7 @@ type manifest struct {
 type PublicView struct {
 	Language     string     `json:"language"`
 	Runner       string     `json:"runner"`
+	Run          string     `json:"run"`
 	Prompt       string     `json:"prompt"`
 	Entry        string     `json:"entry"`
 	Starter      string     `json:"starter"`
@@ -120,8 +123,11 @@ func (codeType) ParseSpec(raw yaml.Node, dir fs.FS) (exercise.Spec, error) {
 		return nil, err
 	}
 	s := Spec{
-		Language: m.Language, Runner: m.Runner, Entry: m.Entry, Limits: m.Limits,
+		Language: m.Language, Runner: m.Runner, Run: m.Run, Entry: m.Entry, Limits: m.Limits,
 		Examples: m.Examples, Constraints: m.Constraints, Hints: m.Hints,
+	}
+	if s.Run == "" {
+		s.Run = defaultRun(s.Runner)
 	}
 	if s.Limits.TimeoutMs == 0 {
 		s.Limits.TimeoutMs = runner.DefaultTimeoutMs
@@ -250,6 +256,9 @@ func (s Spec) validate() error {
 	if _, ok := runner.Images[s.Runner]; !ok {
 		return fmt.Errorf("runner: %q is not supported (docker-python, pyodide)", s.Runner)
 	}
+	if !exercise.ValidRunMode(s.Run) {
+		return fmt.Errorf("run: %q must be browser, server or off", s.Run)
+	}
 	if !fileNameRe.MatchString(s.Entry) || s.Entry == "cq.py" {
 		return fmt.Errorf("entry: %q must be a Python file name such as main.py", s.Entry)
 	}
@@ -335,7 +344,7 @@ func (codeType) PublicView(ex exercise.Exercise) (json.RawMessage, error) {
 		return nil, err
 	}
 	b, err := json.Marshal(PublicView{
-		Language: s.Language, Runner: s.Runner, Prompt: s.Prompt, Entry: s.Entry, Starter: s.Starter,
+		Language: s.Language, Runner: s.Runner, Run: s.Run, Prompt: s.Prompt, Entry: s.Entry, Starter: s.Starter,
 		TimeoutMs: s.Limits.TimeoutMs, Examples: orEmpty(s.Examples), Constraints: orEmpty(s.Constraints),
 		Hints: orEmpty(s.Hints), VisibleTests: s.visibleTests(),
 	})
@@ -485,4 +494,92 @@ func (codeType) WrongAnswers(sp exercise.Spec) (map[string]json.RawMessage, erro
 		out[name] = b
 	}
 	return out, nil
+}
+
+// defaultRun picks where Run executes when the manifest does not say: in the
+// browser for browser runners, on the server for docker runners.
+func defaultRun(runnerName string) string {
+	if runnerName == "pyodide" {
+		return exercise.RunBrowser
+	}
+	return exercise.RunServer
+}
+
+// Run executes the entry as a program plus the visible tests only, ungraded.
+// Hidden tests never take part, so nothing server-only can reach the output.
+func (codeType) Run(ctx context.Context, ex exercise.Exercise, answer json.RawMessage) (exercise.RunOutput, error) {
+	s, err := specOf(ex)
+	if err != nil {
+		return exercise.RunOutput{}, err
+	}
+	if s.Run != exercise.RunServer {
+		return exercise.RunOutput{}, exercise.ErrRunUnavailable
+	}
+	src, err := s.parseAnswer(answer)
+	if err != nil {
+		return exercise.RunOutput{}, err
+	}
+	run, ok := runner.FromContext(ctx)
+	if !ok {
+		return exercise.RunOutput{}, errors.New("code: no runner in context")
+	}
+	visible := s.visibleTests()
+	job := harnessJob{
+		Files: map[string]string{s.Entry: src}, Entry: s.Entry, Tests: visible, RunEntry: true,
+		Forbidden: []string{}, TimeoutMs: s.Limits.TimeoutMs, OutputLimit: stdoutLimit,
+	}
+	stdin, err := json.Marshal(job)
+	if err != nil {
+		return exercise.RunOutput{}, fmt.Errorf("code: encode job: %w", err)
+	}
+	out, err := run.Run(ctx, runner.Job{
+		Image: runner.Images[s.Runner], Stdin: stdin,
+		Limits: runner.Limits{TimeoutMs: s.Limits.TimeoutMs, MemoryMB: s.Limits.MemoryMB},
+	})
+	if err != nil {
+		return exercise.RunOutput{}, fmt.Errorf("code: run: %w", err)
+	}
+	if out.TimedOut {
+		return exercise.RunOutput{TimedOut: true, RuntimeMs: out.RuntimeMs, Checks: []exercise.CheckResult{},
+			Error: fmt.Sprintf("Stopped after %d ms", s.Limits.TimeoutMs)}, nil
+	}
+	report, err := checks.ParseReport(out.Stdout)
+	if err != nil {
+		if out.ExitCode == 137 {
+			return exercise.RunOutput{Checks: []exercise.CheckResult{},
+				Error: fmt.Sprintf("Your code used more than %d MB of memory", s.Limits.MemoryMB)}, nil
+		}
+		return exercise.RunOutput{}, fmt.Errorf("code: %w (exit %d)", err, out.ExitCode)
+	}
+	res := exercise.RunOutput{Checks: []exercise.CheckResult{}, TimedOut: report.TimedOut}
+	for _, c := range s.Checks {
+		if c.Kind != "unit_tests" {
+			continue
+		}
+		var cfg checks.UnitTestsConfig
+		if json.Unmarshal(c.Config, &cfg) != nil || cfg.Visible == nil || !*cfg.Visible {
+			continue
+		}
+		rows, err := checks.Run(ctx, c.Kind, checks.CheckInput{Config: c.Config, Answer: answer, Report: report})
+		if err != nil {
+			return exercise.RunOutput{}, fmt.Errorf("code: %w", err)
+		}
+		res.Checks = append(res.Checks, rows...)
+	}
+	if report.SyntaxError != nil {
+		res.Error = fmt.Sprintf("%s (line %d)", report.SyntaxError.Message, report.SyntaxError.Line)
+	}
+	if p := report.Program; p != nil {
+		res.Stdout, res.Stderr, res.RuntimeMs = p.Stdout, p.Stderr, p.RuntimeMs
+	}
+	if t := report.Tests; t != nil {
+		res.RuntimeMs += t.RuntimeMs
+		if res.Stderr == "" {
+			res.Stderr = t.Stderr
+		}
+	}
+	if report.TimedOut {
+		res.Error = fmt.Sprintf("Stopped after %d ms", s.Limits.TimeoutMs)
+	}
+	return res, nil
 }

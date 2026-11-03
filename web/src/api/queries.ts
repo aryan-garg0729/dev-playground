@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RunOutput } from '../exercise-types/types';
 import { api, ApiError, type GradeResult, unwrap } from './client';
 
 export const keys = {
@@ -75,4 +76,23 @@ export function useSubmit(exerciseId: string, courseId: string | undefined) {
       if (courseId) void qc.invalidateQueries({ queryKey: keys.course(courseId) });
     },
   });
+}
+
+/** Ungraded server Run (`run: server`). */
+export async function runOnServer(exerciseId: string, version: number, answer: unknown): Promise<RunOutput> {
+  const out = await unwrap(
+    api.POST('/exercises/{exerciseId}/run', {
+      params: { path: { exerciseId } },
+      body: { exercise_id: exerciseId, version, answer },
+    }),
+  );
+  return {
+    stdout: out.stdout,
+    stderr: out.stderr,
+    checks: out.checks,
+    runtimeMs: out.runtime_ms,
+    timedOut: out.timed_out,
+    table: out.table,
+    error: out.error,
+  };
 }

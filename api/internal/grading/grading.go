@@ -76,6 +76,55 @@ type outcome struct {
 	err error
 }
 
+func (s *Service) load(ctx context.Context, sub exercise.Submission) (store.GetExerciseForGradingRow, exercise.Type, exercise.Exercise, error) {
+	q := store.New(s.pool)
+	row, err := q.GetExerciseForGrading(ctx, sub.ExerciseID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return row, nil, exercise.Exercise{}, ErrNotFound
+	}
+	if err != nil {
+		return row, nil, exercise.Exercise{}, fmt.Errorf("load exercise: %w", err)
+	}
+	if int(row.Version) != sub.Version {
+		return row, nil, exercise.Exercise{}, fmt.Errorf("%w: submitted v%d, current v%d", ErrStaleVersion, sub.Version, row.Version)
+	}
+	typ, ok := exercise.Get(row.Type)
+	if !ok {
+		return row, nil, exercise.Exercise{}, fmt.Errorf("exercise %s has unregistered type %q", row.ID, row.Type)
+	}
+	spec, err := typ.LoadSpec(row.PrivateSpec)
+	if err != nil {
+		return row, nil, exercise.Exercise{}, fmt.Errorf("load spec %s: %w", row.ID, err)
+	}
+	ex := exercise.Exercise{
+		ID: row.ID, Type: row.Type, Version: int(row.Version), Title: row.Title, XP: int(row.Xp),
+		Difficulty: int(row.Difficulty), Tags: row.Tags, Free: row.Free, Boss: row.Boss, Spec: spec,
+	}
+	return row, typ, ex, nil
+}
+
+// Run executes an ungraded server run (`run: server`): visible checks only,
+// nothing stored, no progress. exercise.ErrRunUnavailable when the exercise
+// does not run on the server.
+func (s *Service) Run(ctx context.Context, sub exercise.Submission) (exercise.RunOutput, error) {
+	_, typ, ex, err := s.load(ctx, sub)
+	if err != nil {
+		return exercise.RunOutput{}, err
+	}
+	r, ok := typ.(exercise.Runnable)
+	if !ok {
+		return exercise.RunOutput{}, exercise.ErrRunUnavailable
+	}
+	if s.runner != nil {
+		ctx = runner.NewContext(ctx, s.runner)
+	}
+	out, err := r.Run(ctx, ex, sub.Answer)
+	if err != nil {
+		return exercise.RunOutput{}, fmt.Errorf("run %s: %w", ex.ID, err)
+	}
+	return out, nil
+}
+
 // Submit grades sub for user. A result within Options.Wait is stored with the
 // progress update in one transaction and returned. Otherwise a pending
 // submission is stored and returned, and grading finishes in the background.
@@ -83,27 +132,9 @@ type outcome struct {
 // runner outages (runner.ErrUnavailable) that happen before the wait ends.
 func (s *Service) Submit(ctx context.Context, user uuid.UUID, sub exercise.Submission) (Graded, error) {
 	q := store.New(s.pool)
-	row, err := q.GetExerciseForGrading(ctx, sub.ExerciseID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Graded{}, ErrNotFound
-	}
+	row, typ, ex, err := s.load(ctx, sub)
 	if err != nil {
-		return Graded{}, fmt.Errorf("load exercise: %w", err)
-	}
-	if int(row.Version) != sub.Version {
-		return Graded{}, fmt.Errorf("%w: submitted v%d, current v%d", ErrStaleVersion, sub.Version, row.Version)
-	}
-	typ, ok := exercise.Get(row.Type)
-	if !ok {
-		return Graded{}, fmt.Errorf("exercise %s has unregistered type %q", row.ID, row.Type)
-	}
-	spec, err := typ.LoadSpec(row.PrivateSpec)
-	if err != nil {
-		return Graded{}, fmt.Errorf("load spec %s: %w", row.ID, err)
-	}
-	ex := exercise.Exercise{
-		ID: row.ID, Type: row.Type, Version: int(row.Version), Title: row.Title, XP: int(row.Xp),
-		Difficulty: int(row.Difficulty), Tags: row.Tags, Free: row.Free, Boss: row.Boss, Spec: spec,
+		return Graded{}, err
 	}
 
 	// Grade on a context that outlives the request, so a slow run is not lost

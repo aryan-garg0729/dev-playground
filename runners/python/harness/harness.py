@@ -212,10 +212,32 @@ def run_tests(entry, tests, plan, timeout_s, limit):
     return proc
 
 
+SQL_CHILD = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sql_child.py")
+
+
+def run_sql(job, t0):
+    """mode "sql": one learner statement over each dataset (see sql_child.py)."""
+    timeout_s = int(job["timeout_ms"]) / 1000
+    cfg = {"query": job["query"], "solution": job.get("solution", ""), "datasets": job["datasets"]}
+    proc = run_proc([sys.executable, "-I", SQL_CHILD], json.dumps(cfg).encode(), timeout_s, 4 << 20)
+    report = {"version": 1, "sql": None, "timed_out": proc["timed_out"], "error": ""}
+    if not proc["timed_out"]:
+        try:
+            report["sql"] = json.loads(proc["stdout"])
+        except ValueError:
+            report["error"] = (proc["stderr"].strip().splitlines() or ["sql runner failed"])[-1][:500]
+    report["runtime_ms"] = int((time.monotonic() - t0) * 1000)
+    sys.stdout.write(json.dumps(report) + "\n")
+    sys.stdout.flush()
+
+
 def main():
     make_undumpable()
     t0 = time.monotonic()
     job = json.loads(sys.stdin.buffer.read())
+    if job.get("mode") == "sql":
+        run_sql(job, t0)
+        return
     files, entry = job["files"], job["entry"]
     tests = job.get("tests", [])
     limit = int(job.get("output_limit", 16384))

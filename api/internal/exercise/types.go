@@ -121,3 +121,40 @@ type Testable interface {
 	// WrongAnswers maps a name (e.g. "wrong/off_by_one.py") to an answer.
 	WrongAnswers(s Spec) (map[string]json.RawMessage, error)
 }
+
+// Run modes: where the Run button executes an exercise (manifest `run:`).
+const (
+	RunBrowser = "browser" // sandbox iframe (Pyodide, sql.js)
+	RunServer  = "server"  // POST /exercises/{id}/run on the grading worker, ungraded
+	RunOff     = "off"     // no Run button
+)
+
+// ErrRunUnavailable means the exercise does not run on the server.
+var ErrRunUnavailable = errors.New("run is not available on the server for this exercise")
+
+// Table is a query result shown to the learner.
+type Table struct {
+	Columns   []string `json:"columns"`
+	Rows      [][]any  `json:"rows"`
+	Truncated bool     `json:"truncated"`
+}
+
+// RunOutput is an ungraded run: visible checks only, nothing stored.
+type RunOutput struct {
+	Stdout    string        `json:"stdout"`
+	Stderr    string        `json:"stderr"`
+	Checks    []CheckResult `json:"checks"`
+	RuntimeMs int           `json:"runtime_ms"`
+	TimedOut  bool          `json:"timed_out"`
+	Table     *Table        `json:"table,omitempty"`
+	Error     string        `json:"error,omitempty"`
+}
+
+// Runnable is implemented by types whose exercises can Run on the server
+// (`run: server`). Run must use only public inputs: visible tests and data.
+type Runnable interface {
+	Run(ctx context.Context, ex Exercise, answer json.RawMessage) (RunOutput, error)
+}
+
+// ValidRunMode reports whether m is a known run mode.
+func ValidRunMode(m string) bool { return m == RunBrowser || m == RunServer || m == RunOff }

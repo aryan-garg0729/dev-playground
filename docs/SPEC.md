@@ -62,7 +62,8 @@ codequest/
     src/runner-client/      # postMessage bridge to sandbox
   runners/python/           # codequest/python:3.12 grading image + harness (Phase 2)
   sandbox/                  # static runner page (served from separate origin)
-    index.html  worker.ts   # Pyodide / sql.js / JS execution
+    index.html  src/main.ts src/worker.ts   # Pyodide / sql.js execution
+    src/protocol.ts         # zod message schemas (identical copy in web/src/runner-client)
   content/                  # courses as files (see Content format)
 ```
 
@@ -188,6 +189,7 @@ exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 - `cq validate <dir>` and `cq build <dir>` print every problem as `path: reason` and exit 1. `<dir>` is a folder of courses or a single course folder.
 - `cq build` writes everything in one transaction, upserting by id. Courses, chapters and exercises no longer in the content are **unpublished, never deleted**, so progress and submissions keyed on old ids survive.
 - mcq: `question` names a markdown file; `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
+- Run location (decided in Phase 3): `code` and `sql` specs take `run: browser | server | off`. `browser` runs in the sandbox iframe (Pyodide for Python, sql.js for SQL); `server` sends the answer to `POST /exercises/{id}/run`, which runs it on the grading worker with visible checks only, ungraded and not stored; `off` hides Run. Defaults: `pyodide` → browser, `docker-python` → server, `sql` → browser. Changing it is a manifest edit plus `cq build`; content CI checks the solution's visible checks wherever `run:` points, so a lesson moved to `browser` whose packages don't load there fails CI.
 - code (decided in Phase 2): `language: python`; `runner: docker-python` (submit-only) or `pyodide` (server grades it on `docker-python`); `prompt` (markdown), `entry` (a module file name such as `main.py`), `starter` and `solution` are required files; `limits` default to 3000 ms / 128 MB, capped at 10000 ms / 512 MB; `examples`, `constraints` and `hints` are optional and public. At least one check. `solution.*` and `wrong/*.py` are read by `cq build`/`cq test` but never stored in `private_spec`; hidden test sources are stored there (server-only). Visible test files are sent to the browser as `visible_tests`.
 - Test files are Python modules with top-level `test_*` functions that import from the entry module. A test's docstring is its row name. `from cq import expect` gives `expect(got, expected)`, which compares exact types (so a learner object with a rigged `__eq__` cannot pass) and reports got/expected. Label hidden tests in words: a hidden label that looks like code (contains `()[]{}=`) is replaced by "Hidden test N". `cq.fakes` (fake chat models) is available to tests and learner code in the image.
 
@@ -249,7 +251,7 @@ v1 types:
 | --- | --- | --- |
 | `code` | `{ files: { [path]: string } }` | `pyodide` or `js` |
 | `mcq` | `{ choices: string[] }` | none |
-| `sql` | `{ query: string }` | `sqljs` |
+| `sql` | `{ query: string }` | `sqljs` (graded on the worker) |
 
 Later types (do not build in v1): `fill_blank`, `predict_output`, `order_steps`, `project_cli` (learner runs a local CLI that posts results), `open_answer` (AI-graded).
 
@@ -264,7 +266,7 @@ The server is the only authority on whether a submission passed. The browser run
 1. **Run (client, ungraded).** The learner clicks Run. The sandbox executes their code plus visible tests and shows output. Nothing is stored.
 2. **Submit (server, authoritative).** The browser POSTs the answer. The API calls the type's `Grade`, which executes all checks (visible and hidden) on a server runner, stores the result, and returns it. Only this path awards XP.
 
-Client runners map to server runners: `pyodide` → `docker-python`, `js` → `docker-node`, `sqljs` → in-process SQLite (`modernc.org/sqlite`). `mcq` grades in-process with no runner. The same test files must produce the same result on both.
+Client runners map to server runners: `pyodide` → `docker-python`, `js` → `docker-node`, `sqljs` → SQLite in the `docker-python` grading container (decided in Phase 3, instead of in-process `modernc.org/sqlite`, so untrusted SQL never runs inside the API process). `mcq` grades in-process with no runner. The same test files must produce the same result on both.
 
 ### Contracts
 
@@ -309,7 +311,7 @@ A grader runs the `checks` list from the manifest. Each kind is a small function
 | `forbidden_calls` | AST/static scan for banned names | code |
 | `max_runtime` | Fails if runtime exceeds N ms | code |
 | `exact_choice` | Selected option ids equal the answer set | mcq |
-| `sql_result_equals` | Compares result set to the solution's; `ordered` flag | sql |
+| `sql_result_equals` | Compares the result set to `expected` (visible) or to the solution's on the check's dataset (hidden); `ordered` flag | sql |
 
 ```go
 type Check interface {
@@ -327,6 +329,7 @@ Manifest fields (every code check also takes `name`, `visible`, `weight ≥ 0`):
 | `unit_tests` | `file` (a `.py` in the exercise folder) | `visible: false`; one row per test, weight applies per row; `name` not allowed |
 | `stdout_equals` | `expected` | `visible: true`, name "Program output"; runs the entry as `__main__`; trailing whitespace per line and trailing blank lines ignored |
 | `stdout_regex` | `pattern` (Go RE2, unanchored), `message` | `visible: true` |
+| `sql_result_equals` | `ordered`, `expected: {columns, rows}` (required when visible), `setup` (a `.sql` file; only on hidden checks) | `visible: true`; values only (column count must match, names may differ); numbers compare with a small tolerance; one statement; `ATTACH`/`DETACH`/`PRAGMA` denied; 1000-row cap |
 | `forbidden_calls` | `names` (identifiers), `message` | static AST scan of learner files: `f(...)` and `x.f(...)` count. A teaching aid, not a sandbox |
 
 ### Runner interface (`api/internal/runner`)
@@ -375,8 +378,9 @@ Learner code never runs in the main app's page. It runs in a Web Worker inside a
 
 - **Separate origin.** Serve `sandbox/` from its own domain (e.g. `run.<other-domain>`; in dev, `localhost:5174`). Embed it with `<iframe sandbox="allow-scripts">` and never add `allow-same-origin`.
 - **Web Worker.** Pyodide, sql.js and JS execution happen in a worker. The iframe kills it with `worker.terminate()` after `timeout_ms` and reports `timeout`. Recreate the worker for the next run; keep a warm spare to hide Pyodide startup.
-- **Message protocol.** App → sandbox: `{ type: "run", runId, runner, files, tests, timeoutMs }`. Sandbox → app: `{ type: "result", runId, stdout, stderr, checks, runtimeMs, timedOut }`. Both sides check `event.origin` and validate the shape with zod; unknown messages are dropped.
-- **CSP on the sandbox page:** `default-src 'none'; script-src 'self' 'wasm-unsafe-eval' <cdn>; connect-src 'self' <cdn>; worker-src 'self' blob:`. Learner code must not reach arbitrary hosts. Self-host Pyodide if possible so `connect-src` can be `'self'` only.
+- **Message protocol.** App → sandbox: `{ type: "run", runId, runner, entry, files, tests, sql?, timeoutMs }`. Sandbox → app: `{ type: "result", runId, stdout, stderr, checks, runtimeMs, timedOut, table?, error? }` and `{ type: "ready" }`. Both sides validate the shape with zod (strict objects; unknown messages are dropped). The sandbox accepts messages only from its parent window with an allowed app origin (`VITE_APP_ORIGINS`). Because the frame has no `allow-same-origin`, its origin is opaque, so the app accepts replies only when `event.source` is its own frame and `event.origin` is `"null"`. For the same reason the app posts run requests with target origin `"*"` (a named origin never matches an opaque frame, so the browser would drop the message); it posts only to its own frame's `contentWindow`, and a run request carries nothing secret (learner code and visible tests).
+- **Workers from an opaque origin.** The worker is bundled as one classic script and started from a blob URL (an opaque-origin page cannot start a same-origin worker). Runtime assets are fetched by absolute URL, so the sandbox serves them with `Access-Control-Allow-Origin: *`; they are public. The sandbox keeps one active worker and one warm spare; a timeout terminates the active worker and promotes the spare.
+- **CSP on the sandbox page:** `default-src 'none'; script-src 'self' <sandbox origin> 'wasm-unsafe-eval'; connect-src 'self' <sandbox origin>; worker-src blob:; base-uri 'none'; form-action 'none'; frame-ancestors <app origins>`. The sandbox origin is listed explicitly because `'self'` does not match from an opaque origin. Pyodide and sql.js are self-hosted (`sandbox/scripts/copy-assets.mjs`), so learner code can reach only the sandbox's own static files. Browser Python is Pyodide 314 (Python 3.14), stdlib only; the server runs Python 3.12, so keep browser lessons to features both share.
 - **Output.** Render stdout and stderr with `textContent` only. No `innerHTML` or `dangerouslySetInnerHTML` anywhere for learner-derived text.
 - **Never ship secrets to the browser.** `PublicView` strips `solution`, hidden tests and `wrong/`. Add an integration test that asserts no server-only file content appears in any API response.
 
@@ -420,6 +424,7 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/courses/{id}` | Chapters and exercises with lock state |
 | GET | `/exercises/{id}` | `public_view`, type, saved draft, last result; 402 if locked |
 | PUT | `/exercises/{id}/draft` | Autosave answer |
+| POST | `/exercises/{id}/run` | Ungraded server Run (`run: server`): visible checks only, nothing stored; 60/min per user |
 | POST | `/exercises/{id}/submit` | Grade; returns `Result` + XP awarded + level/streak changes |
 | GET | `/submissions/{id}` | Poll a pending submission (owner only; `result` is null while pending) |
 | POST | `/exercises/{id}/hint` | AI tutor message |
@@ -428,7 +433,7 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
 CSRF (until real sessions in Phase 4): every non-GET request must be `Content-Type: application/json`, and a browser `Origin` header, when present, must be in `ALLOWED_ORIGINS`.
 
@@ -617,7 +622,7 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 ## Conventions and rules for Claude Code
 
 - Work one phase at a time. Before coding, list the files you will create or change. After coding, run tests and report which acceptance criteria pass.
-- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk). The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
+- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `zod` (sandbox message validation), `pyodide`, `sql.js` (self-hosted browser runtimes), `@playwright/test` (browser tests, run from the official Docker image so no browsers are installed on the host), `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk). The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
 - Go: standard layout above, `gofmt` + `golangci-lint`, errors wrapped with `fmt.Errorf("...: %w", err)`, `context.Context` first argument, table-driven tests, no global state except the plugin registries.
 - SQL only through `sqlc`-generated queries. Every schema change is a new migration; never edit an applied one.
 - React: function components, TypeScript strict mode, no `any` outside the renderer registry, server state through TanStack Query, components under 200 lines.
@@ -632,7 +637,8 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 - Final product name and domains (app, sandbox origin). Needed before Phase 3.
 - ~~First course topic for launch.~~ Resolved (Phase 1): LangChain, sample course `content/langchain-basics`, adapted from the author's genai lesson notes; to be refined into the full course.
 - ~~LangChain `code` exercises (Phase 2).~~ Resolved: `codequest/python:3.12` ships the pinned LangChain packages and `cq.fakes`; the sample LangChain code exercises use `runner: docker-python` and fakes only.
-- Phase 2 interim UI: Run is disabled until the browser sandbox (Phase 3); the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats waits for Phase 4.
+- sql manifest (Phase 3): `prompt`, `setup` (public data, shown to the learner), `solution` (stored in `private_spec` because hidden checks compare against it), optional `starter`, `run`, `limits.timeout_ms` (default 2000). Hidden datasets are server-only.
+- Phase 2 interim UI: Run became available in Phase 3; the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats waits for Phase 4.
 - Dev Compose mounts the host Docker socket into the worker (root-equivalent). Production runs the worker on a dedicated host (later gVisor).
 - LangChain in the browser (Phase 3): Pyodide would need self-hosted `langchain-core` and `pydantic` wheels (CSP forbids fetching from PyPI). Decide whether these exercises are submit-only, graded on the server.
 - Exact prices per plan and per country tier. Needed before Phase 5.

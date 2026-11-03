@@ -68,6 +68,7 @@ func New(d Deps) http.Handler {
 		r.Get("/courses/{courseID}", a.getCourse)
 		r.Get("/exercises/{exerciseID}", a.getExercise)
 		r.With(a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
+		r.With(a.limitRuns).Post("/exercises/{exerciseID}/run", a.run)
 		r.Get("/submissions/{submissionID}", a.getSubmission)
 	})
 	return r
