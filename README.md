@@ -22,6 +22,19 @@ Everything Claude Code needs to build CodeQuest, ready to drop into a new reposi
 
 3. Then build one phase per session: plan, implement, verify against the acceptance criteria and the screen PNGs, commit, clear context, next phase.
 
+## Learner CLI
+
+Command-line lessons (`project_cli`) run on the learner's machine through the `codequest` CLI, like boot.dev's.
+
+```sh
+make cli                      # builds bin/codequest (defaults to the local `make up` stack)
+bin/codequest login           # opens /cli/login; paste the code shown there
+bin/codequest run cl.hello-script
+bin/codequest submit cl.hello-script
+```
+
+A release build points at production with `make cli API_URL=https://… APP_URL=https://…`. See "Phase 8" in `docs/SPEC.md`.
+
 ## Screens
 
 | File | Screen |

@@ -66,6 +66,23 @@ type Chest struct {
 	OpenedAt time.Time `json:"opened_at"`
 }
 
+type CliLoginCode struct {
+	CodeHash  string     `json:"code_hash"`
+	UserID    uuid.UUID  `json:"user_id"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+type CliToken struct {
+	ID         string    `json:"id"`
+	UserID     uuid.UUID `json:"user_id"`
+	Label      string    `json:"label"`
+	CreatedAt  time.Time `json:"created_at"`
+	LastUsedAt time.Time `json:"last_used_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+}
+
 type ClientError struct {
 	Fingerprint string      `json:"fingerprint"`
 	Day         time.Time   `json:"day"`

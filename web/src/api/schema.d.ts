@@ -266,6 +266,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cli/codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description A one-time code for `codequest login`, for a user signed in with the session cookie (not a CLI token). Single use, expires after 10 minutes. */
+        post: operations["createCliCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cli/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Trades a login code for a CLI bearer token (90 days, extended on use). Exempt from the Origin check (it sets no cookie); still needs JSON. 20 attempts per IP per hour. */
+        post: operations["createCliToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cli/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Revokes the bearer token it is called with. */
+        post: operations["cliLogout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cli/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The learner's first unpassed project_cli lesson in course order. Locks apply on GET /exercises/{id}. */
+        get: operations["getCliNext"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/github/start": {
         parameters: {
             query?: never;
@@ -1368,6 +1436,124 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    createCliCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description The code, formatted XXXXX-XXXXX */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        /** Format: date-time */
+                        expires_at: string;
+                    };
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    createCliToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Case and dashes are ignored */
+                    code: string;
+                    /** @description e.g. the machine's hostname */
+                    label?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The token, shown once */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token: string;
+                        name: string;
+                        email: string;
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+        };
+    };
+    cliLogout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    getCliNext: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The next lesson */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        exercise_id: string;
+                        title: string;
+                        course_id: string;
+                        course_title: string;
+                        /** @description 1-based */
+                        chapter_no: number;
+                        /** @description 1-based */
+                        lesson_no: number;
+                    };
+                };
+            };
+            401: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
     githubStart: {

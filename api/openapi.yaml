@@ -202,6 +202,85 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
       responses:
         "204": { description: Signed out }
+  /cli/codes:
+    post:
+      operationId: createCliCode
+      description: >
+        A one-time code for `codequest login`, for a user signed in with the session
+        cookie (not a CLI token). Single use, expires after 10 minutes.
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200":
+          description: The code, formatted XXXXX-XXXXX
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, expires_at]
+                properties:
+                  code: { type: string }
+                  expires_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Error" }
+  /cli/token:
+    post:
+      operationId: createCliToken
+      description: >
+        Trades a login code for a CLI bearer token (90 days, extended on use). Exempt
+        from the Origin check (it sets no cookie); still needs JSON. 20 attempts per IP per hour.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: Case and dashes are ignored }
+                label: { type: string, description: e.g. the machine's hostname }
+      responses:
+        "200":
+          description: The token, shown once
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, name, email]
+                properties:
+                  token: { type: string }
+                  name: { type: string }
+                  email: { type: string }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /cli/logout:
+    post:
+      operationId: cliLogout
+      description: Revokes the bearer token it is called with.
+      security: [{ cliToken: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "204": { description: Revoked }
+        "401": { $ref: "#/components/responses/Error" }
+  /cli/next:
+    get:
+      operationId: getCliNext
+      description: The learner's first unpassed project_cli lesson in course order. Locks apply on GET /exercises/{id}.
+      responses:
+        "200":
+          description: The next lesson
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [exercise_id, title, course_id, course_title, chapter_no, lesson_no]
+                properties:
+                  exercise_id: { type: string }
+                  title: { type: string }
+                  course_id: { type: string }
+                  course_title: { type: string }
+                  chapter_no: { type: integer, description: 1-based }
+                  lesson_no: { type: integer, description: 1-based }
+        "401": { $ref: "#/components/responses/Error" }
+        "404": { $ref: "#/components/responses/Error" }
   /auth/github/start:
     get:
       operationId: githubStart
@@ -394,6 +473,13 @@ paths:
         "400": { $ref: "#/components/responses/Error" }
         "429": { $ref: "#/components/responses/Error" }
 components:
+  securitySchemes:
+    cliToken:
+      type: http
+      scheme: bearer
+      description: >
+        The `codequest` CLI's token. Accepted on every endpoint in place of the
+        cq_session cookie (never together with it); such requests skip the Origin check.
   responses:
     Error:
       description: Error

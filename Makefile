@@ -9,7 +9,7 @@ REDIS_TEST_URL ?= redis://localhost:6379/15
 RUNNER_IMAGE := codequest/python:3.12
 PW_IMAGE := mcr.microsoft.com/playwright:v1.64.1-noble
 
-.PHONY: up down db migrate content validate content-test runner-image e2e lighthouse test test-api test-web test-sandbox lint tokens tokens-check sqlc api-types
+.PHONY: up down db migrate content validate content-test runner-image e2e lighthouse test test-api test-web test-sandbox lint tokens tokens-check sqlc api-types cli
 
 up: ## Start Postgres, Redis, API, worker and web (applies migrations and builds content/)
 	$(COMPOSE) up --build
@@ -73,6 +73,9 @@ tokens: ## Regenerate web/src/styles/tokens.css and web/tailwind.config.ts from 
 
 tokens-check:
 	cd web && npm run tokens:check
+
+cli: ## Build the learner CLI into bin/codequest (set API_URL / APP_URL for a release build)
+	cd api && go build -trimpath -ldflags "-X main.version=$$(git describe --always --dirty 2>/dev/null || echo dev)$(if $(API_URL), -X main.defaultAPIURL=$(API_URL))$(if $(APP_URL), -X main.defaultAppURL=$(APP_URL))" -o ../bin/codequest ./cmd/codequest
 
 sqlc: ## Regenerate api/internal/store from db/queries
 	docker run --rm -v "$(CURDIR)/api":/src -w /src $(SQLC_IMAGE) generate

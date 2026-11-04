@@ -43,9 +43,10 @@ codequest/
     cmd/api/main.go         # HTTP server
     cmd/worker/main.go      # server-side grading worker (Redis queue -> Docker; no DB access)
     cmd/cq/main.go          # CLI: validate, test, build content
+    cmd/codequest/          # learner CLI: login, run and submit project_cli lessons (Phase 8)
     internal/
       content/              # load + validate exercise packages
-      exercise/             # type registry + plugins (code, mcq, sql)
+      exercise/             # type registry + plugins (code, mcq, sql, projectcli)
       checks/               # reusable check primitives
       runner/               # Runner interface + docker impl
       grading/              # submission pipeline, result storage
@@ -252,8 +253,16 @@ v1 types:
 | `code` | `{ files: { [path]: string } }` | `pyodide` or `js` |
 | `mcq` | `{ choices: string[] }` | none |
 | `sql` | `{ query: string }` | `sqljs` (graded on the worker) |
+| `project_cli` | `{ base_url?, steps: [{ cli: { exit_code, stdout } } \| { http: { status, headers, body, error? } } \| { skipped: true }] }` | the learner's machine, via the `codequest` CLI (Phase 8); graded in-process |
 
-Later types (do not build in v1): `fill_blank`, `predict_output`, `order_steps`, `project_cli` (learner runs a local CLI that posts results), `open_answer` (AI-graded).
+Later types (do not build in v1): `fill_blank`, `predict_output`, `order_steps`, `open_answer` (AI-graded).
+
+`project_cli` (Phase 8, modelled on boot.dev's CLI lessons). Manifest `spec`: `prompt` (markdown file), `solution` (`solution.json`, a recorded passing answer; `wrong/*.json` are recorded failing ones, both for `cq test` only), optional `base_url` (the default for `${baseURL}`; the learner may override it with `codequest config base_url`), optional `allowed_os` (`linux`, `darwin`, `windows`), and 1–20 `steps`. Each step has a `description` and exactly one of:
+
+- `cli_command`: `command` (run with `sh -c`, or `cmd /C` on Windows, in the learner's current folder; 30 s limit), optional `captures`, and `tests`, each one of `exit_code`, `stdout_contains_all`, `stdout_contains_none`, `stdout_lines_gt`. "stdout" is stdout and stderr combined.
+- `http_request`: `request` (`method` GET/POST/PUT/PATCH/DELETE/HEAD, `url` starting with `${baseURL}` or http(s)://, `headers`, `body_json`, `follow_redirects`; 10 s limit), optional `captures`, and `tests`, each one of `status_code`, `body_contains`, `json_body: {path, op: eq|ne|gt|lt|contains, value}`, `header: {name, contains}`.
+
+A capture (`name` plus `regex`, first submatch, or `json_path`, HTTP only) defines `${name}` for the step's own tests and later steps; `${var}` is interpolated in commands, URLs, header values, body strings and expected values. Paths are a small jq subset (`.a.b[0]`, `.`), not jq. Every test is visible: the public view is the whole spec plus `lesson_id`, minus `solution`/`wrong/`, and its JSON key for tests is `visible_tests`. Output is capped at 16 KB per step and headers at 4 KB. `Grade` makes one visible check row per test ("Step 2: status code is 200"). It **recomputes captures from the reported output** and ignores anything else the client sends; a step whose input variable was not captured fails with "Needs ${x}…". `Result.stdout` is a transcript of the steps.
 
 Prefer configuration over new types. "Fix the bug" is a `code` exercise with buggy starter code. "Make it faster" is `code` plus a `max_runtime` check. Only add a type when the UI is genuinely different.
 
@@ -365,7 +374,7 @@ Server grading runs in `cmd/worker`, which pulls jobs from Redis (`cq:jobs` list
 
 ### Content CI (`cq test`)
 
-`cq test <dir>` (needs Docker and the runner image; part of `make test`) grades every `Testable` exercise's reference answer and wrong answers on the Docker runner and prints one line per case. For mcq, the wrong answers are each single non-answer option. For every exercise, CI must verify:
+`cq test <dir>` (needs Docker and the runner image; part of `make test`) grades every `Testable` exercise's reference answer and wrong answers on the Docker runner and prints one line per case. For mcq, the wrong answers are each single non-answer option. For `project_cli`, the solution and wrong answers are the recorded `solution.json` and `wrong/*.json`. For every exercise, CI must verify:
 
 - [ ] Manifest parses and matches its type's spec schema.
 - [ ] `solution.*` passes every check on the server runner.
@@ -387,6 +396,7 @@ Learner code never runs in the main app's page. It runs in a Web Worker inside a
 Server-side rules:
 
 - Never trust a client-reported pass. XP, streaks, leagues and course completion are written only by the server grading path.
+  - **Exception (decision 2026-11-04, at the author's request): `project_cli` lessons.** Their steps must run on the learner's machine, so the server judges output the CLI *reports* (the boot.dev model), and a determined learner can forge it. They still go through the normal submit path and count for everything: XP, streaks, leagues, Bytes, quests and medals. What stays server-side: the verdict, captures (recomputed from raw output) and the tests. Every other type is unchanged.
 - Rate-limit submissions per user (30/min) and per IP (120/min) in Redis, fixed one-minute windows; over the limit is `429 rate_limited` with `Retry-After`. If Redis is down, submits are refused (503), never let through unlimited.
 - Docker runner hardening as listed under Grading. The worker host runs no other services and has no credentials to the database beyond writing results.
 - Store passwords nowhere (magic link + OAuth only). CSRF protection on all state-changing endpoints. Validate all request bodies.
@@ -416,6 +426,8 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | `subscriptions` | user_id, provider, provider_ref, plan, status, current_period_end |
 | `tutor_messages` | id, user_id, exercise_id, role (user, assistant), content, input_tokens, output_tokens, model, created_at |
 | `analytics_events` | id, user_id (null when signed out), anon_id, name, props (flat jsonb), path, created_at; kept 90 days |
+| `cli_login_codes` | code_hash (SHA-256), user_id, expires_at (10 minutes), used_at (single use), created_at |
+| `cli_tokens` | id (SHA-256 of the token), user_id, label (hostname), created_at, last_used_at, expires_at (90 days, extended on use) |
 | `client_errors` | fingerprint, day, message, stack, url, user_agent, release, count, users (uuid[], at most 100), first_seen, last_seen; kept 90 days |
 
 Game economy tables (medals, Bytes, inventory, quests) are listed under Game economy. `total_xp` and `bytes` are always derivable from their ledgers; treat `user_stats` as a cache.
@@ -430,6 +442,10 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/auth/github/start`, `/auth/github/callback` | GitHub OAuth web flow, sets the session cookie |
 | POST | `/auth/dev` | Sign in without email; only when `DEV_AUTH=1` (404 otherwise) |
 | POST | `/auth/logout` | End the session |
+| POST | `/cli/codes` | A one-time code for `codequest login` (session cookie only, not a CLI token) |
+| POST | `/cli/token` | Trade a code for a CLI bearer token (no Origin check; 20/h per IP) |
+| POST | `/cli/logout` | Revoke the calling CLI token |
+| GET | `/cli/next` | The learner's next unpassed `project_cli` lesson (locks apply on `GET /exercises/{id}`) |
 | GET | `/me` | Current user (with `goal`, `onboarded`), stats (XP, level, streak, league tier, daily goal) and `features` (`tutor`); entitlement in Phase 5 |
 | PATCH | `/me` | Name, timezone, daily goal, title, onboarding goal, `onboarded: true`. XP, level, streak and league fields are rejected |
 | GET | `/home` | Continue card, today (goal, streak week), paths, league summary |
@@ -449,9 +465,9 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `tutor_unavailable` (404, the tutor is off), `limit_reached` (also 429 when today's tutor hints are used), `tutor_failed` (an SSE `error` event; the hint is refunded), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `invalid_code` (400, a CLI login code that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `tutor_unavailable` (404, the tutor is off), `limit_reached` (also 429 when today's tutor hints are used), `tutor_failed` (an SSE `error` event; the hint is refunded), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
-CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (browsers always send one on these methods; a missing one is refused) and `Content-Type: application/json` (a cross-site form cannot send it without a CORS preflight). The session cookie is also `SameSite=Lax`.
+CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (browsers always send one on these methods; a missing one is refused) and `Content-Type: application/json` (a cross-site form cannot send it without a CORS preflight). The session cookie is also `SameSite=Lax`. Two exceptions skip the Origin check, never the content type (Phase 8): requests with an `Authorization` header (the CLI; a page cannot attach one cross-site without a preflight, which the API never answers) and `POST /cli/token` (sets no cookie; needs a code shown only to the signed-in user).
 
 ### Accounts and sessions
 
@@ -459,6 +475,7 @@ CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (
 - **Magic links.** `POST /auth/magic-link` emails `APP_URL/sign-in/verify#token=…`. The token is in the URL fragment, so it never reaches a server or proxy log, and the page redeems it with `POST /auth/magic-link/verify` only after a click, so mail scanners that open links cannot use it up. Tokens are single use, expire after 15 minutes and are stored hashed. Limits: 5 emails per address per hour, 20 sign-in attempts per IP per hour. Without `SMTP_ADDR` (development) the email is written to the API log; production requires SMTP. The first sign-in saves the browser's timezone (streak days follow it).
 - **GitHub.** Hand-rolled OAuth web flow (no new dependency): a random `state` in a 10-minute `HttpOnly` cookie, compared in constant time; scopes `read:user user:email`; the primary verified email is required. A GitHub identity links to the account with that email, or creates one. Enabled when `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set.
 - **Post-sign-in redirect** (`next`) is accepted only as a same-site path (`/…`, not `//`, no backslashes, not under `/api/`).
+- **CLI tokens** (Phase 8, paste-code flow like boot.dev's, without its localhost listener). `codequest login` opens `APP_URL/cli/login`; the signed-in page calls `POST /cli/codes` and shows a 10-character code (`XXXXX-XXXXX`, no ambiguous letters, single use, 10 minutes, stored hashed); the learner pastes it and the CLI gets a random 32-byte token from `POST /cli/token`, kept in `<user config dir>/codequest/config.json` (mode 0600). The API accepts `Authorization: Bearer <token>` in place of the cookie on every endpoint; a request with both is `400`, a bad or expired token `401`. `codequest logout` revokes it (`POST /cli/logout`) and always deletes it locally. Expired codes and tokens are deleted hourly.
 - **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
 
 ## Gamification engine
@@ -674,6 +691,22 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 - [ ] Medal rules are evaluated after submission, review, league close and daily rollover; each tier is awarded once.
 - [ ] A boss shows HP = number of checks; the HP bar drops by one per passing check; defeat unlocks the next chapter.
 
+### Phase 8 — Learner CLI and `project_cli` lessons
+
+Scope: the `codequest` CLI (`api/cmd/codequest`, standard library only: `login`, `logout`, `status`, `run [id]`, `submit [id]`, `config`), the `project_cli` type (see Exercise type plugin system), CLI login codes and bearer tokens, `/cli/login` page and the `project_cli` renderer, sample course `content/command-line`.
+
+> Decision 2026-11-04: Phase 8 is built before Phase 5 (payments), at the author's request, as Phase 7 was. Lessons that are not free return 402 to the CLI like to the browser.
+
+- [x] `codequest login` with a code from `/cli/login` stores a token. A code works once, expires after 10 minutes and is refused on a second use.
+- [x] Bearer requests skip the Origin check. A bearer request that also carries a cookie is refused. A revoked or expired token gives 401.
+- [x] `codequest run` executes the steps locally and prints their output with no verdict. `submit` returns the server's `Result`. A passing submit awards XP, league points and quest progress once, exactly like a web lesson.
+- [x] The server recomputes captures, so forged variables in an answer have no effect. A malformed answer is a 400 and is not stored.
+- [x] `cq test` passes every `project_cli` `solution.json` and fails every `wrong/*.json`.
+- [x] The CLI never sends the CodeQuest token to lesson URLs (unit test against an `httptest` server).
+- [x] The config file is 0600. `logout` deletes the token locally even when the API is unreachable.
+
+As built: `run` and `submit` list the commands and ask before running them (`-y` skips the prompt), because lesson commands run in the learner's own shell. Output is printed as it arrives: the raw output, then the tests it will be judged on; only `submit` prints ✓/✗, from the server. `submit` exits 0 on pass and 1 otherwise. API and app URLs default to localhost and are set at build time with `-ldflags "-X main.defaultAPIURL=… -X main.defaultAppURL=…"` (or `CODEQUEST_API_URL` / `CODEQUEST_APP_URL` / `codequest config`); plain http is refused except for localhost. The lesson page shows the steps, tests, copyable `codequest run/submit <id>` commands and the latest result ("Check for new results" refetches the lesson). `/cli/login` has no design screen; it reuses the sign-in page's shell. The name `codequest` changes with the product name (open question).
+
 ## Conventions and rules for Claude Code
 
 - Work one phase at a time. Before coding, list the files you will create or change. After coding, run tests and report which acceptance criteria pass.
@@ -689,7 +722,7 @@ Scope: Byte ledger, shop and inventory, power-up effects, medals with tiers and 
 
 ## Open questions
 
-- Final product name and domains (app, sandbox origin). Needed before Phase 3.
+- Final product name and domains (app, sandbox origin). Needed before Phase 3. The learner CLI (`codequest`, Phase 8) is renamed with it, and its release build needs the production API and app URLs and an install path (`go install …@latest` assumes a public module path).
 - ~~First course topic for launch.~~ Resolved (Phase 1): LangChain, sample course `content/langchain-basics`, adapted from the author's genai lesson notes; to be refined into the full course.
 - ~~LangChain `code` exercises (Phase 2).~~ Resolved: `codequest/python:3.12` ships the pinned LangChain packages and `cq.fakes`; the sample LangChain code exercises use `runner: docker-python` and fakes only.
 - sql manifest (Phase 3): `prompt`, `setup` (public data, shown to the learner), `solution` (stored in `private_spec` because hidden checks compare against it), optional `starter`, `run`, `limits.timeout_ms` (default 2000). Hidden datasets are server-only.

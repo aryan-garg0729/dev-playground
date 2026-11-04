@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { CodeExercise, codeSandboxJob } from './code/CodeExercise';
 import { McqExercise } from './mcq/McqExercise';
+import { CliExercise } from './project_cli/CliExercise';
 import { SqlExercise, sqlSandboxJob } from './sql/SqlExercise';
 import type { ExerciseRendererProps, ToSandboxJob } from './types';
 
@@ -11,6 +12,7 @@ export type { ExerciseRendererProps, RunMode, RunOutput } from './types';
 export const renderers: Record<string, ComponentType<ExerciseRendererProps<any, any>>> = {
   code: CodeExercise,
   mcq: McqExercise,
+  project_cli: CliExercise,
   sql: SqlExercise,
 };
 

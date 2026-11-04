@@ -1,0 +1,29 @@
+id: cl.local-server
+type: project_cli
+version: 1
+title: Serve a file locally
+xp: 30
+difficulty: 2
+tags: [cli, http]
+free: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8000
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Fetch hello.txt from your server
+      http_request:
+        request: { method: GET, url: "${baseURL}/hello.txt" }
+        tests:
+          - status_code: 200
+          - body_contains: "Hello from my server"
+          - header: { name: Content-Type, contains: text/plain }
+    - description: Fetch info.json from your server
+      http_request:
+        request: { method: GET, url: "${baseURL}/info.json" }
+        captures: [{ name: course, json_path: ".course" }]
+        tests:
+          - status_code: 200
+          - json_body: { path: ".course", op: eq, value: command-line }
+          - json_body: { path: ".lessons", op: gt, value: 1 }

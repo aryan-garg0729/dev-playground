@@ -143,6 +143,9 @@ func cleanAuth(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) {
 		if err := store.New(pool).DeleteExpiredAuth(ctx); err != nil && ctx.Err() == nil {
 			log.Error("clean expired sessions", "err", err)
 		}
+		if err := store.New(pool).DeleteExpiredCLIAuth(ctx); err != nil && ctx.Err() == nil {
+			log.Error("clean expired cli tokens", "err", err)
+		}
 		if err := store.New(pool).DeleteOldTelemetry(ctx); err != nil && ctx.Err() == nil {
 			log.Error("clean old telemetry", "err", err)
 		}

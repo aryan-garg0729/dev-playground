@@ -7,6 +7,7 @@ import (
 	"mime"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -30,6 +31,9 @@ type Deps struct {
 	AllowedOrigins []string
 	// Sessions resolve the session cookie. Required.
 	Sessions *auth.Sessions
+	// CLI issues login codes and resolves the CLI's bearer tokens
+	// (&auth.CLI{Pool: Pool} when nil).
+	CLI *auth.CLI
 	// Links sends and redeems magic links. Required.
 	Links *auth.MagicLinks
 	// GitHub is nil when GitHub sign-in is not configured.
@@ -67,6 +71,9 @@ func New(d Deps) http.Handler {
 	if d.SubmitPerIP <= 0 {
 		d.SubmitPerIP = 120
 	}
+	if d.CLI == nil {
+		d.CLI = &auth.CLI{Pool: d.Pool}
+	}
 	a := &api{d}
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -100,6 +107,10 @@ func New(d Deps) http.Handler {
 			r.Get("/auth/github/start", a.githubStart)
 			r.Get("/auth/github/callback", a.githubCallback)
 			r.Post("/auth/logout", a.logout)
+			r.Post("/cli/codes", a.createCLICode)
+			r.With(a.limitSignIns).Post("/cli/token", a.cliToken)
+			r.Post("/cli/logout", a.cliLogout)
+			r.Get("/cli/next", a.cliNext)
 			if d.DevAuth {
 				r.Post("/auth/dev", a.devSignIn)
 			}
@@ -128,7 +139,10 @@ func New(d Deps) http.Handler {
 
 type ctxKey int
 
-const userKey ctxKey = iota
+const (
+	userKey ctxKey = iota
+	bearerKey
+)
 
 // currentUser returns the signed-in user, if any.
 func currentUser(r *http.Request) uuid.NullUUID {
@@ -136,9 +150,49 @@ func currentUser(r *http.Request) uuid.NullUUID {
 	return u
 }
 
-// sessionUser resolves the session cookie to the signed-in user.
+// bearerToken returns the request's `Authorization: Bearer` token, if any.
+func bearerToken(r *http.Request) (string, bool) {
+	h := r.Header.Get("Authorization")
+	if h == "" {
+		return "", false
+	}
+	scheme, tok, _ := strings.Cut(h, " ")
+	return strings.TrimSpace(tok), strings.EqualFold(scheme, "Bearer")
+}
+
+// viaCLI reports whether the request was authenticated by a CLI bearer token.
+func viaCLI(r *http.Request) bool {
+	v, _ := r.Context().Value(bearerKey).(bool)
+	return v
+}
+
+// sessionUser resolves the session cookie, or the CLI's bearer token, to the
+// signed-in user. A request may carry one credential, not both.
 func (a *api) sessionUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, cookieErr := r.Cookie(sessionCookie)
+		if tok, ok := bearerToken(r); ok || r.Header.Get("Authorization") != "" {
+			if !ok {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "use Authorization: Bearer <token>")
+				return
+			}
+			if cookieErr == nil {
+				writeError(w, http.StatusBadRequest, "bad_request", "send a session cookie or a bearer token, not both")
+				return
+			}
+			u, err := a.CLI.Lookup(r.Context(), tok)
+			if err != nil {
+				a.internal(w, r, err)
+				return
+			}
+			if !u.Valid {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "the CLI token is invalid or expired; run `codequest login`")
+				return
+			}
+			ctx := context.WithValue(r.Context(), userKey, u)
+			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, bearerKey, true)))
+			return
+		}
 		if c, err := r.Cookie(sessionCookie); err == nil {
 			u, err := a.Sessions.Lookup(r.Context(), c.Value)
 			if err != nil {
@@ -164,6 +218,12 @@ func (a *api) now() time.Time {
 // Origin header (browsers always send one on these methods) and a JSON content
 // type (which a cross-site form cannot send without a CORS preflight). The
 // session cookie is also SameSite=Lax.
+//
+// Two exceptions skip the Origin check (never the content type): requests
+// with an Authorization header (the CLI; a cross-site page cannot attach one
+// without a CORS preflight, which this API never answers, and sessionUser
+// refuses a request that also carries the cookie), and POST /cli/token, which
+// sets no cookie and needs a one-time code shown only to the signed-in user.
 func (a *api) guardStateChanges(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -171,7 +231,8 @@ func (a *api) guardStateChanges(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if origin := r.Header.Get("Origin"); !slices.Contains(a.AllowedOrigins, origin) {
+		cli := r.Header.Get("Authorization") != "" || r.URL.Path == "/api/v1/cli/token"
+		if origin := r.Header.Get("Origin"); !cli && !slices.Contains(a.AllowedOrigins, origin) {
 			writeError(w, http.StatusForbidden, "forbidden_origin", "origin not allowed")
 			return
 		}
