@@ -6,7 +6,7 @@ This is the source of truth for building CodeQuest (working name), a gamified, h
 
 Prompt Claude Code one phase at a time, for example: "Implement Phase 1 from docs/SPEC.md. Stop when its acceptance criteria pass and summarize what you built."
 
-Design references live in `docs/design/`: `tokens.json` (all design tokens), `README.md` (the design system's rules), `components/` (component guidelines and HTML previews) and `screens/` (a PNG of every designed screen).
+How to write courses, chapters and lessons is in `docs/CONTENT.md`. Design references live in `docs/design/`: `tokens.json` (all design tokens), `README.md` (the design system's rules), `components/` (component guidelines and HTML previews) and `screens/` (a PNG of every designed screen).
 
 ## Product in one paragraph
 
