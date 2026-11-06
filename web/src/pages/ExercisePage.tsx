@@ -1,16 +1,18 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import type { CourseDetail, ExerciseDetail, GradeResult } from '../api/client';
 import { noOutcome, runOnServer, useCourse, useExercise, useSubmit } from '../api/queries';
 import { track } from '../analytics';
 import { AppHeader } from '../components/AppHeader';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons';
+import { LessonAssetsProvider } from '../components/LessonAssets';
 import { LessonRail, type RailLesson } from '../components/LessonRail';
 import { PassCelebration } from '../components/PassCelebration';
 import { PowerUpsPanel } from '../components/PowerUpsPanel';
 import { DifficultyPill, Pill } from '../components/Pill';
 import { TutorPanel } from '../components/TutorPanel';
 import { type RunMode, type RunOutput, renderers, sandboxJobs } from '../exercise-types';
+import { attackDuration } from '../exercise-types/shared/Boss';
 import { runInSandbox, warmSandbox } from '../runner-client/sandbox';
 import { loadDraft, saveDraft } from './drafts';
 import { LoadError, Loading } from './states';
@@ -107,6 +109,8 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
     sameVersion && last?.result ? { submission_id: last.submission_id, result: last.result, xp_awarded: 0, outcome: noOutcome } : undefined,
   );
   const submit = useSubmit(ex.id, ex.course_id);
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(celebrateTimer.current), []);
   const onRun = useRun(ex);
   useEffect(() => {
     track('lesson_opened', { exercise: ex.id, type: ex.type });
@@ -135,7 +139,7 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
     return <p className="text-body text-text-muted">This lesson type ({ex.type}) is not supported yet.</p>;
   }
   return (
-    <>
+    <LessonAssetsProvider assets={ex.assets ?? {}}>
       <Renderer
         header={header}
         boss={boss}
@@ -154,7 +158,11 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
           track('submit_clicked', { exercise: ex.id });
           const r = await submit.mutateAsync({ version: ex.version, answer });
           setResult(r);
-          if (r.result.status === 'pass' && r.outcome.breakdown) setCelebrate(r); // first pass only
+          if (r.result.status === 'pass' && r.outcome.breakdown) {
+            // First pass only. A boss's attack plays out before the dialog opens.
+            clearTimeout(celebrateTimer.current);
+            celebrateTimer.current = setTimeout(() => setCelebrate(r), ex.boss ? attackDuration(r.result) : 0);
+          }
           return r;
         }}
       />
@@ -167,7 +175,7 @@ function Exercise({ ex, course }: { ex: ExerciseDetail; course: CourseDetail | u
           onClose={() => setCelebrate(undefined)}
         />
       )}
-    </>
+    </LessonAssetsProvider>
   );
 }
 

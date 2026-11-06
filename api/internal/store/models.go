@@ -97,6 +97,13 @@ type ClientError struct {
 	LastSeen    time.Time   `json:"last_seen"`
 }
 
+type ContentAsset struct {
+	Sha256 string `json:"sha256"`
+	Mime   string `json:"mime"`
+	Size   int32  `json:"size"`
+	Bytes  []byte `json:"bytes"`
+}
+
 type Counter struct {
 	UserID uuid.UUID `json:"user_id"`
 	Key    string    `json:"key"`
@@ -132,6 +139,7 @@ type Exercise struct {
 	PublicView  json.RawMessage `json:"public_view"`
 	PrivateSpec json.RawMessage `json:"private_spec"`
 	Published   bool            `json:"published"`
+	Assets      json.RawMessage `json:"assets"`
 }
 
 type Idempotency struct {

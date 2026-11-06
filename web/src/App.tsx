@@ -20,6 +20,9 @@ const SignInPage = lazy(() => import('./pages/SignInPage').then((m) => ({ defaul
 const VerifyPage = lazy(() => import('./pages/VerifyPage').then((m) => ({ default: m.VerifyPage })));
 const CliLoginPage = lazy(() => import('./pages/CliLoginPage').then((m) => ({ default: m.CliLoginPage })));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
+// Dev only: import.meta.env.DEV is false in production builds, so this branch
+// and its chunk are dropped from the bundle entirely.
+const EffectsLab = import.meta.env.DEV ? lazy(() => import('./pages/dev/EffectsLab').then((m) => ({ default: m.EffectsLab }))) : null;
 
 const auth = (el: ReactNode) => <RequireAuth>{el}</RequireAuth>;
 
@@ -58,6 +61,7 @@ export function App() {
           <Route path="/league" element={auth(<LeaguePage />)} />
           <Route path="/shop" element={auth(<ShopPage />)} />
           <Route path="/profile" element={auth(<ProfilePage />)} />
+          {EffectsLab && <Route path="/dev/effects" element={<EffectsLab />} />}
           <Route path="*" element={<LoadError error={new Error('Page not found')} />} />
         </Routes>
       </Suspense>

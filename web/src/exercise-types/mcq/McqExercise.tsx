@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
 import { CheckIcon, CrossIcon } from '../../components/icons';
+import { useLessonAsset } from '../../components/LessonAssets';
 import { Markdown } from '../../components/Markdown';
 import type { ExerciseRendererProps } from '../types';
 
 export interface McqPublicView {
   question: string;
   multiple: boolean;
-  options: { id: string; text: string }[];
+  /** `image` names a lesson image ("assets/a.png"); `text` is also its alt text. */
+  options: { id: string; text: string; image?: string }[];
 }
 
 export interface McqAnswer {
@@ -20,6 +22,7 @@ export function McqExercise({ header, publicView, draft, onChange, onSubmit, res
   const choices = draft?.choices ?? [];
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
+  const asset = useLessonAsset();
 
   function toggle(id: string) {
     setError(undefined);
@@ -66,7 +69,18 @@ export function McqExercise({ header, publicView, draft, onChange, onSubmit, res
                 onChange={() => toggle(o.id)}
                 className="h-4 w-4 shrink-0"
               />
-              <span className="font-mono text-[13px] leading-[23px]">{o.text}</span>
+              <span className="flex min-w-0 flex-1 flex-col gap-2">
+                {asset(o.image) && (
+                  <img
+                    src={asset(o.image)}
+                    alt={o.text}
+                    loading="lazy"
+                    decoding="async"
+                    className="block h-[160px] w-auto max-w-full self-start rounded-md border border-border bg-surface-raised p-1.5"
+                  />
+                )}
+                <span className="font-mono text-[13px] leading-[23px]">{o.text}</span>
+              </span>
             </label>
           );
         })}

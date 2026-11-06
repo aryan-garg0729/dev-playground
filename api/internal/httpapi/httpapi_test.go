@@ -416,3 +416,53 @@ func TestNotFoundUsesErrorEnvelope(t *testing.T) {
 		}
 	}
 }
+
+func TestLessonImages(t *testing.T) {
+	e := setup(t, false)
+	var detail struct {
+		Assets map[string]string `json:"assets"`
+	}
+	e.getJSON("/api/v1/exercises/"+exID, &detail)
+	url := detail.Assets["assets/choice.svg"]
+	if !strings.HasPrefix(url, "/api/v1/assets/") || !strings.HasSuffix(url, ".svg") {
+		t.Fatalf("assets = %v", detail.Assets)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+	e.h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.HasPrefix(rec.Body.Bytes(), []byte("<svg")) {
+		t.Fatalf("GET %s = %d: %s", url, rec.Code, rec.Body.String())
+	}
+	want := map[string]string{
+		"Content-Type":            "image/svg+xml",
+		"X-Content-Type-Options":  "nosniff",
+		"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+		"Cache-Control":           "public, max-age=31536000, immutable",
+	}
+	for k, v := range want {
+		if got := rec.Header().Get(k); got != v {
+			t.Errorf("%s = %q, want %q", k, got, v)
+		}
+	}
+
+	req = httptest.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("If-None-Match", rec.Header().Get("ETag"))
+	rec = httptest.NewRecorder()
+	e.h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotModified {
+		t.Fatalf("conditional GET = %d", rec.Code)
+	}
+
+	sha := strings.TrimSuffix(strings.TrimPrefix(url, "/api/v1/assets/"), ".svg")
+	for _, p := range []string{
+		"/api/v1/assets/" + strings.Repeat("0", 64) + ".svg", // unknown hash
+		"/api/v1/assets/" + sha + ".png",                     // wrong type for these bytes
+		"/api/v1/assets/" + sha + ".html",                    // not an image type
+		"/api/v1/assets/../me",                               // not a hash
+	} {
+		if code, _ := e.do(http.MethodGet, p, "", nil); code != http.StatusNotFound {
+			t.Errorf("GET %s = %d, want 404", p, code)
+		}
+	}
+}

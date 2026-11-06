@@ -12,6 +12,23 @@ import (
 	"github.com/google/uuid"
 )
 
+const getContentAsset = `-- name: GetContentAsset :one
+SELECT mime, bytes FROM content_assets WHERE sha256 = $1
+`
+
+type GetContentAssetRow struct {
+	Mime  string `json:"mime"`
+	Bytes []byte `json:"bytes"`
+}
+
+// Public: lesson images are served to anyone who has the hash.
+func (q *Queries) GetContentAsset(ctx context.Context, sha256 string) (GetContentAssetRow, error) {
+	row := q.db.QueryRow(ctx, getContentAsset, sha256)
+	var i GetContentAssetRow
+	err := row.Scan(&i.Mime, &i.Bytes)
+	return i, err
+}
+
 const getCourse = `-- name: GetCourse :one
 SELECT id, title, description FROM courses WHERE id = $1 AND published
 `
@@ -31,7 +48,7 @@ func (q *Queries) GetCourse(ctx context.Context, id string) (GetCourseRow, error
 
 const getExercise = `-- name: GetExercise :one
 SELECT e.id, e.chapter_id, e.type, e.version, e.title, e.xp, e.difficulty, e.tags, e.free, e.boss,
-       e.public_view, ch.course_id, ch.title AS chapter_title
+       e.public_view, e.assets, ch.course_id, ch.title AS chapter_title
 FROM exercises e
 JOIN chapters ch ON ch.id = e.chapter_id
 WHERE e.id = $1 AND e.published AND ch.published
@@ -49,6 +66,7 @@ type GetExerciseRow struct {
 	Free         bool            `json:"free"`
 	Boss         bool            `json:"boss"`
 	PublicView   json.RawMessage `json:"public_view"`
+	Assets       json.RawMessage `json:"assets"`
 	CourseID     string          `json:"course_id"`
 	ChapterTitle string          `json:"chapter_title"`
 }
@@ -69,6 +87,7 @@ func (q *Queries) GetExercise(ctx context.Context, id string) (GetExerciseRow, e
 		&i.Free,
 		&i.Boss,
 		&i.PublicView,
+		&i.Assets,
 		&i.CourseID,
 		&i.ChapterTitle,
 	)
@@ -308,6 +327,30 @@ func (q *Queries) UpsertChapter(ctx context.Context, arg UpsertChapterParams) er
 	return err
 }
 
+const upsertContentAsset = `-- name: UpsertContentAsset :exec
+INSERT INTO content_assets (sha256, mime, size, bytes)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (sha256) DO NOTHING
+`
+
+type UpsertContentAssetParams struct {
+	Sha256 string `json:"sha256"`
+	Mime   string `json:"mime"`
+	Size   int32  `json:"size"`
+	Bytes  []byte `json:"bytes"`
+}
+
+// Content-addressed: the same bytes always have the same row.
+func (q *Queries) UpsertContentAsset(ctx context.Context, arg UpsertContentAssetParams) error {
+	_, err := q.db.Exec(ctx, upsertContentAsset,
+		arg.Sha256,
+		arg.Mime,
+		arg.Size,
+		arg.Bytes,
+	)
+	return err
+}
+
 const upsertCourse = `-- name: UpsertCourse :exec
 INSERT INTO courses (id, title, description, order_index, published)
 VALUES ($1, $2, $3, $4, $5)
@@ -339,9 +382,9 @@ func (q *Queries) UpsertCourse(ctx context.Context, arg UpsertCourseParams) erro
 
 const upsertExercise = `-- name: UpsertExercise :exec
 INSERT INTO exercises (id, chapter_id, type, version, title, xp, difficulty, tags, free, boss,
-                       order_index, public_view, private_spec, published)
+                       order_index, public_view, private_spec, assets, published)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12, $13, true)
+        $11, $12, $13, $14, true)
 ON CONFLICT (id) DO UPDATE SET
     chapter_id = EXCLUDED.chapter_id,
     type = EXCLUDED.type,
@@ -355,6 +398,7 @@ ON CONFLICT (id) DO UPDATE SET
     order_index = EXCLUDED.order_index,
     public_view = EXCLUDED.public_view,
     private_spec = EXCLUDED.private_spec,
+    assets = EXCLUDED.assets,
     published = true
 `
 
@@ -372,6 +416,7 @@ type UpsertExerciseParams struct {
 	OrderIndex  int32           `json:"order_index"`
 	PublicView  json.RawMessage `json:"public_view"`
 	PrivateSpec json.RawMessage `json:"private_spec"`
+	Assets      json.RawMessage `json:"assets"`
 }
 
 func (q *Queries) UpsertExercise(ctx context.Context, arg UpsertExerciseParams) error {
@@ -389,6 +434,7 @@ func (q *Queries) UpsertExercise(ctx context.Context, arg UpsertExerciseParams) 
 		arg.OrderIndex,
 		arg.PublicView,
 		arg.PrivateSpec,
+		arg.Assets,
 	)
 	return err
 }

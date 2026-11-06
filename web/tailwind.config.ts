@@ -56,6 +56,16 @@ export default {
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
         pixel: ['Silkscreen', 'Inter', 'sans-serif'],
       },
+      transitionDuration: {
+        'fast': 'var(--motion-fast)',
+        'base': 'var(--motion-base)',
+        'slow': 'var(--motion-slow)',
+        'celebrate': 'var(--motion-celebrate)'
+      },
+      transitionTimingFunction: {
+        'out': 'var(--ease-out)',
+        'spring': 'var(--ease-spring)'
+      },
     },
   },
 } satisfies Config;

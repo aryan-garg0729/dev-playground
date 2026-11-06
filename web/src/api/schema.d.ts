@@ -399,6 +399,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/assets/{file}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A lesson image by content hash ("<sha256>.<ext>"), as listed in an exercise's `assets`. Public, immutable (cached for a year), served with nosniff and a sandbox CSP. */
+        get: operations["getAsset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exercises/{exerciseId}": {
         parameters: {
             query?: never;
@@ -922,6 +939,10 @@ export interface components {
             next_id: string | null;
             /** @description Type-specific public view (see the exercise type's renderer) */
             public_view: unknown;
+            /** @description Lesson images, from the name used in the content ("assets/loop.svg") to its URL */
+            assets: {
+                [key: string]: string;
+            };
             last_submission: null | components["schemas"]["LastSubmission"];
         };
         LastSubmission: {
@@ -1636,6 +1657,40 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CourseDetail"];
                 };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    getAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/webp": string;
+                    "image/gif": string;
+                    "image/svg+xml": string;
+                };
+            };
+            /** @description Not modified (If-None-Match matched the ETag) */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             404: components["responses"]["Error"];
         };

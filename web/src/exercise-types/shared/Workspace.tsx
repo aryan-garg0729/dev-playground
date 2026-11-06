@@ -4,7 +4,7 @@ import { Button } from '../../components/Button';
 import { Splitter } from '../../components/Splitter';
 import { PANE_LIMITS, usePanes } from '../../stores/panes';
 import type { BossInfo, GradeResult, RunOutput } from '../types';
-import { BossHP, BossResults, DefeatReward } from './Boss';
+import { BossHP, BossResults, DefeatReward, useAttack } from './Boss';
 import { Results, type Shown } from './Results';
 
 const CodeEditor = lazy(() => import('../code/CodeEditor'));
@@ -63,9 +63,15 @@ export function Workspace(p: Props) {
   const [error, setError] = useState<string>();
   const [run, setRun] = useState<RunOutput>();
   const [showRun, setShowRun] = useState(false);
+  // The result shown when the latest Attack was clicked (null: none). Any newer
+  // result is that attack's, and only it plays the boss animation.
+  const [attackFrom, setAttackFrom] = useState<string | null>();
   const shown: Shown = showRun && run ? { kind: 'run', out: run } : p.result ? { kind: 'submit', graded: p.result } : undefined;
   const failing = shown?.kind === 'submit' ? shown.graded.result.checks : shown?.out.checks;
   const errorLine = failing?.find((c) => !c.passed && (c.line ?? 0) > 0)?.line;
+  const fresh = p.boss !== undefined && p.result !== undefined && attackFrom !== undefined && p.result.submission_id !== attackFrom;
+  const revealed = useAttack(p.boss ? p.result?.result : undefined, fresh);
+  const reveal = fresh ? revealed : undefined;
 
   async function act(kind: 'run' | 'submit') {
     setBusy(kind);
@@ -75,6 +81,7 @@ export function Workspace(p: Props) {
         setRun(await p.onRun());
         setShowRun(true);
       } else {
+        setAttackFrom(p.result?.submission_id ?? null);
         await p.onSubmit();
         setShowRun(false);
       }
@@ -109,7 +116,7 @@ export function Workspace(p: Props) {
         className="flex w-[var(--problem-w)] shrink-0 flex-col gap-4 overflow-y-auto rounded-lg border border-border bg-surface px-6 py-5 max-[900px]:w-auto"
       >
         {p.header}
-        {p.boss && <BossHP maxHP={p.boss.maxHP} result={p.result?.result} />}
+        {p.boss && <BossHP maxHP={p.boss.maxHP} result={p.result?.result} revealed={reveal} />}
         {p.problem}
         {p.aside}
         {(p.problemFooter || p.boss) && (
@@ -176,7 +183,7 @@ export function Workspace(p: Props) {
           aria-live="polite"
           className={`flex shrink-0 flex-col gap-2 overflow-y-auto ${shown ? 'h-[var(--results-h)] max-[900px]:h-auto max-[900px]:max-h-[60vh]' : ''}`}
         >
-          {p.boss && shown?.kind === 'submit' ? <BossResults result={shown.graded.result} /> : <Results shown={shown} />}
+          {p.boss && shown?.kind === 'submit' ? <BossResults result={shown.graded.result} revealed={reveal} /> : <Results shown={shown} />}
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { useMe, useSignOut } from '../api/queries';
 import { GameStats } from './GameStats';
 import { Bytes } from './powerups';
 import { CodeIcon } from './icons';
+import { SoundToggle } from './SoundToggle';
 import { ThemeToggle } from './ThemeToggle';
 
 function initials(name: string, email: string): string {
@@ -122,6 +123,7 @@ export function AppHeader({ center }: { center?: ReactNode }) {
             nextLevelXP={s.next_level_xp}
           />
         )}
+        <SoundToggle />
         <ThemeToggle />
         {me.data && <AccountMenu me={me.data} />}
       </div>

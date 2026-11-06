@@ -234,6 +234,8 @@ func (l *loader) exercise(dir string) (Compiled, bool) {
 		l.problem(path, "spec: %v", err)
 		return Compiled{}, false
 	}
+	assets := l.loadAssets(dir)
+	l.checkImageRefs(dir, h.Spec, assets)
 	if len(l.problems) > n {
 		return Compiled{}, false
 	}
@@ -264,7 +266,12 @@ func (l *loader) exercise(dir string) (Compiled, bool) {
 		l.problem(path, "spec does not round-trip through JSON: %v", err)
 		return Compiled{}, false
 	}
-	return Compiled{Exercise: ex, PublicView: pub, PrivateSpec: priv}, true
+	list := make([]Asset, 0, len(assets))
+	for _, a := range assets {
+		list = append(list, a)
+	}
+	slices.SortFunc(list, func(a, b Asset) int { return strings.Compare(a.Name, b.Name) })
+	return Compiled{Exercise: ex, PublicView: pub, PrivateSpec: priv, Assets: list}, true
 }
 
 // readStrict decodes one YAML document into v, rejecting unknown fields.

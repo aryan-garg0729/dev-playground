@@ -164,6 +164,7 @@ spec:
 Rules:
 
 - `id` never changes, even if the folder moves. Progress and submissions key on `id`.
+- Lesson images (Phase 9): an exercise folder may hold a flat `assets/` folder of images (`png`, `jpg`/`jpeg`, `webp`, `gif`, `svg`; the bytes must match the extension), referenced from its markdown as `![alt](assets/loop.svg)` and from spec strings such as an mcq option's `image: assets/a.png`. Everything in `assets/` is public, so `cq validate` fails on: a reference to a file that is not there, any external image (`http:`, `//`, `data:`), a file no public markdown or spec string uses (`solution.md` does not count), files over 1 MB or over 5 MB per exercise, subfolders and symlinks, server-only names (`solution.*`, `tests_hidden.*`, `wrong`), and SVGs with script, event handlers, `foreignObject`, entities, or `href`/`url()` other than `#fragment`. Alt text is required in practice: it is what shows if an image cannot load.
 - Order comes from `course.yaml` and `chapter.yaml` lists, not from folder names.
 - The build step (`cq build`) validates everything and writes a compiled bundle to Postgres. The API never parses YAML at request time.
 - Files marked server-only (`solution.*`, `tests_hidden.*`, `wrong/`) are never included in any API response.
@@ -189,7 +190,7 @@ exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 - Exercise header: `id`, `type`, `version` (≥ 1), `title` and `xp` (≥ 0) are required; `difficulty` defaults to 1 (1–2 shows as Easy), `tags` to `[]`, `free` and `boss` to false. Only `code` exercises can be bosses.
 - `cq validate <dir>` and `cq build <dir>` print every problem as `path: reason` and exit 1. `<dir>` is a folder of courses or a single course folder.
 - `cq build` writes everything in one transaction, upserting by id. Courses, chapters and exercises no longer in the content are **unpublished, never deleted**, so progress and submissions keyed on old ids survive.
-- mcq: `question` names a markdown file; `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
+- mcq: `question` names a markdown file; options may carry `image: assets/<file>` (Phase 9; the option's `text` is still required and is its alt text); `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
 - Run location (decided in Phase 3): `code` and `sql` specs take `run: browser | server | off`. `browser` runs in the sandbox iframe (Pyodide for Python, sql.js for SQL); `server` sends the answer to `POST /exercises/{id}/run`, which runs it on the grading worker with visible checks only, ungraded and not stored; `off` hides Run. Defaults: `pyodide` → browser, `docker-python` → server, `sql` → browser. Changing it is a manifest edit plus `cq build`; content CI checks the solution's visible checks wherever `run:` points, so a lesson moved to `browser` whose packages don't load there fails CI.
 - code (decided in Phase 2): `language: python`; `runner: docker-python` (submit-only) or `pyodide` (server grades it on `docker-python`); `prompt` (markdown), `entry` (a module file name such as `main.py`), `starter` and `solution` are required files; `limits` default to 3000 ms / 128 MB, capped at 10000 ms / 512 MB; `examples`, `constraints` and `hints` are optional and public. At least one check. `solution.*` and `wrong/*.py` are read by `cq build`/`cq test` but never stored in `private_spec`; hidden test sources are stored there (server-only). Visible test files are sent to the browser as `visible_tests`.
 - Test files are Python modules with top-level `test_*` functions that import from the entry module. A test's docstring is its row name. `from cq import expect` gives `expect(got, expected)`, which compares exact types (so a learner object with a rigged `__eq__` cannot pass) and reports got/expected. Label hidden tests in words: a hidden label that looks like code (contains `()[]{}=`) is replaced by "Hidden test N". A hidden test may declare its input on a docstring line `input: <call>` (e.g. `input: fizzbuzz(15)[14]`); the harness parent reads it from the AST, the API keeps it server-side (`submissions.hidden_inputs`, never serialized in a `Result`) and only Peek reveals it, for one failed check. The API cuts it at `==`, `->` or `→`, so never write the expected value there. `cq.fakes` (fake chat models) is available to tests and learner code in the image.
@@ -415,7 +416,8 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | `oauth_identities` | provider, provider_user_id, user_id |
 | `courses` | id (slug), title, description, order_index, published |
 | `chapters` | id, course_id, title, order_index, published |
-| `exercises` | id (manifest id), chapter_id, type, version, title, xp, difficulty, free, boss, tags (text[]), order_index, public_view (jsonb), private_spec (jsonb, server-only), published |
+| `exercises` | id (manifest id), chapter_id, type, version, title, xp, difficulty, free, boss, tags (text[]), order_index, public_view (jsonb), private_spec (jsonb, server-only), assets (jsonb: image name → `<sha256>.<ext>`), published |
+| `content_assets` | sha256 (key), mime, size (≤ 1 MB), bytes: lesson images, content-addressed, upserted by `cq build` and never deleted |
 | `submissions` | id, user_id, exercise_id, exercise_version, answer (jsonb), status, score, result (jsonb), outcome (jsonb, the game Outcome), created_at |
 | `progress` | user_id, exercise_id, status (started, passed), first_passed_at, attempts, used_hint |
 | `xp_events` | id, user_id, amount, reason, ref_id, created_at (append-only ledger; unique (user_id, reason, ref_id), so a lesson's pass XP can exist once) |
@@ -451,7 +453,8 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/home` | Continue card, today (goal, streak week), paths, league summary |
 | GET | `/courses` | Course list with progress |
 | GET | `/courses/{id}` | Chapters and exercises with lock state |
-| GET | `/exercises/{id}` | `public_view`, type, saved draft, last result; 402 if locked |
+| GET | `/exercises/{id}` | `public_view`, type, `assets` (image name → URL), saved draft, last result; 402 if locked |
+| GET | `/assets/{sha256}.{ext}` | A lesson image (public; `Cache-Control: immutable`, ETag, `nosniff`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`, `Cross-Origin-Resource-Policy: same-site`); 404 for an unknown hash or an extension that does not match the stored type |
 | PUT | `/exercises/{id}/draft` | Autosave answer |
 | POST | `/exercises/{id}/run` | Ungraded server Run (`run: server`): visible checks only, nothing stored; 60/min per user |
 | POST | `/exercises/{id}/submit` | Grade; returns `Result` + XP awarded + level/streak changes |
@@ -496,7 +499,7 @@ Rules for v1 (keep all numbers in `game/config.go`):
 
 All writes for one submission (submission row, progress, xp_events, user_stats, day_passes, league membership; medals and quests later) happen in a single DB transaction, which locks the user's `user_stats` row. The leaderboard update to Redis happens after commit and is idempotent (the group's set is rewritten from Postgres).
 
-Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home showed Daily quests and Review as disabled "Coming soon" placeholders (decision 2026-11-03); quests arrived with Phase 7, Review stays a placeholder until reviews exist. The tutor button arrived in Phase 6 (development only; see AI tutor).
+Frontend: XP bar and level in the header, streak flame with day count, a short celebration on pass (see `screens/pass-celebration.png`), league page, profile medals tab. Celebrations must be skippable and respect `prefers-reduced-motion`. Animations and sounds (Phase 9) are for rare, earned moments only: lesson clear, level up, boss fight and chests; routine submits, runs and fails stay quiet. The celebration shows on a first pass (when XP was awarded); a re-solve shows the normal result. It omits the design's "Compare with solution" (solutions never reach the browser) and "Share" (no share target yet). Home showed Daily quests and Review as disabled "Coming soon" placeholders (decision 2026-11-03); quests arrived with Phase 7, Review stays a placeholder until reviews exist. The tutor button arrived in Phase 6 (development only; see AI tutor).
 
 ## Game economy: Bytes, power-ups, medals, quests
 
@@ -597,6 +600,7 @@ Implementation rules:
 
 - `web/src/styles/tokens.css` and `web/tailwind.config.ts` are generated from `docs/design/tokens.json` and already in the repo. Add a `make tokens` script that regenerates them; never edit them by hand. No hex values in components.
 - Theme: default dark; the header toggle sets `data-theme` on `<html>` and saves the choice in localStorage; respect `prefers-color-scheme` on first visit.
+- Motion and sound (Phase 9): `motion-*` durations and `ease-*` easings are tokens; keyframes live in `web/src/styles/effects.css` (hand-written). Sound is on by default; the header speaker toggle mutes it (`cq-sound` in localStorage).
 - Amber (`accent`) is the only accent. Use it as a fill with `accent-ink` text; when amber must be text, use `accent-text`.
 - Load fonts from Google Fonts (Inter 400–800, JetBrains Mono 400/500, Silkscreen 400/700) or self-host them with `@fontsource`.
 - Build these components first, matching `docs/design/components/<Name>/README.md`: `Button`, `Pill`, `GameStats`, `LessonRail`, `ProblemExample`, `CheckList`.
@@ -706,6 +710,32 @@ Scope: the `codequest` CLI (`api/cmd/codequest`, standard library only: `login`,
 - [x] The config file is 0600. `logout` deletes the token locally even when the API is unreachable.
 
 As built: `run` and `submit` list the commands and ask before running them (`-y` skips the prompt), because lesson commands run in the learner's own shell. Output is printed as it arrives: the raw output, then the tests it will be judged on; only `submit` prints ✓/✗, from the server. `submit` exits 0 on pass and 1 otherwise. API and app URLs default to localhost and are set at build time with `-ldflags "-X main.defaultAPIURL=… -X main.defaultAppURL=…"` (or `CODEQUEST_API_URL` / `CODEQUEST_APP_URL` / `codequest config`); plain http is refused except for localhost. The lesson page shows the steps, tests, copyable `codequest run/submit <id>` commands and the latest result ("Check for new results" refetches the lesson). `/cli/login` has no design screen; it reuses the sign-in page's shell. The name `codequest` changes with the product name (open question).
+
+### Phase 9 — Game feel and lesson images
+
+> Decision 2026-11-05: built after Phase 8, at the author's request, with Phase 5 (payments) still skipped. Taken with the author: sounds are synthesized in the browser (Web Audio, no audio files); diagrams are image files (no Mermaid, which would need `innerHTML`); sound is on by default with a mute toggle. After review, the author narrowed effects to rare, earned moments: routine submits, runs and fails get no sound and no new animation, so the game never feels childish or nagging.
+
+Scope: motion tokens, a sound engine and mute toggle, effects for lesson clear, level up, boss fights and chests, and lesson images (`assets/`, the assets endpoint, rendering in prompts and mcq options). No new dependencies.
+
+- [x] Normal submits and runs play no sound and show no new animation (`effects/quiet.test.ts`: only the lesson-clear dialog, the boss fight and the chest may import the sound engine).
+- [x] Lesson clear, level up, boss hit/block/defeat and chest open each play their animation and sound. With `prefers-reduced-motion` there is no motion but the end state shows. Muting silences every sound and survives a reload.
+- [x] Every overlay closes with Escape, a backdrop click or its button, and focus returns to where it was.
+- [x] Effects never change a `Result`: they read only the `Result` and `Outcome` the server returned.
+- [x] No hex colors in components (confetti reads token variables at runtime). Token files are regenerated with `make tokens`, and `tokens:check` passes.
+- [x] `cq validate` rejects a missing image, an external image, an over-size file, a disallowed or mislabelled type, a scriptable SVG, a server-only name and an unused file in `assets/`.
+- [x] The assets endpoint serves the stored type with `nosniff`, the sandbox CSP, an ETag and immutable caching. An unknown hash or a mismatched extension is a 404.
+- [x] Prompts and mcq options show lesson images in both themes. External or unknown images show as their alt text, and nothing goes through `innerHTML`.
+- [x] Lighthouse stays ≥ 90 on the landing page (effects code is not on the landing page; `make lighthouse`: 99 / 96 / 96 / 100).
+
+As built:
+
+- **Sounds** (`web/src/effects/sound.ts`): six short chiptune recipes (`success`, `levelUp`, `bossHit`, `bossBlock`, `bossDefeat`, `chestOpen`), oscillators plus gain envelopes through one quiet master gain (0.4 × the user's volume). The `AudioContext` is created on first use, which always follows a click. Missing Web Audio is a silent no-op. Callers use `play(name)` only, so recorded files can replace the recipes later.
+- **Lesson clear**: one soft chime and an XP count-up. On a level up the fanfare replaces the chime, and the dialog shows a "LEVEL UP" banner, the badge popping from the old level to the new one, and one confetti burst (none under reduced motion).
+- **Boss fight**: after Attack the checks are revealed 150 ms apart. Each HIT drains one HP segment (`bossHit`), each BLOCK plays `bossBlock`, and a full clear ends with the `bossDefeat` fanfare. The celebration opens once the reveal has finished. A result loaded with the page (not a fresh attack) shows at once, silently.
+- **Chests** (`ChestOpen`): the daily chest on Home and the boss chest (from the celebration's "Open boss chest") open in a modal. The chest wobbles while the server decides (at least 600 ms), then the lid opens (`chestOpen`), the Bytes count up and the power-up rises. The loot comes from the server; the modal only shows it.
+- **Images**: `GET /exercises/{id}` carries `assets`. `LessonAssetsProvider` (on the lesson page) lets `Markdown` and the mcq renderer resolve `assets/…` names, so no renderer props changed. Images are lazy, framed on `surface-raised` so transparent diagrams read in both themes, and open full size on click. `Markdown` outside a lesson (tutor replies) loads no images at all. Assets of a locked lesson are reachable by anyone who has the hash; accepted, because hashes cannot be guessed and images are not answers.
+- **Effects lab** (`/dev/effects`, development builds only: the route and its chunk are left out of production builds by `import.meta.env.DEV`): buttons for every sound, each lesson-clear scenario (plain, level up, boss with chest, boss with level up), a boss attack with any number of checks and hits, and the daily chest with a fast server, a slow server or an error. It needs no sign-in and makes no requests; it drives the real components with made-up `Result`s and `Outcome`s.
+- There are no PNG designs for these moments; component notes are in `docs/design/components/ChestOpen`, `LevelUpBurst` and `SoundToggle`.
 
 ## Conventions and rules for Claude Code
 

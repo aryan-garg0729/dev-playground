@@ -55,7 +55,9 @@ type exerciseDetail struct {
 	PrevID     *string         `json:"prev_id"`
 	NextID     *string         `json:"next_id"`
 	PublicView json.RawMessage `json:"public_view"`
-	Last       *lastSubmission `json:"last_submission"`
+	// Lesson images: name used in the content ("assets/loop.svg") -> URL.
+	Assets map[string]string `json:"assets"`
+	Last   *lastSubmission   `json:"last_submission"`
 }
 
 func (a *api) getExercise(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +87,10 @@ func (a *api) getExercise(w http.ResponseWriter, r *http.Request) {
 	}
 	if out.Tags == nil {
 		out.Tags = []string{}
+	}
+	if out.Assets, err = assetURLs(e.Assets); err != nil {
+		a.internal(w, r, err)
+		return
 	}
 	for i, s := range siblings {
 		if s.ChapterID == e.ChapterID {

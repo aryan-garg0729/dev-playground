@@ -38,6 +38,16 @@ export const MoonIcon = (p: IconProps) => (
     <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
   </Icon>
 );
+export const SpeakerIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M11 5 6 9H3v6h3l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+  </Icon>
+);
+export const SpeakerOffIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M11 5 6 9H3v6h3l5 4V5ZM22 9l-6 6M16 9l6 6" />
+  </Icon>
+);
 export const ChevronLeftIcon = (p: IconProps) => (
   <Icon strokeWidth={2.5} {...p}>
     <path d="m15 18-6-6 6-6" />

@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -39,11 +40,22 @@ func Build(ctx context.Context, pool *pgxpool.Pool, b *Bundle) (BuildStats, erro
 				}
 				chapterIDs = append(chapterIDs, ch.ID)
 				for ei, ex := range ch.Exercises {
+					for _, a := range ex.Assets {
+						if err := q.UpsertContentAsset(ctx, store.UpsertContentAssetParams{
+							Sha256: a.SHA256, Mime: a.MIME, Size: int32(len(a.Data)), Bytes: a.Data,
+						}); err != nil {
+							return fmt.Errorf("exercise %s: asset %s: %w", ex.ID, a.Name, err)
+						}
+					}
+					assets, err := json.Marshal(AssetMap(ex.Assets))
+					if err != nil {
+						return fmt.Errorf("exercise %s: encode assets: %w", ex.ID, err)
+					}
 					if err := q.UpsertExercise(ctx, store.UpsertExerciseParams{
 						ID: ex.ID, ChapterID: ch.ID, Type: ex.Type, Version: int32(ex.Version),
 						Title: ex.Title, Xp: int32(ex.XP), Difficulty: int32(ex.Difficulty),
 						Tags: ex.Tags, Free: ex.Free, Boss: ex.Boss, OrderIndex: int32(ei),
-						PublicView: ex.PublicView, PrivateSpec: ex.PrivateSpec,
+						PublicView: ex.PublicView, PrivateSpec: ex.PrivateSpec, Assets: assets,
 					}); err != nil {
 						return fmt.Errorf("exercise %s: %w", ex.ID, err)
 					}

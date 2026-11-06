@@ -14,6 +14,7 @@ interface Tokens {
   spacing: { tokens: { name: string; value: string }[] };
   radius: { tokens: { name: string; value: string }[] };
   layout: { tokens: { name: string; value: string }[] };
+  motion?: { tokens: { name: string; value: string }[] };
 }
 
 const webDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -39,7 +40,7 @@ export function renderCss(t: Tokens): string {
     out.push(`  color-scheme: ${theme.id};`, '}', '');
   });
   out.push(':root {');
-  for (const tok of [...t.spacing.tokens, ...t.radius.tokens, ...t.layout.tokens]) {
+  for (const tok of [...t.spacing.tokens, ...t.radius.tokens, ...t.layout.tokens, ...(t.motion?.tokens ?? [])]) {
     out.push(`  --${tok.name}: ${tok.value};`);
   }
   for (const [name, stack] of Object.entries(t.type.families)) {
@@ -69,6 +70,9 @@ export function renderTailwind(t: Tokens): string {
   const colors = entries(t.color.tokens.map((c) => [c.name, `var(--${c.name})`]));
   const spacing = entries(t.spacing.tokens.map((s) => [stripPrefix(s.name, 'space-'), `var(--${s.name})`]));
   const radius = entries(t.radius.tokens.map((r) => [stripPrefix(r.name, 'radius-'), `var(--${r.name})`]));
+  const motion = t.motion?.tokens ?? [];
+  const durations = entries(motion.filter((m) => m.name.startsWith('motion-')).map((m) => [stripPrefix(m.name, 'motion-'), `var(--${m.name})`]));
+  const easings = entries(motion.filter((m) => m.name.startsWith('ease-')).map((m) => [stripPrefix(m.name, 'ease-'), `var(--${m.name})`]));
   const fonts = Object.entries(t.type.families)
     .map(([name, stack]) => `        ${name}: [${stack.split(',').map((f) => `'${f.trim()}'`).join(', ')}],`)
     .join('\n');
@@ -91,6 +95,12 @@ ${radius}
       },
       fontFamily: {
 ${fonts}
+      },
+      transitionDuration: {
+${durations}
+      },
+      transitionTimingFunction: {
+${easings}
       },
     },
   },

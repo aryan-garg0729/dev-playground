@@ -116,6 +116,7 @@ func New(d Deps) http.Handler {
 			}
 			r.Get("/courses", a.listCourses)
 			r.Get("/courses/{courseID}", a.getCourse)
+			r.Get("/assets/{file}", a.getAsset)
 			r.With(a.requireUnlocked).Get("/exercises/{exerciseID}", a.getExercise)
 			r.With(a.requireUnlocked, a.limitSubmits).Post("/exercises/{exerciseID}/submit", a.submit)
 			r.With(a.requireUnlocked, a.limitRuns).Post("/exercises/{exerciseID}/run", a.run)

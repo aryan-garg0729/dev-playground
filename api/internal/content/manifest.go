@@ -73,6 +73,7 @@ type Compiled struct {
 	exercise.Exercise
 	PublicView  json.RawMessage
 	PrivateSpec json.RawMessage
+	Assets      []Asset // public images from assets/, sorted by name
 }
 
 // Problem is one validation failure: a file path and a reason.

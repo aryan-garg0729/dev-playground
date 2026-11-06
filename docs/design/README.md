@@ -46,6 +46,20 @@ The system has two themes from one set of tokens: **Dark (Charcoal)**, the defau
 
 Panes wrap to a single column below about 900px; the rail stays collapsed on small screens.
 
+## Motion and sound
+
+Game moments get motion and sound; the workspace does not. Effects are for rare, earned moments only: lesson clear, level up, boss fight and chests. A routine submit, run or fail never animates or makes a sound, because effects that fire every few seconds feel childish and nag.
+
+- Use the motion tokens: `motion-fast` (120ms), `motion-base` (240ms), `motion-slow` (600ms), `motion-celebrate` (1200ms), `ease-out`, `ease-spring` (a slight overshoot, for pops). Keyframes live in `web/src/styles/effects.css`.
+- Under `prefers-reduced-motion` nothing moves, but every end state still shows (the opened chest, the final HP, the new level).
+- Sound is short (≤ 1 s) and quiet, and on by default. The header speaker toggle mutes it per device. A sound is never the only cue: each one has a visible counterpart.
+- One sound per moment: a level-up fanfare replaces the lesson-clear chime, and the boss fanfare replaces both.
+- Every overlay can be skipped (Escape, backdrop, button) and returns focus.
+
+## Lesson images
+
+Diagrams and pictures in prompts and quiz options sit on `surface-raised` with a 1px `border` and `radius-md`, so transparent SVGs read in both themes. Draw them in a mid-grey that works on both grounds, with amber only to point at the thing that matters. They span the prompt width up to 420px tall (160px tall in quiz options) and open full size on click. Alt text says what the image shows.
+
 ## Iconography
 
 Stroke icons on a 24px grid, 2px stroke (2.5–3 for tiny chevrons and ticks), round caps and joins, colored with the text token they sit beside. No filled icons, no emoji. Decorative icons are `aria-hidden`; icon-only buttons carry an `aria-label`.

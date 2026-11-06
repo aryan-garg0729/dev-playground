@@ -316,6 +316,24 @@ paths:
           description: Chapters and exercises in manifest order
           content: { application/json: { schema: { $ref: "#/components/schemas/CourseDetail" } } }
         "404": { $ref: "#/components/responses/Error" }
+  /assets/{file}:
+    get:
+      operationId: getAsset
+      description: >-
+        A lesson image by content hash ("<sha256>.<ext>"), as listed in an exercise's `assets`.
+        Public, immutable (cached for a year), served with nosniff and a sandbox CSP.
+      parameters: [{ name: file, in: path, required: true, schema: { type: string, pattern: "^[0-9a-f]{64}\\.(png|jpg|webp|gif|svg)$" } }]
+      responses:
+        "200":
+          description: The image bytes
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            image/gif: { schema: { type: string, format: binary } }
+            image/svg+xml: { schema: { type: string, format: binary } }
+        "304": { description: Not modified (If-None-Match matched the ETag) }
+        "404": { $ref: "#/components/responses/Error" }
   /exercises/{exerciseId}:
     get:
       operationId: getExercise
@@ -937,7 +955,7 @@ components:
         line: { type: integer, description: 1-based line in the learner's file the failure points at }
     ExerciseDetail:
       type: object
-      required: [id, type, version, title, xp, difficulty, tags, free, boss, course_id, chapter, position, prev_id, next_id, public_view, last_submission]
+      required: [id, type, version, title, xp, difficulty, tags, free, boss, course_id, chapter, position, prev_id, next_id, public_view, assets, last_submission]
       properties:
         id: { type: string }
         type: { type: string }
@@ -960,6 +978,10 @@ components:
         prev_id: { type: [string, "null"] }
         next_id: { type: [string, "null"] }
         public_view: { description: Type-specific public view (see the exercise type's renderer) }
+        assets:
+          description: Lesson images, from the name used in the content ("assets/loop.svg") to its URL
+          type: object
+          additionalProperties: { type: string }
         last_submission:
           oneOf:
             - type: "null"

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120" font-family="ui-monospace, monospace" font-size="13">
+  <defs>
+    <marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0L10 5L0 10z" fill="#d9a43f"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="#8a8a93" stroke-width="2">
+    <rect x="20" y="40" width="40" height="40" rx="4"/>
+    <rect x="60" y="40" width="40" height="40" rx="4"/>
+    <rect x="100" y="40" width="40" height="40" rx="4"/>
+  </g>
+  <g fill="none" stroke="#d9a43f" stroke-width="2">
+    <path d="M190 30Q160 30 150 44" marker-end="url(#h)"/>
+    <path d="M150 76Q160 92 190 92" marker-end="url(#h)"/>
+  </g>
+  <g fill="#8a8a93"><text x="160" y="22">in</text><text x="160" y="112">out</text></g>
+</svg>

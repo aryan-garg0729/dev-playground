@@ -36,4 +36,24 @@ describe('ExercisePage', () => {
     expect(post.headers.get('Content-Type')).toContain('application/json');
     expect(await post.json()).toEqual({ exercise_id: 'lc.q', version: 3, answer: { choices: ['b'] } });
   });
+
+  it('shows the lesson\'s images in the question and options, and nothing from elsewhere', async () => {
+    stubApi({
+      'GET /api/v1/exercises/lc.q': [200, {
+        ...detail,
+        assets: { 'assets/flow.svg': '/api/v1/assets/aa.svg', 'assets/a.png': '/api/v1/assets/bb.png' },
+        public_view: {
+          question: 'Look:\n\n![The flow](assets/flow.svg)\n\n![Tracker](https://evil.test/p.png)',
+          multiple: false,
+          options: [{ id: 'a', text: 'Left', image: 'assets/a.png' }, { id: 'b', text: 'Right' }],
+        },
+      }],
+    });
+    renderRoute('/learn/lc/lc.q', '/learn/:courseId/:exerciseId', <ExercisePage />);
+    expect(await screen.findByRole('img', { name: 'The flow' })).toHaveAttribute('src', '/api/v1/assets/aa.svg');
+    expect(screen.getByRole('img', { name: 'Left' })).toHaveAttribute('src', '/api/v1/assets/bb.png');
+    expect(screen.queryByRole('img', { name: 'Tracker' })).not.toBeInTheDocument();
+    expect(screen.getByText('[Tracker]')).toBeInTheDocument();
+    expect(document.querySelector('img[src^="https:"]')).toBeNull();
+  });
 });

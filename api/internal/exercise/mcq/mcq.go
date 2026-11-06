@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"regexp"
 	"slices"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 
@@ -20,10 +21,12 @@ const maxQuestionBytes = 64 << 10
 
 var optionIDRe = regexp.MustCompile(`^[a-z0-9_-]{1,32}$`)
 
-// Option is one choice.
+// Option is one choice. Image, when set, is a lesson image ("assets/x.png");
+// Text is still required and doubles as its alt text.
 type Option struct {
-	ID   string `json:"id" yaml:"id"`
-	Text string `json:"text" yaml:"text"`
+	ID    string `json:"id" yaml:"id"`
+	Text  string `json:"text" yaml:"text"`
+	Image string `json:"image,omitempty" yaml:"image"`
 }
 
 // Spec is the compiled mcq spec. Answer and Explain are server-only until a
@@ -100,6 +103,9 @@ func (s Spec) validate() error {
 		}
 		if o.Text == "" {
 			return fmt.Errorf("options[%d].text: required", i)
+		}
+		if o.Image != "" && (!strings.HasPrefix(o.Image, "assets/") || !fs.ValidPath(o.Image)) {
+			return fmt.Errorf("options[%d].image: %q must be a file in the exercise's assets/ folder (e.g. assets/a.png)", i, o.Image)
 		}
 		ids = append(ids, o.ID)
 	}

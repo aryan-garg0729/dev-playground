@@ -18,9 +18,9 @@ ON CONFLICT (id) DO UPDATE SET
 
 -- name: UpsertExercise :exec
 INSERT INTO exercises (id, chapter_id, type, version, title, xp, difficulty, tags, free, boss,
-                       order_index, public_view, private_spec, published)
+                       order_index, public_view, private_spec, assets, published)
 VALUES (@id, @chapter_id, @type, @version, @title, @xp, @difficulty, @tags, @free, @boss,
-        @order_index, @public_view, @private_spec, true)
+        @order_index, @public_view, @private_spec, @assets, true)
 ON CONFLICT (id) DO UPDATE SET
     chapter_id = EXCLUDED.chapter_id,
     type = EXCLUDED.type,
@@ -34,7 +34,18 @@ ON CONFLICT (id) DO UPDATE SET
     order_index = EXCLUDED.order_index,
     public_view = EXCLUDED.public_view,
     private_spec = EXCLUDED.private_spec,
+    assets = EXCLUDED.assets,
     published = true;
+
+-- name: UpsertContentAsset :exec
+-- Content-addressed: the same bytes always have the same row.
+INSERT INTO content_assets (sha256, mime, size, bytes)
+VALUES (@sha256, @mime, @size, @bytes)
+ON CONFLICT (sha256) DO NOTHING;
+
+-- name: GetContentAsset :one
+-- Public: lesson images are served to anyone who has the hash.
+SELECT mime, bytes FROM content_assets WHERE sha256 = @sha256;
 
 -- name: UnpublishCoursesNotIn :exec
 UPDATE courses SET published = false WHERE NOT (id = ANY (@ids::text[]));
@@ -81,7 +92,7 @@ ORDER BY ch.order_index, e.order_index;
 -- name: GetExercise :one
 -- Browser-facing: never selects private_spec.
 SELECT e.id, e.chapter_id, e.type, e.version, e.title, e.xp, e.difficulty, e.tags, e.free, e.boss,
-       e.public_view, ch.course_id, ch.title AS chapter_title
+       e.public_view, e.assets, ch.course_id, ch.title AS chapter_title
 FROM exercises e
 JOIN chapters ch ON ch.id = e.chapter_id
 WHERE e.id = @id AND e.published AND ch.published;

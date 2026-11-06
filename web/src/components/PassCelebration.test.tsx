@@ -6,6 +6,9 @@ import type { Result } from '../api/client';
 import { firstPass } from '../test/fixtures';
 import { PassCelebration } from './PassCelebration';
 
+const sounds = vi.hoisted(() => vi.fn());
+vi.mock('../effects/sound', () => ({ play: sounds, resetSoundForTests: () => {} }));
+
 const result: Result = {
   status: 'pass', score: 1, stdout: '', runtime_ms: 41,
   checks: [1, 2, 3].map((i) => ({ name: `c${i}`, passed: true, visible: true })),
@@ -62,5 +65,58 @@ describe('PassCelebration', () => {
     const gained = screen.getByRole('img', { name: /XP in level/ }).lastElementChild!;
     expect(gained.className).toMatch(/motion-safe:transition-\[width\]/);
     expect(gained.className).not.toMatch(/(^|\s)transition/);
+  });
+});
+
+describe('PassCelebration effects', () => {
+  beforeEach(() => sounds.mockClear());
+
+  const render1 = (outcome: typeof firstPass) =>
+    render(
+      <MemoryRouter>
+        <PassCelebration outcome={outcome} result={result} courseTo="/courses/c" onClose={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+  it('plays one soft chime on a plain lesson clear, with no level-up burst', () => {
+    render1(firstPass);
+    expect(sounds.mock.calls).toEqual([['success']]);
+    expect(screen.queryByText('LEVEL UP')).not.toBeInTheDocument();
+  });
+
+  it('plays the fanfare instead of the chime on a level up and shows old → new level', () => {
+    render1({ ...firstPass, level_up: true, level: 8 });
+    expect(sounds.mock.calls).toEqual([['levelUp']]);
+    expect(screen.getByText('LEVEL UP')).toBeInTheDocument();
+    expect(screen.getByLabelText('Level 7 to level 8')).toBeInTheDocument();
+  });
+
+  it('has no confetti under reduced motion', () => {
+    render1({ ...firstPass, level_up: true, level: 8 });
+    expect(screen.queryByTestId('confetti')).not.toBeInTheDocument();
+  });
+
+  it('after a boss: no extra sound, and the boss chest opens in place; Escape closes only the chest', async () => {
+    const onClose = vi.fn();
+    const boss = {
+      ...firstPass,
+      rewards: {
+        bytes: [], medals: [], quests_done: [], chest_ready: false, chapter_complete: true,
+        boss: { max_hp: 3, hp: 0, defeated: true, chest: { bytes: 300, powerup: 'peek' }, unlocked_chapter: 'ch2' },
+      },
+    };
+    render(
+      <MemoryRouter>
+        <PassCelebration outcome={boss} result={result} courseTo="/courses/c" onClose={onClose} />
+      </MemoryRouter>,
+    );
+    expect(sounds).not.toHaveBeenCalled();
+    expect(screen.getByText('BOSS DEFEATED')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Open boss chest' }));
+    expect(screen.getByRole('dialog', { name: 'BOSS CHEST' })).toHaveTextContent('+300 Bytes');
+    expect(sounds).toHaveBeenCalledWith('chestOpen');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'BOSS CHEST' })).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

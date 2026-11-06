@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import type { Outcome, Result } from '../api/client';
+import { CountUp } from '../effects/CountUp';
+import { play } from '../effects/sound';
 import { Button } from './Button';
+import { ChestOpen, type Loot } from './ChestOpen';
 import { levelProgress } from './GameStats';
-import { CheckIcon, FlameIcon } from './icons';
+import { CheckIcon, ChestIcon, FlameIcon } from './icons';
+import { LevelUpBurst } from './LevelUpBurst';
 import { powerupName } from './powerups';
 
 interface Props {
@@ -16,11 +20,12 @@ interface Props {
 }
 
 /** Bytes, medals, quests and boss loot from the economy, if any. */
-function RewardsList({ outcome }: { outcome: Outcome }) {
+function RewardsList({ outcome, onOpenChest }: { outcome: Outcome; onOpenChest: (loot: Loot) => void }) {
   const r = outcome.rewards;
+  const chest = r?.boss?.defeated ? r.boss.chest : null;
   const lines: string[] = [];
   if (outcome.second_wind_kept) lines.push('Second Wind kept your first-try bonus');
-  if (r?.boss?.defeated && r.boss.chest) lines.push(`Boss chest: +${r.boss.chest.bytes} Bytes and ${powerupName(r.boss.chest.powerup)}`);
+  if (chest) lines.push(`Boss chest: +${chest.bytes} Bytes and ${powerupName(chest.powerup)}`);
   if (r?.boss?.unlocked_chapter) lines.push('Next chapter unlocked');
   for (const m of r?.medals ?? []) lines.push(`Medal: ${m.name} (${m.tier}) · title "${m.title}"`);
   for (const q of r?.quests_done ?? []) lines.push(`Quest done: ${q}`);
@@ -28,13 +33,21 @@ function RewardsList({ outcome }: { outcome: Outcome }) {
   for (const g of r?.bytes ?? []) if (g.reason !== 'boss' && g.reason !== 'medal') lines.push(`${g.label}: +${g.amount} Bytes`);
   if (lines.length === 0) return null;
   return (
-    <ul aria-label="Rewards" className="flex flex-col gap-1.5">
-      {lines.map((l) => (
-        <li key={l} className="text-small text-text-secondary">
-          {l}
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-3">
+      {chest && (
+        <Button className="h-10 border border-dashed border-accent-line" onClick={() => onOpenChest(chest)}>
+          <ChestIcon size={16} className="text-accent-text" />
+          Open boss chest
+        </Button>
+      )}
+      <ul aria-label="Rewards" className="flex flex-col gap-1.5">
+        {lines.map((l) => (
+          <li key={l} className="text-small text-text-secondary">
+            {l}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -50,15 +63,29 @@ function Row({ label, xp }: { label: string; xp: number }) {
 /**
  * "Lesson clear" dialog after a first pass (screens/pass-celebration.png).
  * Skippable: Escape, the backdrop, or "Keep working" close it. The XP bar
- * animates only when the user allows motion.
+ * animates only when the user allows motion. One sound per clear: the level-up
+ * fanfare, else a soft chime; none after a boss, whose fanfare already played.
  */
 export function PassCelebration({ outcome, result, next, courseTo, onClose }: Props) {
   const primary = useRef<HTMLAnchorElement>(null);
   const [filled, setFilled] = useState(false);
+  const [chest, setChest] = useState<Loot>();
+  const chestShown = useRef(false);
+  chestShown.current = chest !== undefined;
+  const bossDefeated = outcome.rewards?.boss?.defeated === true;
+  const played = useRef(false); // once per dialog, also under StrictMode's double effects
   useEffect(() => {
-    primary.current?.focus();
+    if (played.current) return;
+    played.current = true;
+    if (outcome.level_up) play('levelUp');
+    else if (!bossDefeated) play('success');
+  }, [outcome.level_up, bossDefeated]);
+  useEffect(() => {
+    // Without scrolling: in a tall dialog the banner at the top must stay in view.
+    primary.current?.focus({ preventScroll: true });
     const t = requestAnimationFrame(() => setFilled(true));
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    // While the chest is open, Escape closes the chest only.
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !chestShown.current && onClose();
     document.addEventListener('keydown', onKey);
     return () => {
       cancelAnimationFrame(t);
@@ -82,10 +109,11 @@ export function PassCelebration({ outcome, result, next, courseTo, onClose }: Pr
         role="dialog"
         aria-modal="true"
         aria-labelledby="clear-title"
-        className="relative flex w-full max-w-[420px] flex-col gap-5 rounded-lg border border-border bg-surface p-6"
+        className="relative flex max-h-full w-full max-w-[420px] flex-col gap-5 overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-surface p-6"
       >
         <div className="flex flex-col items-center gap-3 text-center">
-          <p className="text-game-sm tracking-[0.2em] text-accent-text">LESSON CLEAR</p>
+          <p className="text-game-sm tracking-[0.2em] text-accent-text">{bossDefeated ? 'BOSS DEFEATED' : 'LESSON CLEAR'}</p>
+          {outcome.level_up && <LevelUpBurst level={outcome.level} />}
           <span className="flex h-11 w-11 items-center justify-center rounded-pill bg-success-soft text-success">
             <CheckIcon size={22} />
           </span>
@@ -104,7 +132,9 @@ export function PassCelebration({ outcome, result, next, courseTo, onClose }: Pr
             {b.boost > 0 && <Row label="Focus Boost ×2" xp={b.boost} />}
             <div className="mt-1 flex items-center justify-between border-t border-border pt-3">
               <span className="text-section text-text">Total</span>
-              <span className="text-game text-[24px] leading-[28px] text-accent-text">+{outcome.xp_awarded} XP</span>
+              <span className="text-game text-[24px] leading-[28px] text-accent-text">
+                +<CountUp to={outcome.xp_awarded} duration={900} /> XP
+              </span>
             </div>
           </div>
         )}
@@ -137,7 +167,7 @@ export function PassCelebration({ outcome, result, next, courseTo, onClose }: Pr
           </div>
         </div>
 
-        <RewardsList outcome={outcome} />
+        <RewardsList outcome={outcome} onOpenChest={setChest} />
 
         <div className="flex flex-col gap-2">
           <Link
@@ -153,6 +183,7 @@ export function PassCelebration({ outcome, result, next, courseTo, onClose }: Pr
           </Button>
         </div>
       </div>
+      {chest && <ChestOpen title="Boss chest" loot={chest} onClose={() => setChest(undefined)} />}
     </div>
   );
 }

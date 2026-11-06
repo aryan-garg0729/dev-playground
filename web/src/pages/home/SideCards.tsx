@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Link } from 'react-router';
 import type { Home, LeagueSummary } from '../../api/client';
+import { ApiError } from '../../api/client';
 import { useOpenChest, useQuests } from '../../api/queries';
 import { Button } from '../../components/Button';
+import { ChestOpen } from '../../components/ChestOpen';
 import { powerupName } from '../../components/powerups';
 import { CheckIcon, ChestIcon } from '../../components/icons';
 import { timeLeft, tierAbove, tierBelow, tierTitle } from './format';
@@ -67,6 +69,7 @@ const soon = <span className="text-caption rounded-pill bg-surface-raised px-2 p
 export function QuestsCard() {
   const { data } = useQuests();
   const open = useOpenChest();
+  const [opening, setOpening] = useState(false);
   if (!data) return null;
   const done = data.daily.filter((q) => q.done).length;
   const chest = data.chest;
@@ -104,7 +107,14 @@ export function QuestsCard() {
           </span>
         </div>
         {chest.ready && !chest.opened ? (
-          <Button variant="primary" disabled={open.isPending} onClick={() => open.mutate()}>
+          <Button
+            variant="primary"
+            disabled={open.isPending}
+            onClick={() => {
+              setOpening(true);
+              open.mutate();
+            }}
+          >
             Open
           </Button>
         ) : (
@@ -114,6 +124,14 @@ export function QuestsCard() {
       <p className="text-caption text-text-muted">
         Chest odds: {chest.odds.map((o) => `${powerupName(o.powerup)} ${o.weight}%`).join(' · ')}
       </p>
+      {opening && (
+        <ChestOpen
+          title="Daily chest"
+          loot={open.data}
+          error={open.error ? (open.error instanceof ApiError ? open.error.message : 'Could not open the chest. Try again.') : undefined}
+          onClose={() => setOpening(false)}
+        />
+      )}
     </Card>
   );
 }

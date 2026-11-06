@@ -53,6 +53,8 @@ func TestParseSpecErrors(t *testing.T) {
 		{"two answers single", strings.Replace(validSpec, "answer: [a]", "answer: [a, b]", 1), "multiple is false"},
 		{"duplicate ids", strings.Replace(validSpec, "id: b", "id: a", 1), "duplicate"},
 		{"missing explain", strings.Replace(validSpec, "explain: range(5) starts at 0 and stops before 5.", "", 1), "explain"},
+		{"image outside assets", strings.Replace(validSpec, `text: "0 to 4" }`, `text: "0 to 4", image: "pic.png" }`, 1), "assets/"},
+		{"image escaping", strings.Replace(validSpec, `text: "0 to 4" }`, `text: "0 to 4", image: "assets/../x.png" }`, 1), "assets/"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -142,5 +144,25 @@ func TestGrade(t *testing.T) {
 				t.Fatal("explanation should be returned after submit")
 			}
 		})
+	}
+}
+
+func TestOptionImageIsPublic(t *testing.T) {
+	src := strings.Replace(validSpec, `text: "0 to 4" }`, `text: "0 to 4", image: assets/zero.png }`, 1)
+	ex, err := parse(t, src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	typ, _ := exercise.Get("mcq")
+	pub, err := typ.PublicView(ex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.Marshal(pub)
+	if !strings.Contains(string(b), `"image":"assets/zero.png"`) {
+		t.Fatalf("public view %s lacks the option image", b)
+	}
+	if strings.Contains(string(b), `"image":""`) {
+		t.Fatalf("options without an image must omit it: %s", b)
 	}
 }
