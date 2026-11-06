@@ -8,7 +8,7 @@ The system has two themes from one set of tokens: **Dark (Charcoal)**, the defau
 
 - **One accent.** Amber (`accent`) is the only brand color. It marks the primary action (Submit), the current lesson, and XP. If two things on a screen are amber, one of them is wrong.
 - **Color means state, not decoration.** `success` = passed / done / Easy. `danger` = failed / wrong value. `accent` = current / reward. Everything else is neutral.
-- **Pixel type is for game moments only.** `pixel` (Pixelify Sans) appears on the streak count, level badge and +XP pill. Never on instructions, problem text, buttons or code.
+- **Pixel type is for game moments only.** `pixel` (Silkscreen, chosen over Pixelify Sans because its 2/5/8 are distinct) appears on the streak count, level badge and +XP pill. Never on instructions, problem text, buttons or code.
 - **The workspace stays dense and quiet.** Panes are flat `surface` blocks with a 1px `border`, separated by an 8px gap (`space-2`). No shadows, no gradients.
 - **Progress lives in one place.** The outline rail on the left is the only progress indicator on the lesson screen. The header shows the lesson name and position as text, not a second bar.
 
@@ -34,8 +34,8 @@ The system has two themes from one set of tokens: **Dark (Charcoal)**, the defau
 
 - `sans` (Inter) for all interface text. Problem title `page-title` (22/30, 600); body `body` (14/24).
 - `mono` (JetBrains Mono) for code, examples, constraints and check rows (`code`, `code-sm`).
-- `pixel` (Pixelify Sans) for `game` and `game-sm` only.
-- Fonts are hosted on Google Fonts: Inter 400/500/600/700, JetBrains Mono 400/500, Pixelify Sans 500/700.
+- `pixel` (Silkscreen, chosen over Pixelify Sans because its 2/5/8 are distinct) for `game` and `game-sm` only.
+- Fonts are hosted on Google Fonts: Inter 400/500/600/700, JetBrains Mono 400/500, Silkscreen 400/700.
 
 ## Layout: the lesson screen
 

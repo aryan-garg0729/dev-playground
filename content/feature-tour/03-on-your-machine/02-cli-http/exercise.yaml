@@ -1,0 +1,21 @@
+id: ft.cli.http
+type: project_cli
+version: 1
+title: Answer an HTTP request
+xp: 30
+difficulty: 2
+tags: [cli, http]
+free: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8000
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Fetch ping.txt from your server
+      http_request:
+        request: { method: GET, url: "${baseURL}/ping.txt" }
+        tests:
+          - status_code: 200
+          - body_contains: "pong"
+          - header: { name: Content-Type, contains: text/plain }

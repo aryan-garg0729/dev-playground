@@ -54,7 +54,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
-        pixel: ['"Pixelify Sans"', 'Inter', 'sans-serif'],
+        pixel: ['Silkscreen', 'Inter', 'sans-serif'],
       },
     },
   },

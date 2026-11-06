@@ -208,3 +208,44 @@ func (s *Service) openChest(ctx context.Context, q *store.Queries, user uuid.UUI
 	}
 	return &game.ChestDrop{Bytes: bytes, PowerUp: p}, nil
 }
+
+// Dev starter grant: what the default dev user (DEV_AUTH only) starts with, so
+// level-gated UI and every power-up can be tried without grinding.
+const (
+	DevStarterXP    = 1000
+	DevStarterBytes = 5000 // one of every power-up plus a Streak Repair and a max bet
+	devGrantReason  = "dev_grant"
+	devGrantRef     = "starter"
+)
+
+// GrantDevStarter gives user DevStarterXP and DevStarterBytes once, through
+// the XP and Byte ledgers (keyed on reason/ref, so repeat calls do nothing).
+// Only the DEV_AUTH sign-in calls it. It never touches grading or progress.
+func (s *Service) GrantDevStarter(ctx context.Context, user uuid.UUID) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		q := store.New(tx)
+		if err := q.EnsureUserStats(ctx, user); err != nil {
+			return fmt.Errorf("ensure stats: %w", err)
+		}
+		_, err := q.AwardXP(ctx, store.AwardXPParams{UserID: user, Amount: DevStarterXP, Reason: devGrantReason, RefID: devGrantRef})
+		switch {
+		case errors.Is(err, pgx.ErrNoRows): // granted before
+		case err != nil:
+			return fmt.Errorf("dev xp: %w", err)
+		default:
+			st, err := q.LockUserStats(ctx, user)
+			if err != nil {
+				return fmt.Errorf("lock stats: %w", err)
+			}
+			xp := int(st.TotalXp) + DevStarterXP
+			if err := q.UpdateUserStats(ctx, store.UpdateUserStatsParams{
+				UserID: user, TotalXp: int32(xp), Level: int32(max(int(st.Level), game.LevelFor(xp))),
+				StreakDays: st.StreakDays, StreakFreezes: st.StreakFreezes, LastActiveDate: st.LastActiveDate,
+			}); err != nil {
+				return fmt.Errorf("dev stats: %w", err)
+			}
+		}
+		_, err = credit(ctx, q, user, DevStarterBytes, devGrantReason, devGrantRef)
+		return err
+	})
+}

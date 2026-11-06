@@ -1,0 +1,35 @@
+id: ft.basics.double-it
+type: code
+version: 1
+title: Double every number
+xp: 20
+difficulty: 1
+tags: [loops]
+free: true
+spec:
+  language: python
+  runner: pyodide
+  run: browser
+  prompt: prompt.md
+  entry: main.py
+  starter: starter.py
+  solution: solution.py
+  limits: { timeout_ms: 3000, memory_mb: 128 }
+  examples:
+    - { input: "nums = [1, 2, 3]", output: "[2, 4, 6]", explanation: "each number times 2" }
+    - { input: "nums = []", output: "[]" }
+  constraints:
+    - "0 ≤ len(nums) ≤ 10⁴"
+  hints:
+    - Start with an empty list and append to it.
+    - Multiply each number by 2 before you append it.
+  checks:
+    - kind: unit_tests
+      file: tests_visible.py
+      visible: true
+    - kind: unit_tests
+      file: tests_hidden.py
+      weight: 2
+    - kind: forbidden_calls
+      names: [map]
+      message: Try it with a loop instead of map()

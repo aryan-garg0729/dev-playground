@@ -1,0 +1,18 @@
+id: ft.basics.pick-many
+type: mcq
+version: 1
+title: Pick every answer
+xp: 5
+difficulty: 1
+tags: [quiz]
+free: true
+spec:
+  question: prompt.md
+  multiple: true
+  options:
+    - { id: a, text: "list" }
+    - { id: b, text: "tuple" }
+    - { id: c, text: "dict" }
+    - { id: d, text: "str" }
+  answer: [a, c]
+  explain: Lists and dicts can change after they are made. Tuples and strings cannot.

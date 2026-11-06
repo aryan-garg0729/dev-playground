@@ -128,13 +128,26 @@ func (a *api) devSignIn(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
 	}
-	if req.Email == "" {
+	starter := req.Email == ""
+	if starter {
 		req.Email, req.Name = "dev@codequest.local", "Dev User"
 	}
 	email, err := auth.NormalizeEmail(req.Email)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 		return
+	}
+	// The default dev user starts with XP and Bytes (once) so power-ups can be
+	// tried; dev sign-ins with an email (the e2e learners) start from zero.
+	if starter {
+		u, err := auth.UserForEmail(r.Context(), a.Pool, email, req.Name, "")
+		if err == nil {
+			err = a.Economy.GrantDevStarter(r.Context(), u.ID)
+		}
+		if err != nil {
+			a.internal(w, r, err)
+			return
+		}
 	}
 	a.finishSignIn(w, r, email, req.Name, "", req.Timezone, "/")
 }

@@ -82,7 +82,7 @@
   --touch-min: 44px;
   --font-sans: Inter, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
-  --font-pixel: "Pixelify Sans", Inter, sans-serif;
+  --font-pixel: Silkscreen, Inter, sans-serif;
 }
 
 .text-page-title { font-family: var(--font-sans); font-size: 22px; line-height: 30px; font-weight: 600; }
@@ -94,5 +94,5 @@
 .text-caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 500; }
 .text-code { font-family: var(--font-mono); font-size: 14px; line-height: 24px; font-weight: 400; }
 .text-code-sm { font-family: var(--font-mono); font-size: 13px; line-height: 23px; font-weight: 400; }
-.text-game { font-family: var(--font-pixel); font-size: 16px; line-height: 20px; font-weight: 500; }
-.text-game-sm { font-family: var(--font-pixel); font-size: 13px; line-height: 16px; font-weight: 500; }
+.text-game { font-family: var(--font-pixel); font-size: 16px; line-height: 20px; font-weight: 400; }
+.text-game-sm { font-family: var(--font-pixel); font-size: 12px; line-height: 16px; font-weight: 400; }

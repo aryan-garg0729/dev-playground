@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aryangarg/codequest/api/internal/auth"
+	"github.com/aryangarg/codequest/api/internal/economy"
 )
 
 // doRaw sends a request and returns the recorder, for cookie and header checks.
@@ -162,6 +163,27 @@ func TestDevAuth(t *testing.T) {
 	on.getJSON("/api/v1/me", &me)
 	if me.User.Email != "dev@codequest.local" {
 		t.Fatalf("me = %+v", me)
+	}
+
+	// The default dev user starts with XP and Bytes, granted once.
+	on.doRaw(jsonReq(http.MethodPost, "/api/v1/auth/dev", `{}`))
+	var stats struct {
+		Stats struct {
+			TotalXP int `json:"total_xp"`
+			Bytes   int `json:"bytes"`
+		}
+	}
+	on.getJSON("/api/v1/me", &stats)
+	if stats.Stats.TotalXP != economy.DevStarterXP || stats.Stats.Bytes != economy.DevStarterBytes {
+		t.Fatalf("dev stats = %+v, want %d XP and %d Bytes once", stats.Stats, economy.DevStarterXP, economy.DevStarterBytes)
+	}
+
+	// A dev sign-in with an email is an ordinary fresh user.
+	other := on.doRaw(jsonReq(http.MethodPost, "/api/v1/auth/dev", `{"email":"fresh@example.com"}`))
+	on.cookie = sessionFrom(t, other).Value
+	on.getJSON("/api/v1/me", &stats)
+	if stats.Stats.TotalXP != 0 || stats.Stats.Bytes != 0 {
+		t.Fatalf("fresh dev user stats = %+v, want zero", stats.Stats)
 	}
 }
 

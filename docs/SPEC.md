@@ -476,7 +476,7 @@ CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (
 - **GitHub.** Hand-rolled OAuth web flow (no new dependency): a random `state` in a 10-minute `HttpOnly` cookie, compared in constant time; scopes `read:user user:email`; the primary verified email is required. A GitHub identity links to the account with that email, or creates one. Enabled when `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set.
 - **Post-sign-in redirect** (`next`) is accepted only as a same-site path (`/…`, not `//`, no backslashes, not under `/api/`).
 - **CLI tokens** (Phase 8, paste-code flow like boot.dev's, without its localhost listener). `codequest login` opens `APP_URL/cli/login`; the signed-in page calls `POST /cli/codes` and shows a 10-character code (`XXXXX-XXXXX`, no ambiguous letters, single use, 10 minutes, stored hashed); the learner pastes it and the CLI gets a random 32-byte token from `POST /cli/token`, kept in `<user config dir>/codequest/config.json` (mode 0600). The API accepts `Authorization: Bearer <token>` in place of the cookie on every endpoint; a request with both is `400`, a bad or expired token `401`. `codequest logout` revokes it (`POST /cli/logout`) and always deletes it locally. Expired codes and tokens are deleted hourly.
-- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
+- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. The default dev user (no email given) starts with 1,000 XP and 5,000 Bytes (decision 2026-11-05), granted once through the XP and Byte ledgers (`dev_grant`/`starter`) so every power-up can be tried; dev sign-ins with an email start from zero. The `feature-tour` course has one lesson of every type (mcq single and multiple, browser and server Python, SQL, a boss, CLI command and HTTP) for manual testing. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
 
 ## Gamification engine
 
@@ -591,14 +591,14 @@ One `billing` package with a `Provider` interface (`CreateCheckout`, `HandleWebh
 
 ## Design system and UI
 
-The UI follows the CodeQuest design system in `docs/design/`: one set of color tokens with a Dark (Charcoal, default) and a Light theme, Inter for interface text, JetBrains Mono for code, and Pixelify Sans only for game moments (streak, level, +XP, Bytes, medals). Every designed screen is in `docs/design/screens/`; match them.
+The UI follows the CodeQuest design system in `docs/design/`: one set of color tokens with a Dark (Charcoal, default) and a Light theme, Inter for interface text, JetBrains Mono for code, and Silkscreen only for game moments (streak, level, +XP, Bytes, medals). Every designed screen is in `docs/design/screens/`; match them.
 
 Implementation rules:
 
 - `web/src/styles/tokens.css` and `web/tailwind.config.ts` are generated from `docs/design/tokens.json` and already in the repo. Add a `make tokens` script that regenerates them; never edit them by hand. No hex values in components.
 - Theme: default dark; the header toggle sets `data-theme` on `<html>` and saves the choice in localStorage; respect `prefers-color-scheme` on first visit.
 - Amber (`accent`) is the only accent. Use it as a fill with `accent-ink` text; when amber must be text, use `accent-text`.
-- Load fonts from Google Fonts (Inter 400–800, JetBrains Mono 400/500, Pixelify Sans 500/700) or self-host them with `@fontsource`.
+- Load fonts from Google Fonts (Inter 400–800, JetBrains Mono 400/500, Silkscreen 400/700) or self-host them with `@fontsource`.
 - Build these components first, matching `docs/design/components/<Name>/README.md`: `Button`, `Pill`, `GameStats`, `LessonRail`, `ProblemExample`, `CheckList`.
 
 Lesson screen layout (`/learn/:courseId/:exerciseId`; `screens/lesson-*.png`):
