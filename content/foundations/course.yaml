@@ -7,3 +7,7 @@ order: 2
 chapters:
   - 01-python-warm-up
   - 02-sql-basics
+icon: fd
+level: beginner
+tags: [Python, SQL]
+topics: Loops, dicts, SELECT, WHERE, GROUP BY

@@ -65,7 +65,7 @@ codequest/
   sandbox/                  # static runner page (served from separate origin)
     index.html  src/main.ts src/worker.ts   # Pyodide / sql.js execution
     src/protocol.ts         # zod message schemas (identical copy in web/src/runner-client)
-  content/                  # courses as files (see Content format)
+  content/                  # courses as files (see Content format); paths.yaml lists career paths
 ```
 
 ## Architecture overview
@@ -179,6 +179,10 @@ description: ...
 order: 1                    # position among courses (then id)
 published: true             # default true
 chapters: [01-chat-models, 02-prompt-templates]   # folder names, in order
+icon: lc                    # 1-4 lowercase letters or digits for the catalog tile; default: first 2 of the id
+level: intermediate         # beginner (default) | intermediate | advanced
+tags: [Python, AI]          # catalog filters, at most 4, each 1-20 characters
+topics: Chat models, prompts  # one line for the course card, at most 60 characters
 
 # chapter.yaml
 id: lc.chat-models          # lowercase words joined by . or -, globally unique
@@ -186,6 +190,7 @@ title: Chat models & messages
 exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 ```
 
+- Career paths (decided 2026-11-06, `screens/courses.png`): an optional `paths.yaml` at the root of a folder of courses lists paths in order: `paths: [{id (slug), title, description, goal, courses: [{course, note}]}]`. `goal` is an onboarding goal (`zero`, `backend`, `interviews`, `ai`), at most one path per goal; it makes the path "Your path" for learners who picked that goal. Every course must exist in the tree and be published; `note` (≤ 60 characters) is the line under the course on the path card. `cq build` upserts `career_paths` and unpublishes paths no longer listed. The catalog holds only real courses; "coming soon" stubs, course prerequisites and estimated hours from the design are not built.
 - Every folder must be listed, and every listed folder must exist with its manifest; both are errors otherwise. Hidden folders (`.x`) are ignored; folders inside an exercise (e.g. `wrong/`) belong to that exercise.
 - Exercise header: `id`, `type`, `version` (≥ 1), `title` and `xp` (≥ 0) are required; `difficulty` defaults to 1 (1–2 shows as Easy), `tags` to `[]`, `free` and `boss` to false. Only `code` exercises can be bosses.
 - `cq validate <dir>` and `cq build <dir>` print every problem as `path: reason` and exit 1. `<dir>` is a folder of courses or a single course folder.
@@ -414,7 +419,8 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | `sessions` | id (SHA-256 of the cookie value, never the value), user_id, expires_at, created_at |
 | `magic_links` | token_hash, email, next, expires_at, used_at (single use, 15 minutes) |
 | `oauth_identities` | provider, provider_user_id, user_id |
-| `courses` | id (slug), title, description, order_index, published |
+| `courses` | id (slug), title, description, order_index, published, icon, level, tags (text[]), topics |
+| `career_paths` | id, title, description, goal, order_index, steps (jsonb `[{course, note}]`), published |
 | `chapters` | id, course_id, title, order_index, published |
 | `exercises` | id (manifest id), chapter_id, type, version, title, xp, difficulty, free, boss, tags (text[]), order_index, public_view (jsonb), private_spec (jsonb, server-only), assets (jsonb: image name → `<sha256>.<ext>`), published |
 | `content_assets` | sha256 (key), mime, size (≤ 1 MB), bytes: lesson images, content-addressed, upserted by `cq build` and never deleted |
@@ -450,8 +456,9 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/cli/next` | The learner's next unpassed `project_cli` lesson (locks apply on `GET /exercises/{id}`) |
 | GET | `/me` | Current user (with `goal`, `onboarded`), stats (XP, level, streak, league tier, daily goal) and `features` (`tutor`); entitlement in Phase 5 |
 | PATCH | `/me` | Name, timezone, daily goal, title, onboarding goal, `onboarded: true`. XP, level, streak and league fields are rejected |
-| GET | `/home` | Continue card, today (goal, streak week), paths, league summary |
-| GET | `/courses` | Course list with progress |
+| GET | `/home` | Continue card, today (goal, streak week), path cards (started courses plus the next course on the learner's path, with next boss), league summary, activity |
+| GET | `/profile` | The signed-in learner's own profile: joined date, path, projects shipped, activity (lessons per local day for 53 weeks), projects (every boss: defeated, next, upcoming), skills, recent passes. Never public |
+| GET | `/courses` | Course list with progress, status, current chapter, catalog fields, where lessons run (`browser`, `cli`), free lesson count; and career paths |
 | GET | `/courses/{id}` | Chapters and exercises with lock state |
 | GET | `/exercises/{id}` | `public_view`, type, `assets` (image name → URL), saved draft, last result; 402 if locked |
 | GET | `/assets/{sha256}.{ext}` | A lesson image (public; `Cache-Control: immutable`, ETag, `nosniff`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`, `Cross-Origin-Resource-Policy: same-site`); 404 for an unknown hash or an extension that does not match the stored type |
@@ -614,7 +621,14 @@ Lesson screen layout (`/learn/:courseId/:exerciseId`; `screens/lesson-*.png`):
 5. Resizable panes (decision 2026-11-03): a drag handle between the problem and editor panes (problem width 240–720px, default 320, the editor keeps at least 360px) and one between the editor and the checks once a result is shown (checks height 96–720px, default 240, the editor keeps at least 160px). The handles are WAI-ARIA window splitters: pointer drag, arrow keys (Shift for larger steps), Home/End, and Enter or double-click to reset. Sizes are remembered per device (`cq-panes` in localStorage).
 6. Below 900px the panes stack in one column, the handles are hidden and the rail stays collapsed.
 
-Other screens and their references: Home (`home.png`), Course map (`course-map.png`), Pass celebration overlay (`pass-celebration.png`), Onboarding (`onboarding.png`), Landing (`landing.png`), Pricing (`pricing.png`), Boss fight (`boss-fight.png`), Power-ups (`power-ups-shop.png`), Profile medals (`profile-medals.png`). Only the lesson screen is drawn in both themes; build every screen from tokens so Light works everywhere.
+Other screens and their references: Home (`home.png`), Courses (`courses.png`), Course map (`course-map.png`), Pass celebration overlay (`pass-celebration.png`), Onboarding (`onboarding.png`), Landing (`landing.png`), Pricing (`pricing.png`), Boss fight (`boss-fight.png`), Power-ups (`power-ups-shop.png`), Profile overview (`profile-overview.png`), Profile medals (`profile-medals.png`). Only the lesson screen is drawn in both themes; build every screen from tokens so Light works everywhere.
+
+Screens updated 2026-11-06 (`home.png`, `courses.png`, `profile-overview.png`), as built:
+
+- **Activity heatmap** (`components/Heatmap`): one column per week (Monday first), one square per local day, colored by lessons passed (0, 1, 2, 3, 4+ via `surface-raised`, `accent-line` and `accent` at rising opacity), today outlined. Home shows 27 weeks with active days, lessons passed (both for the shown weeks) and the streak ("best yet" when it is the longest); the profile shows 53 weeks.
+- **Home path cards**: courses the learner has started ("8 chapters · 2 done · next boss: …"), then the first unstarted course on their path ("Up next", "After <previous course> · <topics>"). With no path and nothing started, the first course is up next.
+- **Courses** (`/courses`): career path cards (steps with status dots, % of lessons passed, Continue or Start path) and course cards (icon tile, status, level, where it runs, progress with the current chapter, topics, action). Status: In progress / Completed / Free to start (has free lessons) / Pro (no free lessons, action "Preview"). Search matches title, description, topics and tags; `/` focuses it. Topic filters come from course tags.
+- **Profile** (`/profile`, `/profile/medals`, `/profile/projects`, `/profile/activity`): header (path, joined month, worn title colored by its medal tier), Level, Total XP, Current streak, Projects shipped (defeated bosses). Overview: year heatmap, Projects completed (latest 3 defeated plus the next boss; "View code" opens the lesson, which shows the learner's last answer), Skills, Recent medals. Skills rate each chapter of the course the learner last worked in: Bronze once a lesson is passed, Silver when all are, Gold when all passed on the first try (reviews will replace this when they exist). "Edit profile" is an inline form for name and title. The design's @handle and "Share profile" are left out: profiles are private until public profiles are decided.
 
 ## Build phases
 

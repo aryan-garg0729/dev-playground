@@ -26,6 +26,28 @@ type courseManifest struct {
 	Order       int      `yaml:"order"`
 	Published   *bool    `yaml:"published"`
 	Chapters    []string `yaml:"chapters"` // chapter folder names, in order
+	Icon        string   `yaml:"icon"`     // 1-4 lowercase letters or digits shown in the course tile ("py")
+	Level       string   `yaml:"level"`    // beginner (default) | intermediate | advanced
+	Tags        []string `yaml:"tags"`     // catalog filters ("Python", "AI"), at most 4
+	Topics      string   `yaml:"topics"`   // one short line ("Chat models, prompts, LCEL")
+}
+
+// pathsManifest is the optional paths.yaml at the root of a folder of courses.
+type pathsManifest struct {
+	Paths []pathManifest `yaml:"paths"`
+}
+
+type pathManifest struct {
+	ID          string         `yaml:"id"`
+	Title       string         `yaml:"title"`
+	Description string         `yaml:"description"`
+	Goal        string         `yaml:"goal"` // onboarding goal that makes this "your path"
+	Courses     []pathStepYAML `yaml:"courses"`
+}
+
+type pathStepYAML struct {
+	Course string `yaml:"course"`
+	Note   string `yaml:"note"`
 }
 
 // chapterManifest is chapter.yaml.
@@ -52,6 +74,19 @@ type exerciseHeader struct {
 // Bundle is the compiled content tree.
 type Bundle struct {
 	Courses []Course
+	Paths   []Path
+}
+
+// Path is a compiled career path: courses in order.
+type Path struct {
+	ID, Title, Description, Goal string
+	Steps                        []PathStep
+}
+
+// PathStep is one course of a path, with a short note shown under it.
+type PathStep struct {
+	Course string `json:"course"`
+	Note   string `json:"note"`
 }
 
 // Course is a compiled course.
@@ -60,6 +95,8 @@ type Course struct {
 	Order                  int
 	Published              bool
 	Chapters               []Chapter
+	Icon, Level, Topics    string
+	Tags                   []string
 }
 
 // Chapter is a compiled chapter.

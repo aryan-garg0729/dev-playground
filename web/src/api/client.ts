@@ -3,6 +3,8 @@ import type { components, paths } from './schema';
 
 export type Schemas = components['schemas'];
 export type CourseSummary = Schemas['CourseSummary'];
+export type CareerPath = Schemas['CareerPath'];
+export type Profile = Schemas['Profile'];
 export type CourseDetail = Schemas['CourseDetail'];
 export type ExerciseDetail = Schemas['ExerciseDetail'];
 export type GradeResult = Schemas['SubmitResponse'];

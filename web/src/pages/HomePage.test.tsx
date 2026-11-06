@@ -1,9 +1,10 @@
 import { screen, within } from '@testing-library/react';
 import type { Home } from '../api/client';
-import { me } from '../test/fixtures';
+import { course, me } from '../test/fixtures';
 import { renderRoute, stubApi } from '../test/render';
 import { HomePage } from './HomePage';
 import { nudge, timeLeft } from './home/format';
+import { pathLine } from './home/PathCard';
 
 const week = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08'].map((date, i) => ({
   date, active: i < 2, today: i === 2,
@@ -19,7 +20,15 @@ const home: Home = {
     ] },
   },
   today: { goal: 3, done: 0, streak_days: 12, week },
-  paths: [{ id: 'foundations', title: 'Foundations', description: '', chapter_count: 2, exercise_count: 5, passed_count: 1, status: 'in_progress' }],
+  paths: [
+    { ...course(), next_boss: 'FizzBuzz', up_next: false, after: '' },
+    { ...course({ id: 'langchain-basics', title: 'LangChain Basics', status: 'not_started', passed_count: 0, current_chapter: null, topics: 'Chat models, prompts' }),
+      next_boss: null, up_next: true, after: 'Foundations' },
+  ],
+  activity: {
+    from: '2025-10-30', to: '2026-11-04', longest_streak: 12,
+    days: [{ date: '2026-11-02', lessons: 2 }, { date: '2026-11-03', lessons: 4 }, { date: '2025-11-01', lessons: 9 }],
+  },
   league: {
     joined: true, tier: 'gold', rank: 7, of: 30, weekly_xp: 340, ends_at: new Date(Date.now() + 2 * 86400000 + 6 * 3600000 + 60000).toISOString(),
     promote: 5, demote: 5, xp_to_promote: 85, zone: 'stay',
@@ -63,6 +72,20 @@ describe('HomePage', () => {
     expect(within(q).queryByRole('button', { name: 'Open' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start review' })).toBeDisabled();
 
+    const paths = screen.getByRole('region', { name: 'Your paths' });
+    expect(within(paths).getByRole('link', { name: /^Foundations/ })).toHaveTextContent('2 chapters · 0 done · next boss: FizzBuzz');
+    expect(within(paths).getByRole('link', { name: /LangChain/ })).toHaveTextContent('Up next');
+    expect(paths).toHaveTextContent('After Foundations · Chat models, prompts');
+
+    // Activity counts only the shown six months (the 2025 day is outside), and today is outlined.
+    const activity = screen.getByRole('region', { name: 'Activity' });
+    expect(within(activity).getByRole('img', { name: /6 lessons on 2 active days/ })).toBeInTheDocument();
+    expect(activity).toHaveTextContent('2active days');
+    expect(activity).toHaveTextContent('6lessons passed');
+    expect(activity).toHaveTextContent('12day streak, best yet');
+    expect(activity.querySelector('[data-date="2026-11-04"]')?.className).toContain('outline');
+    expect(activity.querySelector('[data-date="2026-11-08"]')).toBeNull();
+
     const league = screen.getByRole('region', { name: 'Gold league' });
     expect(league).toHaveTextContent('#7of 30 · 340 XP this week');
     expect(league).toHaveTextContent('Top 5 promote to Diamond · 85 XP to go');
@@ -71,6 +94,14 @@ describe('HomePage', () => {
 });
 
 describe('home format', () => {
+  it('describes a path card', () => {
+    const p = { ...course(), next_boss: 'FizzBuzz', up_next: false, after: '' };
+    expect(pathLine(p)).toBe('2 chapters · 0 done · next boss: FizzBuzz');
+    expect(pathLine({ ...p, next_boss: null, chapter_count: 1 })).toBe('1 chapter · 0 done');
+    expect(pathLine({ ...p, up_next: true, after: 'Foundations' })).toBe('After Foundations · Loops, dicts, SELECT');
+    expect(pathLine({ ...p, up_next: true })).toBe('Loops, dicts, SELECT');
+  });
+
   it('formats time left', () => {
     const now = Date.parse('2026-11-03T00:00:00Z');
     expect(timeLeft('2026-11-05T06:30:00Z', now)).toBe('2d 6h');

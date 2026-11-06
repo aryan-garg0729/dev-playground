@@ -99,6 +99,7 @@ func New(d Deps) http.Handler {
 			r.Get("/me", a.me)
 			r.Patch("/me", a.updateMe)
 			r.Get("/home", a.home)
+			r.Get("/profile", a.profile)
 			r.Get("/leagues/current", a.currentLeague)
 
 			r.Get("/auth/providers", a.providers)

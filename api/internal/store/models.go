@@ -49,6 +49,16 @@ type ByteEvent struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type CareerPath struct {
+	ID          string          `json:"id"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Goal        string          `json:"goal"`
+	OrderIndex  int32           `json:"order_index"`
+	Steps       json.RawMessage `json:"steps"`
+	Published   bool            `json:"published"`
+}
+
 type Chapter struct {
 	ID         string `json:"id"`
 	CourseID   string `json:"course_id"`
@@ -111,11 +121,15 @@ type Counter struct {
 }
 
 type Course struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	OrderIndex  int32  `json:"order_index"`
-	Published   bool   `json:"published"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	OrderIndex  int32    `json:"order_index"`
+	Published   bool     `json:"published"`
+	Icon        string   `json:"icon"`
+	Level       string   `json:"level"`
+	Tags        []string `json:"tags"`
+	Topics      string   `json:"topics"`
 }
 
 type DayPass struct {

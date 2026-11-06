@@ -28,6 +28,7 @@ func Build(ctx context.Context, pool *pgxpool.Pool, b *Bundle) (BuildStats, erro
 			if err := q.UpsertCourse(ctx, store.UpsertCourseParams{
 				ID: c.ID, Title: c.Title, Description: c.Description,
 				OrderIndex: int32(c.Order), Published: c.Published,
+				Icon: c.Icon, Level: c.Level, Tags: nonNil(c.Tags), Topics: c.Topics,
 			}); err != nil {
 				return fmt.Errorf("course %s: %w", c.ID, err)
 			}
@@ -62,6 +63,22 @@ func Build(ctx context.Context, pool *pgxpool.Pool, b *Bundle) (BuildStats, erro
 					exerciseIDs = append(exerciseIDs, ex.ID)
 				}
 			}
+		}
+		var pathIDs []string
+		for i, p := range b.Paths {
+			steps, err := json.Marshal(p.Steps)
+			if err != nil {
+				return fmt.Errorf("path %s: encode steps: %w", p.ID, err)
+			}
+			if err := q.UpsertCareerPath(ctx, store.UpsertCareerPathParams{
+				ID: p.ID, Title: p.Title, Description: p.Description, Goal: p.Goal, OrderIndex: int32(i), Steps: steps,
+			}); err != nil {
+				return fmt.Errorf("path %s: %w", p.ID, err)
+			}
+			pathIDs = append(pathIDs, p.ID)
+		}
+		if err := q.UnpublishCareerPathsNotIn(ctx, nonNil(pathIDs)); err != nil {
+			return fmt.Errorf("unpublish paths: %w", err)
 		}
 		if err := q.UnpublishExercisesNotIn(ctx, nonNil(exerciseIDs)); err != nil {
 			return fmt.Errorf("unpublish exercises: %w", err)

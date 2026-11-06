@@ -1,11 +1,34 @@
 -- name: UpsertCourse :exec
-INSERT INTO courses (id, title, description, order_index, published)
-VALUES (@id, @title, @description, @order_index, @published)
+INSERT INTO courses (id, title, description, order_index, published, icon, level, tags, topics)
+VALUES (@id, @title, @description, @order_index, @published, @icon, @level, @tags, @topics)
 ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     description = EXCLUDED.description,
     order_index = EXCLUDED.order_index,
-    published = EXCLUDED.published;
+    published = EXCLUDED.published,
+    icon = EXCLUDED.icon,
+    level = EXCLUDED.level,
+    tags = EXCLUDED.tags,
+    topics = EXCLUDED.topics;
+
+-- name: UpsertCareerPath :exec
+INSERT INTO career_paths (id, title, description, goal, order_index, steps, published)
+VALUES (@id, @title, @description, @goal, @order_index, @steps, true)
+ON CONFLICT (id) DO UPDATE SET
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    goal = EXCLUDED.goal,
+    order_index = EXCLUDED.order_index,
+    steps = EXCLUDED.steps,
+    published = true;
+
+-- name: UnpublishCareerPathsNotIn :exec
+UPDATE career_paths SET published = false WHERE NOT (id = ANY (@ids::text[]));
+
+-- name: ListCareerPaths :many
+SELECT id, title, description, goal, steps FROM career_paths
+WHERE published
+ORDER BY order_index, id;
 
 -- name: UpsertChapter :exec
 INSERT INTO chapters (id, course_id, title, order_index, published)
@@ -57,7 +80,7 @@ UPDATE chapters SET published = false WHERE NOT (id = ANY (@ids::text[]));
 UPDATE exercises SET published = false WHERE NOT (id = ANY (@ids::text[]));
 
 -- name: ListCourses :many
-SELECT c.id, c.title, c.description,
+SELECT c.id, c.title, c.description, c.icon, c.level, c.tags, c.topics,
     (SELECT count(*) FROM chapters ch
       WHERE ch.course_id = c.id AND ch.published)::int AS chapter_count,
     (SELECT count(*) FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
@@ -66,10 +89,35 @@ SELECT c.id, c.title, c.description,
        JOIN exercises e ON e.id = p.exercise_id
        JOIN chapters ch ON ch.id = e.chapter_id
       WHERE ch.course_id = c.id AND ch.published AND e.published
-        AND p.status = 'passed' AND p.user_id = sqlc.narg('user_id'))::int AS passed_count
+        AND p.status = 'passed' AND p.user_id = sqlc.narg('user_id'))::int AS passed_count,
+    -- Chapters with lessons, every one of them passed.
+    (SELECT count(*) FROM chapters ch
+      WHERE ch.course_id = c.id AND ch.published
+        AND EXISTS (SELECT 1 FROM exercises e WHERE e.chapter_id = ch.id AND e.published)
+        AND NOT EXISTS (
+            SELECT 1 FROM exercises e
+            LEFT JOIN progress p ON p.exercise_id = e.id AND p.user_id = sqlc.narg('user_id')
+            WHERE e.chapter_id = ch.id AND e.published AND COALESCE(p.status, '') <> 'passed'))::int AS chapters_done,
+    (SELECT count(*) FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
+      WHERE ch.course_id = c.id AND ch.published AND e.published AND e.free)::int AS free_count,
+    EXISTS (SELECT 1 FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
+      WHERE ch.course_id = c.id AND ch.published AND e.published AND e.type = 'project_cli')::bool AS has_cli,
+    EXISTS (SELECT 1 FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
+      WHERE ch.course_id = c.id AND ch.published AND e.published AND e.type <> 'project_cli')::bool AS has_browser
 FROM courses c
 WHERE c.published
 ORDER BY c.order_index, c.id;
+
+-- name: CourseCurrentChapters :many
+-- Per course, the chapter of the user's first unpassed lesson (1-based index).
+SELECT DISTINCT ON (ch.course_id) ch.course_id, ch.title,
+    (SELECT count(*) FROM chapters c2
+      WHERE c2.course_id = ch.course_id AND c2.published AND c2.order_index <= ch.order_index)::int AS chapter_index
+FROM exercises e
+JOIN chapters ch ON ch.id = e.chapter_id
+LEFT JOIN progress p ON p.exercise_id = e.id AND p.user_id = @user_id
+WHERE ch.published AND e.published AND COALESCE(p.status, '') <> 'passed'
+ORDER BY ch.course_id, ch.order_index, e.order_index;
 
 -- name: GetCourse :one
 SELECT id, title, description FROM courses WHERE id = @id AND published;

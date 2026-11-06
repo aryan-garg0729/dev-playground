@@ -102,6 +102,7 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 			t.Fatalf("load %s: %v", dir, err)
 		}
 		bundle.Courses = append(bundle.Courses, b.Courses...)
+		bundle.Paths = append(bundle.Paths, b.Paths...)
 	}
 	if _, err := content.Build(ctx, pool, bundle); err != nil {
 		t.Fatalf("build: %v", err)
@@ -257,7 +258,7 @@ func TestNoServerOnlyContentInAnyResponse(t *testing.T) {
 			}
 		}
 		if withUser {
-			for _, p := range []string{"/api/v1/me", "/api/v1/home", "/api/v1/shop", "/api/v1/quests", "/api/v1/medals", "/api/v1/leagues/current"} {
+			for _, p := range []string{"/api/v1/me", "/api/v1/home", "/api/v1/profile", "/api/v1/shop", "/api/v1/quests", "/api/v1/medals", "/api/v1/leagues/current"} {
 				bodies[p] = e.getJSON(p, nil)
 			}
 		}

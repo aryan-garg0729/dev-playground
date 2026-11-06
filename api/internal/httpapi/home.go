@@ -59,9 +59,13 @@ type todayCard struct {
 	Week       []dayCell `json:"week"` // Monday..Sunday of the local week
 }
 
+// pathCard is a course on Home: one the user has started, or the next one
+// on their career path (UpNext, with After naming the course before it).
 type pathCard struct {
 	courseSummary
-	Status string `json:"status"` // not_started | in_progress | done
+	NextBoss *string `json:"next_boss"` // title of the course's first undefeated boss
+	UpNext   bool    `json:"up_next"`
+	After    string  `json:"after"`
 }
 
 type homeResponse struct {
@@ -69,6 +73,7 @@ type homeResponse struct {
 	Today    todayCard     `json:"today"`
 	Paths    []pathCard    `json:"paths"`
 	League   leagueSummary `json:"league"`
+	Activity activityDTO   `json:"activity"`
 }
 
 func (a *api) home(w http.ResponseWriter, r *http.Request) {
@@ -88,26 +93,18 @@ func (a *api) home(w http.ResponseWriter, r *http.Request) {
 		a.internal(w, r, err)
 		return
 	}
-	courses, err := store.New(a.Pool).ListCourses(ctx, u)
+	courses, err := a.courseSummaries(ctx, u)
 	if err != nil {
 		a.internal(w, r, err)
 		return
 	}
-	for _, c := range courses {
-		p := pathCard{courseSummary: courseSummary{
-			ID: c.ID, Title: c.Title, Description: c.Description,
-			ChapterCount: int(c.ChapterCount), ExerciseCount: int(c.ExerciseCount), PassedCount: int(c.PassedCount),
-		}, Status: "not_started"}
-		switch {
-		case c.ExerciseCount > 0 && c.PassedCount >= c.ExerciseCount:
-			p.Status = "done"
-		case c.PassedCount > 0:
-			p.Status = "in_progress"
-		}
-		out.Paths = append(out.Paths, p)
+	if out.Paths, err = a.homePaths(ctx, u, courses); err != nil {
+		a.internal(w, r, err)
+		return
 	}
-	if out.Paths == nil {
-		out.Paths = []pathCard{}
+	if out.Activity, err = a.activity(ctx, u.UUID, today, stats.LongestStreak); err != nil {
+		a.internal(w, r, err)
+		return
 	}
 	if out.Continue, err = a.continueCard(ctx, u, courses); err != nil {
 		a.internal(w, r, err)
@@ -118,6 +115,76 @@ func (a *api) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// homePaths is the started courses (in catalog order) plus the next course
+// on the user's career path. With nothing started and no path, the first
+// course is up next.
+func (a *api) homePaths(ctx context.Context, u uuid.NullUUID, courses []courseSummary) ([]pathCard, error) {
+	goal, err := a.userGoal(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	paths, err := a.careerPaths(ctx, goal, courses)
+	if err != nil {
+		return nil, err
+	}
+	bosses, err := store.New(a.Pool).ListBosses(ctx, u.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("bosses: %w", err)
+	}
+	nextBoss := map[string]*string{}
+	for _, b := range bosses {
+		if _, seen := nextBoss[b.CourseID]; !seen && b.Status != "passed" {
+			nextBoss[b.CourseID] = &b.Title
+		}
+	}
+	out := []pathCard{}
+	for _, c := range courses {
+		if c.Status != "not_started" {
+			out = append(out, pathCard{courseSummary: c, NextBoss: nextBoss[c.ID]})
+		}
+	}
+	byID := map[string]courseSummary{}
+	for _, c := range courses {
+		byID[c.ID] = c
+	}
+	path := pickPath(paths)
+	if path != nil {
+		for i, st := range path.Steps {
+			if st.Status != "not_started" {
+				continue
+			}
+			card := pathCard{courseSummary: byID[st.CourseID], NextBoss: nextBoss[st.CourseID], UpNext: true}
+			if i > 0 {
+				card.After = path.Steps[i-1].Title
+			}
+			out = append(out, card)
+			break
+		}
+	} else if len(out) == 0 && len(courses) > 0 {
+		out = append(out, pathCard{courseSummary: courses[0], NextBoss: nextBoss[courses[0].ID], UpNext: true})
+	}
+	return out, nil
+}
+
+// pickPath is the user's own path, else the first one they have started,
+// else the first path.
+func pickPath(paths []careerPathDTO) *careerPathDTO {
+	for i := range paths {
+		if paths[i].Yours {
+			return &paths[i]
+		}
+	}
+	for i := range paths {
+		if paths[i].PassedCount > 0 {
+			return &paths[i]
+		}
+	}
+	if len(paths) > 0 {
+		return &paths[0]
+	}
+	return nil
 }
 
 func (a *api) week(ctx context.Context, user uuid.UUID, today time.Time) ([]dayCell, error) {
@@ -141,7 +208,7 @@ func (a *api) week(ctx context.Context, user uuid.UUID, today time.Time) ([]dayC
 // continueCard picks the lesson to resume: the latest submitted one if not
 // passed yet, else the next unpassed lesson in that course; with no history,
 // the first lesson of the first course.
-func (a *api) continueCard(ctx context.Context, u uuid.NullUUID, courses []store.ListCoursesRow) (*continueCard, error) {
+func (a *api) continueCard(ctx context.Context, u uuid.NullUUID, courses []courseSummary) (*continueCard, error) {
 	q := store.New(a.Pool)
 	last, err := q.LatestActivity(ctx, u.UUID)
 	hasLast := err == nil

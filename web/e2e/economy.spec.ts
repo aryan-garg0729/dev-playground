@@ -70,10 +70,15 @@ test('boss fight, Peek and medals', async ({ page }) => {
   expect(peek.peek.input).toMatch(/^sum_list\(/);
   expect(JSON.stringify(peek)).not.toMatch(/expected|== |assert/);
 
-  // The boss earned Boss Slayer: on the profile, wearable as a title.
+  // The boss earned Boss Slayer: on the profile, wearable as a title, and the boss is a shipped project.
   await page.goto('/profile');
-  await expect(page.getByRole('listitem', { name: 'Boss Slayer, bronze' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Projects completed' }).getByRole('link', { name: 'View code' })).toBeVisible();
+  await page.screenshot({ path: 'e2e/screenshots/profile-overview-dark.png', fullPage: true });
+  await page.getByRole('button', { name: 'Edit profile' }).click();
   await page.getByRole('combobox', { name: 'Title' }).selectOption('Boss Slayer I');
+  await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Boss Slayer I');
+  await page.getByRole('link', { name: 'Medals' }).click();
+  await expect(page.getByRole('listitem', { name: 'Boss Slayer, bronze' })).toBeVisible();
   await page.screenshot({ path: 'e2e/screenshots/profile-medals-dark.png', fullPage: true });
 });

@@ -53,6 +53,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/leagues/current": {
         parameters: {
             query?: never;
@@ -845,7 +861,85 @@ export interface components {
                 zone: components["schemas"]["LeagueZone"];
             }[];
         };
+        /** @description Lessons passed per local day over the last 53 weeks; only days with a pass are listed */
+        Activity: {
+            /** Format: date */
+            from: string;
+            /**
+             * Format: date
+             * @description The user's local today
+             */
+            to: string;
+            longest_streak: number;
+            days: {
+                /** Format: date */
+                date: string;
+                lessons: number;
+            }[];
+        };
+        CareerPath: {
+            id: string;
+            title: string;
+            description: string;
+            /** @description The path matches the user's onboarding goal */
+            yours: boolean;
+            exercise_count: number;
+            passed_count: number;
+            steps: {
+                course_id: string;
+                title: string;
+                note: string;
+                status: components["schemas"]["CourseStatus"];
+            }[];
+        };
+        /** @enum {string} */
+        CourseStatus: "not_started" | "in_progress" | "done";
+        /** @description A chapter boss */
+        Project: {
+            exercise_id: string;
+            course_id: string;
+            course_title: string;
+            title: string;
+            chapter_index: number;
+            chapter_title: string;
+            /** @enum {string} */
+            status: "defeated" | "next" | "upcoming";
+            first_try: boolean;
+            defeated_at: null | string;
+        };
+        Profile: {
+            /** Format: date-time */
+            joined_at: string;
+            path: null | {
+                id: string;
+                title: string;
+            };
+            projects_shipped: number;
+            activity: components["schemas"]["Activity"];
+            projects: components["schemas"]["Project"][];
+            skills: null | {
+                course_id: string;
+                course_title: string;
+                chapters: {
+                    title: string;
+                    /** @enum {string} */
+                    tier: "" | "bronze" | "silver" | "gold";
+                    passed: number;
+                    lessons: number;
+                }[];
+            };
+            recent: {
+                /** Format: date */
+                date: string;
+                exercise_id: string;
+                title: string;
+                boss: boolean;
+                course_id: string;
+                course_title: string;
+            }[];
+        };
         Home: {
+            activity: components["schemas"]["Activity"];
             continue: null | components["schemas"]["ContinueCard"];
             today: {
                 goal: number;
@@ -854,8 +948,12 @@ export interface components {
                 week: components["schemas"]["DayCell"][];
             };
             paths: (components["schemas"]["CourseSummary"] & {
-                /** @enum {string} */
-                status: "not_started" | "in_progress" | "done";
+                /** @description Title of the course's first undefeated boss */
+                next_boss: string | null;
+                /** @description The next course on the user's career path */
+                up_next: boolean;
+                /** @description The course before it on the path ("" for the first) */
+                after: string;
             })[];
             league: components["schemas"]["LeagueSummary"];
         };
@@ -863,9 +961,26 @@ export interface components {
             id: string;
             title: string;
             description: string;
+            /** @description 1-4 lowercase characters for the course tile */
+            icon: string;
+            /** @enum {string} */
+            level: "beginner" | "intermediate" | "advanced";
+            /** @description Catalog filters */
+            tags: string[];
+            topics: string;
+            runs: ("browser" | "cli")[];
             chapter_count: number;
             exercise_count: number;
             passed_count: number;
+            chapters_done: number;
+            /** @description Free lessons; 0 means the course needs Pro */
+            free_count: number;
+            status: components["schemas"]["CourseStatus"];
+            /** @description Chapter of the first unpassed lesson, while in progress */
+            current_chapter: null | {
+                index: number;
+                title: string;
+            };
         };
         /** @enum {string} */
         ProgressStatus: "not_started" | "started" | "passed";
@@ -1124,6 +1239,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Home"];
+                };
+            };
+            401: components["responses"]["Error"];
+        };
+    };
+    getProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The signed-in user's own profile (activity, projects, skills); never public */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
                 };
             };
             401: components["responses"]["Error"];
@@ -1633,6 +1769,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         courses: components["schemas"]["CourseSummary"][];
+                        paths: components["schemas"]["CareerPath"][];
                     };
                 };
             };

@@ -6,3 +6,7 @@ description: >
 order: 3
 chapters:
   - 01-first-steps
+icon: cli
+level: beginner
+tags: [CLI, HTTP]
+topics: Shell commands and HTTP requests

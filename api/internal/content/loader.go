@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -53,6 +54,10 @@ func Load(root string) (*Bundle, error) {
 				b.Courses = append(b.Courses, c)
 			}
 		}
+	}
+
+	if fileExists(filepath.Join(root, "paths.yaml")) && !fileExists(filepath.Join(root, "course.yaml")) {
+		b.Paths = l.paths(filepath.Join(root, "paths.yaml"), b.Courses)
 	}
 
 	if len(l.problems) > 0 {
@@ -106,6 +111,7 @@ func (l *loader) course(dir string) (Course, bool) {
 		ok = false
 	}
 	c := Course{ID: m.ID, Title: m.Title, Description: strings.TrimSpace(m.Description), Order: m.Order, Published: m.Published == nil || *m.Published}
+	ok = l.catalog(path, m, &c) && ok
 
 	folders, listOK := l.checkListing(dir, path, "chapters", m.Chapters, "chapter.yaml")
 	ok = ok && listOK
@@ -309,4 +315,128 @@ func subdirs(dir string) ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+var (
+	iconRe     = regexp.MustCompile(`^[a-z0-9]{1,4}$`)
+	courseTags = 4
+	maxTopics  = 60
+	levels     = map[string]bool{"beginner": true, "intermediate": true, "advanced": true}
+	// pathGoals are the onboarding goals a path can belong to (users.goal).
+	pathGoals = map[string]bool{"zero": true, "backend": true, "interviews": true, "ai": true}
+)
+
+// catalog validates the course's catalog fields (icon, level, tags, topics)
+// and copies them into c, filling defaults.
+func (l *loader) catalog(path string, m courseManifest, c *Course) bool {
+	ok := true
+	c.Icon = m.Icon
+	if c.Icon == "" {
+		c.Icon = strings.ReplaceAll(m.ID, "-", "")
+		c.Icon = c.Icon[:min(2, len(c.Icon))]
+	} else if !iconRe.MatchString(m.Icon) {
+		l.problem(path, "icon %q must be 1-4 lowercase letters or digits", m.Icon)
+		ok = false
+	}
+	c.Level = m.Level
+	if c.Level == "" {
+		c.Level = "beginner"
+	} else if !levels[m.Level] {
+		l.problem(path, "level %q must be beginner, intermediate or advanced", m.Level)
+		ok = false
+	}
+	if len(m.Tags) > courseTags {
+		l.problem(path, "tags: at most %d", courseTags)
+		ok = false
+	}
+	c.Tags = []string{}
+	seen := map[string]bool{}
+	for _, t := range m.Tags {
+		t = strings.TrimSpace(t)
+		switch {
+		case t == "" || len(t) > 20:
+			l.problem(path, "tags: %q must be 1-20 characters", t)
+			ok = false
+		case seen[strings.ToLower(t)]:
+			l.problem(path, "tags: %q is listed twice", t)
+			ok = false
+		default:
+			seen[strings.ToLower(t)] = true
+			c.Tags = append(c.Tags, t)
+		}
+	}
+	c.Topics = strings.TrimSpace(m.Topics)
+	if len(c.Topics) > maxTopics {
+		l.problem(path, "topics: at most %d characters", maxTopics)
+		ok = false
+	}
+	return ok
+}
+
+// paths reads paths.yaml: career paths made of the courses in this tree.
+func (l *loader) paths(path string, courses []Course) []Path {
+	var m pathsManifest
+	if err := readStrict(path, &m); err != nil {
+		l.problem(path, "%v", err)
+		return nil
+	}
+	known := map[string]bool{}
+	for _, c := range courses {
+		known[c.ID] = c.Published
+	}
+	var out []Path
+	goals := map[string]string{}
+	for i, pm := range m.Paths {
+		where := fmt.Sprintf("%s: paths[%d]", path, i)
+		ok := true
+		if !courseIDRe.MatchString(pm.ID) {
+			l.problem(where, "id %q must be a lowercase slug like backend-developer", pm.ID)
+			ok = false
+		} else if !l.claim("path", pm.ID, where) {
+			ok = false
+		}
+		if strings.TrimSpace(pm.Title) == "" {
+			l.problem(where, "title is required")
+			ok = false
+		}
+		if pm.Goal != "" {
+			if !pathGoals[pm.Goal] {
+				l.problem(where, "goal %q must be one of zero, backend, interviews, ai", pm.Goal)
+				ok = false
+			} else if prev, dup := goals[pm.Goal]; dup {
+				l.problem(where, "goal %q already belongs to path %q", pm.Goal, prev)
+				ok = false
+			}
+			goals[pm.Goal] = pm.ID
+		}
+		if len(pm.Courses) == 0 {
+			l.problem(where, "courses: list at least one course")
+			ok = false
+		}
+		p := Path{ID: pm.ID, Title: pm.Title, Description: strings.TrimSpace(pm.Description), Goal: pm.Goal}
+		inPath := map[string]bool{}
+		for _, st := range pm.Courses {
+			published, exists := known[st.Course]
+			switch {
+			case !exists:
+				l.problem(where, "courses: %q is not a course in this folder", st.Course)
+				ok = false
+			case !published:
+				l.problem(where, "courses: %q is not published", st.Course)
+				ok = false
+			case inPath[st.Course]:
+				l.problem(where, "courses: %q is listed twice", st.Course)
+				ok = false
+			case len(strings.TrimSpace(st.Note)) > maxTopics:
+				l.problem(where, "courses: note for %q is over %d characters", st.Course, maxTopics)
+				ok = false
+			}
+			inPath[st.Course] = true
+			p.Steps = append(p.Steps, PathStep{Course: st.Course, Note: strings.TrimSpace(st.Note)})
+		}
+		if ok {
+			out = append(out, p)
+		}
+	}
+	return out
 }
