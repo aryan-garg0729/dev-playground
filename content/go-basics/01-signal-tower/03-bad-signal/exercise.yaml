@@ -1,0 +1,31 @@
+id: go.tower.bad-signal
+type: code
+version: 1
+title: Bad signal
+xp: 20
+difficulty: 2
+tags: [exit codes, switch]
+free: true
+spec:
+  language: go
+  runner: wasm
+  prompt: prompt.md
+  entry: main.go
+  starter: starter.go
+  solution: solution.go
+  examples:
+    - { input: "green", output: "OK green" }
+    - { input: "purple", output: "(stderr) unknown signal: purple, exit code 2" }
+  hints:
+    - A switch can list several values in one case.
+    - What does os.Exit do that return doesn't?
+  checks:
+    - kind: io_cases
+      name: Known signal
+      cases:
+        - { stdin: "green\n", stdout: "OK green\n" }
+        - { stdin: "red\n", stdout: "OK red\n" }
+        - { stdin: "amber\n", stdout: "OK amber\n", visible: false, name: The third color }
+    - kind: exit_code
+      name: Blank signal exits with 2
+      expected: 2

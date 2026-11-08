@@ -1,0 +1,7 @@
+id: go.tower
+title: Signal tower
+exercises:
+  - 01-hello-harbor
+  - 02-ship-count
+  - 03-bad-signal
+  - 04-tonnage-board-boss

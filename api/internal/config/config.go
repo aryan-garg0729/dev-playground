@@ -40,6 +40,11 @@ type Worker struct {
 	RedisURL    string
 	Concurrency int    // WORKER_CONCURRENCY, default 2
 	DockerBin   string // DOCKER_BIN, default "docker"
+	// Runner is WORKER_RUNNER: "docker" (default; the jobs queue) or "wasm"
+	// (the jobs:wasm queue, run in-process; needs no Docker socket).
+	Runner       string
+	WasmDir      string // WASM_DIR: the modules from runners/wasm
+	WasmCacheDir string // WASM_CACHE_DIR: compiled-module cache, optional
 }
 
 // LoadWorker reads the worker's environment.
@@ -50,6 +55,12 @@ func LoadWorker() (Worker, error) {
 		return Worker{}, fmt.Errorf("WORKER_CONCURRENCY must be 1-64, got %q", os.Getenv("WORKER_CONCURRENCY"))
 	}
 	w.Concurrency = n
+	w.Runner = getenv("WORKER_RUNNER", "docker")
+	w.WasmDir = getenv("WASM_DIR", "../runners/wasm/dist")
+	w.WasmCacheDir = os.Getenv("WASM_CACHE_DIR")
+	if w.Runner != "docker" && w.Runner != "wasm" {
+		return Worker{}, fmt.Errorf("WORKER_RUNNER must be docker or wasm, got %q", w.Runner)
+	}
 	return w, nil
 }
 

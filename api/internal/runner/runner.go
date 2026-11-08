@@ -1,13 +1,16 @@
 // Package runner executes untrusted code for server-side grading.
 //
-// The Docker runner is the only implementation that runs code; the queue runner
-// forwards jobs to cmd/worker over Redis. Exercise types get the runner from the
+// Two implementations run code: Docker (one hardened container per job) and
+// wasm (a WASI module per job, package runner/wasm). The queue runner forwards
+// jobs to cmd/worker over Redis, on one queue per kind. Exercise types get the runner from the
 // context (NewContext / FromContext), so plugins stay free of global state.
 package runner
 
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 // Limits bound one job. Zero values take the defaults below.
@@ -62,7 +65,39 @@ var Images = map[string]string{
 // ErrUnavailable means no runner could take the job (no worker, queue full, ...).
 var ErrUnavailable = errors.New("runner unavailable")
 
-func (l Limits) withDefaults() Limits {
+// WasmPrefix starts the image name of a wasm job: "wasm:<language>".
+const WasmPrefix = "wasm:"
+
+// WasmLanguages are the lesson languages the wasm runner grades (package
+// runner/wasm maps each to its module; a test keeps the two in step).
+var WasmLanguages = []string{"go", "js"}
+
+// IsWasm reports whether image names a wasm language rather than a Docker image.
+func IsWasm(image string) bool { return strings.HasPrefix(image, WasmPrefix) }
+
+// WasmImage is the job image for a wasm language.
+func WasmImage(language string) string { return WasmPrefix + language }
+
+// Route sends wasm jobs to Wasm and every other job to Docker. A nil side is
+// unavailable.
+type Route struct {
+	Wasm, Docker Runner
+}
+
+// Run implements Runner.
+func (r Route) Run(ctx context.Context, job Job) (Output, error) {
+	next := r.Docker
+	if IsWasm(job.Image) {
+		next = r.Wasm
+	}
+	if next == nil {
+		return Output{}, fmt.Errorf("%w: no runner for %s", ErrUnavailable, job.Image)
+	}
+	return next.Run(ctx, job)
+}
+
+// WithDefaults fills zero limits with the defaults and applies the caps.
+func (l Limits) WithDefaults() Limits {
 	if l.TimeoutMs <= 0 {
 		l.TimeoutMs = DefaultTimeoutMs
 	}

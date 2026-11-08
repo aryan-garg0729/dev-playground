@@ -12,7 +12,7 @@ Contents:
 4. [Create a chapter](#4-create-a-chapter)
 5. [The exercise header (every lesson type)](#5-the-exercise-header-every-lesson-type)
 6. [Lesson type: `mcq` (quiz)](#6-lesson-type-mcq-quiz)
-7. [Lesson type: `code` (Python)](#7-lesson-type-code-python)
+7. [Lesson type: `code` (Python, Go, JavaScript)](#7-lesson-type-code-python-go-javascript)
 8. [Lesson type: `sql`](#8-lesson-type-sql)
 9. [Lesson type: `project_cli` (on the learner's machine)](#9-lesson-type-project_cli-on-the-learners-machine)
 10. [Boss fights](#10-boss-fights)
@@ -62,8 +62,8 @@ Run these from the repository root.
 | --- | --- | --- |
 | `make validate` | Checks every manifest, file and image in `content/`. Prints each problem as `path: reason`. | Go only |
 | `cd api && go run ./cmd/cq validate ../content/my-course` | Same, for one course | Go only |
-| `make content-test` | Content CI: grades every reference solution (must pass) and every `wrong/` answer (must fail) on the real grader | Docker (builds the `codequest/python:3.12` image) |
-| `cd api && go run ./cmd/cq test ../content/my-course` | Same, for one course (run `make runner-image` once first) | Docker |
+| `make content-test` | Content CI: grades every reference solution (must pass) and every `wrong/` answer (must fail) on the real grader | Docker (builds the `codequest/python:3.12` image) and Go (builds the Go/JS modules) |
+| `cd api && go run ./cmd/cq test ../content/my-course` | Same, for one course (run `make runner-image` once first, and `make wasm-modules` for Go or JS lessons) | Docker; Go/JS lessons need only Go |
 | `make content` | Compiles `content/` into Postgres so the running app shows your changes | Docker Compose database |
 | `make e2e` | Includes a browser check that each solution passes its visible tests on **Run** | Docker |
 
@@ -167,7 +167,7 @@ spec:
 
 Good quiz options are plausible mistakes. "It raises an error" is a useful wrong answer when learners really do expect one.
 
-## 7. Lesson type: `code` (Python)
+## 7. Lesson type: `code` (Python, Go, JavaScript)
 
 ```
 03-double-it/
@@ -258,6 +258,7 @@ def test_three():
 | `unit_tests` | `file` | One row per test function. `visible` defaults to false. `weight` applies per row. |
 | `stdout_equals` | `expected` | Runs the entry as `__main__` and compares the output. Trailing whitespace and blank lines are ignored. Visible by default, named "Program output". |
 | `stdout_regex` | `pattern` (Go RE2, unanchored), `message` | Visible by default. |
+| `exit_code` | `expected` (0-125) | Runs the entry as a program; passes when it exits with that code. Visible by default, named "Exit code". |
 | `forbidden_calls` | `names`, `message` | Static scan for `f(...)` and `x.f(...)`. A teaching aid, not a sandbox. |
 
 Every check also accepts `name` (except `unit_tests`), `visible` and `weight` (0 or more; the score is the weighted share of passing rows).
@@ -269,6 +270,56 @@ Add 2 or 3 realistic mistakes, one file each, written as a learner would write t
 ### Starter code
 
 The starter should run without errors and fail the tests: a function stub that returns an empty value, not `pass` or `...` that crashes the tests. A "fix the bug" lesson is just a `code` lesson whose starter has the bug in it.
+
+### Go and JavaScript lessons
+
+A `code` lesson can also be written in Go or JavaScript. These run on the **wasm runner**: an interpreter compiled to WebAssembly, run on the grading server in about 20-50 ms. Run and Submit both go to the server. See `content/go-basics` and `content/js-basics`.
+
+```
+02-ship-count/
+  exercise.yaml
+  prompt.md
+  starter.go          # or starter.js
+  solution.go         # server-only
+  wrong/
+    always_plural.go  # same extension as the entry
+```
+
+```yaml
+spec:
+  language: go               # go | js
+  runner: wasm
+  run: server                # the default; or off. There is no browser runner for these yet.
+  prompt: prompt.md
+  entry: main.go             # main.js for JavaScript
+  starter: starter.go
+  solution: solution.go
+  checks:
+    - kind: io_cases
+      name: Count            # rows "Count 1", "Count 2", ...
+      cases:
+        - { stdin: "3\n", stdout: "3 ships docked\n" }
+        - { stdin: "1\n", stdout: "1 ship docked\n" }
+        - { stdin: "0\n", stdout: "0 ships docked\n", visible: false, name: Empty harbor }
+    - kind: exit_code         # optional: the program run with empty stdin exits with this code
+      expected: 0
+```
+
+These lessons are **programs, not functions**. The learner reads stdin and prints to stdout, and you grade the output. There are no test files: `unit_tests` and `forbidden_calls` are Python-only.
+
+| `kind` | Use it for |
+| --- | --- |
+| `io_cases` | The main check. Each case is a stdin and the exact stdout expected (compared like `stdout_equals`) and becomes one row. 1-50 cases, at most one `io_cases` check per lesson. Hidden cases (`visible: false`) are your hidden tests: name them in words, and their input never leaves the server. |
+| `stdout_equals` / `stdout_regex` | Programs that read no input. |
+| `exit_code` | Error handling: "exit with 2 on a bad signal". The program runs with **empty** stdin, so pick an expected code that matches that. |
+
+What the learner's code can use:
+
+- **Go** runs on an interpreter (yaegi). `package main` with `func main()`, and these standard packages only: `bufio bytes cmp container/heap container/list errors fmt iter maps math math/bits math/rand os regexp slices sort strconv strings sync time unicode unicode/utf8`. Anything else, including `net` and `encoding/json`, fails with "package … is not available in lessons". The interpreter doesn't reject unused variables or imports the way `go build` does, so don't write a lesson about that error. Read input with `fmt.Scan` or `bufio.Scanner`.
+- **JavaScript** is ES2015+ (goja). Node-like globals: `console.log/error`, `process.exit(code)`, `process.stdout.write`, and `require("fs").readFileSync(0, "utf8")` for all of stdin. No other modules, no npm, no `fetch`, no timers. `console.log` formats arrays and objects like Node does (`[ 1, 'a' ]`, `{ a: 1 }`) for common values; print strings yourself when the exact format matters.
+- No files except the learner's own, no network, no environment variables. Limits work as for Python (`limits.timeout_ms`, `limits.memory_mb`). All runs of one submission share 2 × `timeout_ms`.
+
+In prompts, show the input and output side by side, and say what to print for empty input. Hidden cases should cover what visible ones don't: empty input, zero, one, ties, very large values.
 
 ## 8. Lesson type: `sql`
 

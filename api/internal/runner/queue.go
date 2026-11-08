@@ -14,9 +14,10 @@ import (
 )
 
 // Queue is a Runner that hands jobs to cmd/worker through Redis and waits for
-// the output. The worker needs Docker but no database access.
+// the output. Workers have no database access.
 //
-//	<prefix>jobs           list; the API LPUSHes, workers BRPOP
+//	<prefix>jobs           list of Docker jobs; the API LPUSHes, Docker workers BRPOP
+//	<prefix>jobs:wasm      list of wasm jobs, for wasm workers (no Docker socket)
 //	<prefix>result:<id>    list; the worker LPUSHes one reply, the API BLPOPs it
 type Queue struct {
 	Redis  *redis.Client
@@ -39,6 +40,14 @@ type reply struct {
 
 const replyTTL = 2 * time.Minute
 
+// JobsKey is the queue (without prefix) that jobs for image go to.
+func JobsKey(image string) string {
+	if IsWasm(image) {
+		return "jobs:wasm"
+	}
+	return "jobs"
+}
+
 func prefix(p string) string {
 	if p == "" {
 		return "cq:"
@@ -58,11 +67,11 @@ func (q *Queue) Run(ctx context.Context, job Job) (Output, error) {
 	if err != nil {
 		return Output{}, fmt.Errorf("queue: encode job: %w", err)
 	}
-	if err := q.Redis.LPush(ctx, p+"jobs", b).Err(); err != nil {
+	if err := q.Redis.LPush(ctx, p+JobsKey(job.Image), b).Err(); err != nil {
 		return Output{}, fmt.Errorf("%w: enqueue: %w", ErrUnavailable, err)
 	}
 	// The reply can take up to the queue wait plus the run's own hard limit.
-	l := job.Limits.withDefaults()
+	l := job.Limits.WithDefaults()
 	timeout := wait + 2*time.Duration(l.TimeoutMs)*time.Millisecond + hardGrace
 	if dl, ok := ctx.Deadline(); ok {
 		timeout = min(timeout, time.Until(dl))
@@ -84,10 +93,11 @@ func (q *Queue) Run(ctx context.Context, job Job) (Output, error) {
 	return rep.Output, nil
 }
 
-// Worker pulls jobs from the queue and runs them with Runner.
+// Worker pulls jobs from one queue and runs them with Runner.
 type Worker struct {
 	Redis       *redis.Client
 	Prefix      string
+	Queue       string // "jobs" (default, Docker) or "jobs:wasm"
 	Runner      Runner
 	Concurrency int // default 2
 	Log         *slog.Logger
@@ -113,8 +123,12 @@ func (w *Worker) Serve(ctx context.Context) error {
 
 func (w *Worker) loop(ctx context.Context, log *slog.Logger) {
 	p := prefix(w.Prefix)
+	queue := w.Queue
+	if queue == "" {
+		queue = "jobs"
+	}
 	for ctx.Err() == nil {
-		res, err := w.Redis.BRPop(ctx, time.Second, p+"jobs").Result()
+		res, err := w.Redis.BRPop(ctx, time.Second, p+queue).Result()
 		if errors.Is(err, redis.Nil) || ctx.Err() != nil {
 			continue
 		}
@@ -135,8 +149,14 @@ func (w *Worker) loop(ctx context.Context, log *slog.Logger) {
 			log.Warn("worker: skipping expired job", "id", qj.ID)
 			continue
 		}
-		// Finish a started job even during shutdown; the API is waiting for it.
-		out, err := w.Runner.Run(context.WithoutCancel(ctx), qj.Job)
+		var out Output
+		if JobsKey(qj.Job.Image) != queue {
+			// Never run a job meant for another kind of worker.
+			err = fmt.Errorf("job for %s on queue %s", qj.Job.Image, queue)
+		} else {
+			// Finish a started job even during shutdown; the API is waiting for it.
+			out, err = w.Runner.Run(context.WithoutCancel(ctx), qj.Job)
+		}
 		rep := reply{Output: out}
 		if err != nil {
 			rep.Error = err.Error()

@@ -4,6 +4,7 @@
 package code
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,8 +29,44 @@ const (
 	stdoutLimit    = 16 << 10 // Result.Stdout
 )
 
-// fileNameRe is a Python module file directly in the exercise folder.
-var fileNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*\.py$`)
+// language is what a lesson language allows.
+type language struct {
+	ext     string   // entry and wrong/ file extension
+	runners []string // manifest runner names
+	name    string   // for error messages
+}
+
+// languages lists the supported lesson languages. Python runs on the Python
+// harness (Docker, Pyodide in the browser); the others on the wasm runner.
+var languages = map[string]language{
+	"python": {ext: ".py", runners: []string{"docker-python", "pyodide"}, name: "Python"},
+	"go":     {ext: ".go", runners: []string{runnerWasm}, name: "Go"},
+	"js":     {ext: ".js", runners: []string{runnerWasm}, name: "JavaScript"},
+}
+
+const runnerWasm = "wasm"
+
+func init() {
+	for _, l := range runner.WasmLanguages {
+		if _, ok := languages[l]; !ok {
+			panic("code: wasm language " + l + " is not in languages")
+		}
+	}
+}
+
+// fileNameRe is a module file name (any extension) directly in the exercise folder.
+var fileNameRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*\.[a-z]+$`)
+
+// pythonOnly are check kinds that need the Python harness.
+var pythonOnly = map[string]bool{"unit_tests": true, "forbidden_calls": true}
+
+// image is the runner.Job image for this spec.
+func (s Spec) image() string {
+	if s.Runner == runnerWasm {
+		return runner.WasmImage(s.Language)
+	}
+	return runner.Images[s.Runner]
+}
 
 // Example is one "Example n:" block under the problem statement.
 type Example struct {
@@ -118,10 +155,21 @@ type CheckCounts struct {
 var testFuncRe = regexp.MustCompile(`(?m)^(?:async\s+)?def\s+test_\w*\s*\(`)
 
 // checkCounts counts result rows per check: one per test function for
-// unit_tests, one for every other kind.
+// unit_tests, one per case for io_cases, one for every other kind.
 func (s Spec) checkCounts() CheckCounts {
 	var n CheckCounts
 	for _, c := range s.Checks {
+		if c.Kind == "io_cases" {
+			_, visible, _ := checks.IOCaseStdins(c.Config)
+			for _, v := range visible {
+				if v {
+					n.Visible++
+				} else {
+					n.Hidden++
+				}
+			}
+			continue
+		}
 		if c.Kind != "unit_tests" {
 			var cfg struct {
 				Visible *bool `json:"visible"`
@@ -212,7 +260,11 @@ func (codeType) ParseSpec(raw yaml.Node, dir fs.FS) (exercise.Spec, error) {
 			s.Tests = append(s.Tests, TestFile{File: cfg.File, Source: src})
 		}
 	}
-	if s.Wrong, err = readWrong(dir); err != nil {
+	ext := ".py"
+	if l, ok := languages[s.Language]; ok {
+		ext = l.ext
+	}
+	if s.Wrong, err = readWrong(dir, ext); err != nil {
 		return nil, err
 	}
 	if err := s.validate(); err != nil {
@@ -267,8 +319,8 @@ func readFile(dir fs.FS, field, name string, limit int) (string, error) {
 	return string(b), nil
 }
 
-// readWrong loads wrong/*.py: known-bad solutions that cq test expects to fail.
-func readWrong(dir fs.FS) (map[string]string, error) {
+// readWrong loads wrong/*<ext>: known-bad solutions that cq test expects to fail.
+func readWrong(dir fs.FS, ext string) (map[string]string, error) {
 	entries, err := fs.ReadDir(dir, "wrong")
 	if errors.Is(err, fs.ErrNotExist) {
 		return map[string]string{}, nil
@@ -282,8 +334,8 @@ func readWrong(dir fs.FS) (map[string]string, error) {
 			continue
 		}
 		name := path.Join("wrong", e.Name())
-		if path.Ext(name) != ".py" {
-			return nil, fmt.Errorf("%s: wrong/ may hold only .py files", name)
+		if path.Ext(name) != ext {
+			return nil, fmt.Errorf("%s: wrong/ may hold only %s files", name, ext)
 		}
 		src, err := readFile(dir, "wrong", name, maxFileBytes)
 		if err != nil {
@@ -295,17 +347,21 @@ func readWrong(dir fs.FS) (map[string]string, error) {
 }
 
 func (s Spec) validate() error {
-	if s.Language != "python" {
-		return fmt.Errorf("language: %q is not supported (python)", s.Language)
+	l, ok := languages[s.Language]
+	if !ok {
+		return fmt.Errorf("language: %q is not supported (python, go, js)", s.Language)
 	}
-	if _, ok := runner.Images[s.Runner]; !ok {
-		return fmt.Errorf("runner: %q is not supported (docker-python, pyodide)", s.Runner)
+	if !slices.Contains(l.runners, s.Runner) {
+		return fmt.Errorf("runner: %q is not supported for %s (%s)", s.Runner, s.Language, strings.Join(l.runners, ", "))
 	}
 	if !exercise.ValidRunMode(s.Run) {
 		return fmt.Errorf("run: %q must be browser, server or off", s.Run)
 	}
-	if !fileNameRe.MatchString(s.Entry) || s.Entry == "cq.py" {
-		return fmt.Errorf("entry: %q must be a Python file name such as main.py", s.Entry)
+	if s.Runner == runnerWasm && s.Run == exercise.RunBrowser {
+		return fmt.Errorf("run: %s lessons run on the server (run: server or off)", l.name)
+	}
+	if !fileNameRe.MatchString(s.Entry) || path.Ext(s.Entry) != l.ext || s.Entry == "cq.py" {
+		return fmt.Errorf("entry: %q must be a %s file name such as main%s", s.Entry, l.name, l.ext)
 	}
 	if s.Limits.TimeoutMs < 100 || s.Limits.TimeoutMs > runner.MaxTimeoutMs {
 		return fmt.Errorf("limits.timeout_ms: must be 100-%d", runner.MaxTimeoutMs)
@@ -325,14 +381,27 @@ func (s Spec) validate() error {
 		}
 	}
 	for _, t := range s.Tests {
-		if !fileNameRe.MatchString(t.File) || t.File == s.Entry || t.File == "cq.py" {
+		if !fileNameRe.MatchString(t.File) || path.Ext(t.File) != ".py" || t.File == s.Entry || t.File == "cq.py" {
 			return fmt.Errorf("checks: test file %q must be a Python file name other than the entry", t.File)
 		}
 	}
+	ioChecks := 0
 	for _, c := range s.Checks {
 		if err := checks.Validate(c.Kind, c.Config); err != nil {
 			return fmt.Errorf("checks: %s: %w", c.Kind, err)
 		}
+		if s.Runner == runnerWasm && pythonOnly[c.Kind] {
+			return fmt.Errorf("checks: %s is Python-only; %s lessons use stdout_equals, stdout_regex, io_cases or exit_code", c.Kind, l.name)
+		}
+		if c.Kind == "io_cases" {
+			ioChecks++
+			if s.Runner != runnerWasm {
+				return errors.New("checks: io_cases needs runner: wasm (Python lessons use unit_tests)")
+			}
+		}
+	}
+	if ioChecks > 1 {
+		return errors.New("checks: at most one io_cases check (put every case in it)")
 	}
 	return nil
 }
@@ -399,12 +468,14 @@ func (codeType) PublicView(ex exercise.Exercise) (json.RawMessage, error) {
 	return b, nil
 }
 
-// harnessJob is the harness's stdin (runners/python/harness/harness.py).
+// harnessJob is the harness's stdin (runners/python/harness/harness.py, and
+// the wasm runner's in internal/runner/wasm).
 type harnessJob struct {
 	Files       map[string]string `json:"files"`
 	Entry       string            `json:"entry"`
 	Tests       []TestFile        `json:"tests"`
 	RunEntry    bool              `json:"run_entry"`
+	Cases       []string          `json:"cases,omitempty"` // io_cases stdins (wasm)
 	Forbidden   []string          `json:"forbidden"`
 	TimeoutMs   int               `json:"timeout_ms"`
 	OutputLimit int               `json:"output_limit"`
@@ -450,8 +521,14 @@ func (codeType) Grade(ctx context.Context, ex exercise.Exercise, sub exercise.Su
 	}
 	for _, c := range s.Checks {
 		switch c.Kind {
-		case "stdout_equals", "stdout_regex":
+		case "stdout_equals", "stdout_regex", "exit_code":
 			job.RunEntry = true
+		case "io_cases":
+			stdins, _, err := checks.IOCaseStdins(c.Config)
+			if err != nil {
+				return exercise.Result{}, fmt.Errorf("code: %w", err)
+			}
+			job.Cases = stdins
 		case "forbidden_calls":
 			names, err := checks.ForbiddenNames(c.Config)
 			if err != nil {
@@ -465,7 +542,7 @@ func (codeType) Grade(ctx context.Context, ex exercise.Exercise, sub exercise.Su
 		return exercise.Result{}, fmt.Errorf("code: encode job: %w", err)
 	}
 	out, err := run.Run(ctx, runner.Job{
-		Image: runner.Images[s.Runner], Stdin: stdin,
+		Image: s.image(), Stdin: stdin,
 		Limits: runner.Limits{TimeoutMs: s.Limits.TimeoutMs, MemoryMB: s.Limits.MemoryMB},
 	})
 	if err != nil {
@@ -499,6 +576,8 @@ func (codeType) Grade(ctx context.Context, ex exercise.Exercise, sub exercise.Su
 	switch {
 	case report.Program != nil:
 		res.Stdout, res.RuntimeMs = report.Program.Stdout, report.Program.RuntimeMs
+	case len(report.Cases) > 0:
+		res.Stdout, res.RuntimeMs = report.Cases[0].Stdout, report.RuntimeMs
 	case report.Tests != nil:
 		res.Stdout, res.RuntimeMs = report.Tests.Stdout, report.Tests.RuntimeMs
 	}
@@ -506,6 +585,35 @@ func (codeType) Grade(ctx context.Context, ex exercise.Exercise, sub exercise.Su
 		res.Stdout = res.Stdout[:stdoutLimit]
 	}
 	return res, nil
+}
+
+// visibleIOCases is the io_cases check with only its visible cases, or nil.
+func (s Spec) visibleIOCases() (*checks.IOCasesConfig, error) {
+	for _, c := range s.Checks {
+		if c.Kind != "io_cases" {
+			continue
+		}
+		var cfg checks.IOCasesConfig
+		if err := json.Unmarshal(c.Config, &cfg); err != nil {
+			return nil, fmt.Errorf("code: io_cases: %w", err)
+		}
+		_, visible, err := checks.IOCaseStdins(c.Config)
+		if err != nil {
+			return nil, fmt.Errorf("code: io_cases: %w", err)
+		}
+		all := cfg.Cases
+		cfg.Cases = nil
+		for i, k := range all {
+			if visible[i] {
+				if k.Name == "" { // keep the row name the full check gives it
+					k.Name = fmt.Sprintf("%s %d", cmp.Or(cfg.Name, "Case"), i+1)
+				}
+				cfg.Cases = append(cfg.Cases, k)
+			}
+		}
+		return &cfg, nil
+	}
+	return nil, nil
 }
 
 func single(status, name, feedback string, ms int) exercise.Result {
@@ -542,7 +650,7 @@ func (codeType) WrongAnswers(sp exercise.Spec) (map[string]json.RawMessage, erro
 }
 
 // defaultRun picks where Run executes when the manifest does not say: in the
-// browser for browser runners, on the server for docker runners.
+// browser for browser runners, on the server for docker and wasm runners.
 func defaultRun(runnerName string) string {
 	if runnerName == "pyodide" {
 		return exercise.RunBrowser
@@ -573,12 +681,22 @@ func (codeType) Run(ctx context.Context, ex exercise.Exercise, answer json.RawMe
 		Files: map[string]string{s.Entry: src}, Entry: s.Entry, Tests: visible, RunEntry: true,
 		Forbidden: []string{}, TimeoutMs: s.Limits.TimeoutMs, OutputLimit: stdoutLimit,
 	}
+	// Visible io cases run too; hidden cases never take part.
+	cases, err := s.visibleIOCases()
+	if err != nil {
+		return exercise.RunOutput{}, err
+	}
+	if cases != nil {
+		for _, k := range cases.Cases {
+			job.Cases = append(job.Cases, k.Stdin)
+		}
+	}
 	stdin, err := json.Marshal(job)
 	if err != nil {
 		return exercise.RunOutput{}, fmt.Errorf("code: encode job: %w", err)
 	}
 	out, err := run.Run(ctx, runner.Job{
-		Image: runner.Images[s.Runner], Stdin: stdin,
+		Image: s.image(), Stdin: stdin,
 		Limits: runner.Limits{TimeoutMs: s.Limits.TimeoutMs, MemoryMB: s.Limits.MemoryMB},
 	})
 	if err != nil {
@@ -596,16 +714,35 @@ func (codeType) Run(ctx context.Context, ex exercise.Exercise, answer json.RawMe
 		}
 		return exercise.RunOutput{}, fmt.Errorf("code: %w (exit %d)", err, out.ExitCode)
 	}
+	// Rows for every visible check, in manifest order, from the same program
+	// run Submit uses: visible unit tests, visible output checks, visible cases.
 	res := exercise.RunOutput{Checks: []exercise.CheckResult{}, TimedOut: report.TimedOut}
 	for _, c := range s.Checks {
-		if c.Kind != "unit_tests" {
+		cfg := c.Config
+		switch c.Kind {
+		case "unit_tests":
+			var u checks.UnitTestsConfig
+			if json.Unmarshal(c.Config, &u) != nil || u.Visible == nil || !*u.Visible {
+				continue
+			}
+		case "stdout_equals", "stdout_regex", "exit_code":
+			var v struct {
+				Visible *bool `json:"visible"`
+			}
+			if json.Unmarshal(c.Config, &v) != nil || (v.Visible != nil && !*v.Visible) {
+				continue
+			}
+		case "io_cases":
+			if cases == nil || len(cases.Cases) == 0 {
+				continue
+			}
+			if cfg, err = json.Marshal(cases); err != nil {
+				return exercise.RunOutput{}, fmt.Errorf("code: %w", err)
+			}
+		default:
 			continue
 		}
-		var cfg checks.UnitTestsConfig
-		if json.Unmarshal(c.Config, &cfg) != nil || cfg.Visible == nil || !*cfg.Visible {
-			continue
-		}
-		rows, err := checks.Run(ctx, c.Kind, checks.CheckInput{Config: c.Config, Answer: answer, Report: report})
+		rows, err := checks.Run(ctx, c.Kind, checks.CheckInput{Config: cfg, Answer: answer, Report: report})
 		if err != nil {
 			return exercise.RunOutput{}, fmt.Errorf("code: %w", err)
 		}
@@ -616,6 +753,10 @@ func (codeType) Run(ctx context.Context, ex exercise.Exercise, answer json.RawMe
 	}
 	if p := report.Program; p != nil {
 		res.Stdout, res.Stderr, res.RuntimeMs = p.Stdout, p.Stderr, p.RuntimeMs
+	}
+	if len(report.Cases) > 0 { // a program that reads input: show it on the first visible case
+		c := report.Cases[0]
+		res.Stdout, res.Stderr, res.RuntimeMs = c.Stdout, c.Stderr, report.RuntimeMs
 	}
 	if t := report.Tests; t != nil {
 		res.RuntimeMs += t.RuntimeMs

@@ -1,0 +1,34 @@
+id: js.board.receipt
+type: code
+version: 1
+title: Receipt Printer
+xp: 50
+difficulty: 3
+tags: [strings, arrays, numbers]
+free: true
+boss: true
+spec:
+  language: js
+  runner: wasm
+  prompt: prompt.md
+  entry: main.js
+  starter: starter.js
+  solution: solution.js
+  examples:
+    - input: "rye 2 4.50\ncroissant 3 2.25"
+      output: "rye x2 9.00\ncroissant x3 6.75\nTOTAL 15.75"
+  constraints:
+    - "Each line is: item (one word), quantity (whole number), unit price"
+    - "Blank lines are ignored"
+  hints:
+    - split("\n") gives lines; filter out the empty ones.
+    - toFixed(2) always shows two decimals.
+  checks:
+    - kind: io_cases
+      name: Receipt
+      cases:
+        - { stdin: "rye 2 4.50\ncroissant 3 2.25\n", stdout: "rye x2 9.00\ncroissant x3 6.75\nTOTAL 15.75\n" }
+        - { stdin: "bagel 1 1\n", stdout: "bagel x1 1.00\nTOTAL 1.00\n" }
+        - { stdin: "", stdout: "TOTAL 0.00\n", visible: false, name: No orders }
+        - { stdin: "\nscone 4 0.10\n\n", stdout: "scone x4 0.40\nTOTAL 0.40\n", visible: false, name: Blank lines }
+        - { stdin: "cake 10 12.99\npie 3 8.25\nbun 7 0.65\n", stdout: "cake x10 129.90\npie x3 24.75\nbun x7 4.55\nTOTAL 159.20\n", visible: false, name: Big order }

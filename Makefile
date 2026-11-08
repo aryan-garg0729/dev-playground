@@ -9,7 +9,7 @@ REDIS_TEST_URL ?= redis://localhost:6379/15
 RUNNER_IMAGE := codequest/python:3.12
 PW_IMAGE := mcr.microsoft.com/playwright:v1.64.1-noble
 
-.PHONY: up down db migrate content validate content-test runner-image e2e lighthouse test test-api test-web test-sandbox lint tokens tokens-check sqlc api-types cli
+.PHONY: up down db migrate content validate content-test runner-image wasm-modules e2e lighthouse test test-api test-web test-sandbox lint tokens tokens-check sqlc api-types cli
 
 up: ## Start Postgres, Redis, API, worker and web (applies migrations and builds content/)
 	$(COMPOSE) up --build
@@ -32,7 +32,10 @@ validate:
 runner-image: ## Build the codequest/python grading image
 	docker build -q -t $(RUNNER_IMAGE) runners/python
 
-content-test: runner-image ## Content CI: every solution passes, every wrong/ file fails
+wasm-modules: ## Build the WASI interpreters for Go and JS lessons (runners/wasm/dist)
+	$(MAKE) -s -C runners/wasm dist
+
+content-test: runner-image wasm-modules ## Content CI: every solution passes, every wrong/ file fails
 	cd api && go run ./cmd/cq test ../content
 
 e2e: ## Browser tests (sandbox isolation, timeouts, Run speed, content CI in the browser, screenshots)
@@ -54,13 +57,14 @@ lighthouse: ## Landing page Lighthouse audit; fails below 90 in any category
 
 test: test-api content-test lint test-web test-sandbox e2e lighthouse ## Everything CI runs
 
-test-api: db runner-image
+test-api: db runner-image wasm-modules
 	cd api && go vet ./... && \
-	  CQ_REQUIRE_DB=1 CQ_REQUIRE_DOCKER=1 TEST_DATABASE_URL='$(DATABASE_URL)' TEST_REDIS_URL='$(REDIS_TEST_URL)' \
+	  CQ_REQUIRE_DB=1 CQ_REQUIRE_DOCKER=1 CQ_REQUIRE_WASM=1 TEST_DATABASE_URL='$(DATABASE_URL)' TEST_REDIS_URL='$(REDIS_TEST_URL)' \
 	  go test -count=1 ./...
 
 lint:
 	docker run --rm -v "$(CURDIR)/api":/src -w /src $(LINT_IMAGE) golangci-lint run ./...
+	docker run --rm -v "$(CURDIR)/runners/wasm":/src -w /src $(LINT_IMAGE) golangci-lint run ./...
 
 test-web:
 	cd web && npm run typecheck && npm test && npm run tokens:check

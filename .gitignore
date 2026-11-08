@@ -5,3 +5,6 @@ web/dist/
 *.test
 coverage/
 /bin/
+
+# Built wasm modules (make wasm-modules)
+runners/wasm/dist/

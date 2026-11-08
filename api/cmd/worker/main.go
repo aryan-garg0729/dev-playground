@@ -1,7 +1,10 @@
-// Command worker runs grading jobs from the Redis queue in Docker containers.
+// Command worker runs grading jobs from a Redis queue.
 //
-// It needs the docker CLI and a Docker daemon, and nothing else: no database
-// credentials. Run it on a host that runs no other services.
+// WORKER_RUNNER=docker (default) runs the jobs queue in Docker containers: it
+// needs the docker CLI and a Docker daemon. Run it on a host that runs no
+// other services. WORKER_RUNNER=wasm runs the jobs:wasm queue as WASI modules
+// in-process: it needs the modules (WASM_DIR) and no Docker socket, so it runs
+// in a hardened container of its own. Neither has database credentials.
 package main
 
 import (
@@ -11,11 +14,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
 	"github.com/aryangarg/codequest/api/internal/config"
 	"github.com/aryangarg/codequest/api/internal/runner"
+	"github.com/aryangarg/codequest/api/internal/runner/wasm"
 )
 
 func main() {
@@ -42,10 +47,20 @@ func run(log *slog.Logger) error {
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		return fmt.Errorf("ping redis: %w", err)
 	}
-	log.Info("worker started", "concurrency", cfg.Concurrency)
 	w := &runner.Worker{
 		Redis: rdb, Runner: runner.Docker{Binary: cfg.DockerBin},
 		Concurrency: cfg.Concurrency, Log: log,
 	}
+	if cfg.Runner == "wasm" {
+		start := time.Now()
+		wr, err := wasm.New(ctx, cfg.WasmDir, cfg.WasmCacheDir)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = wr.Close(context.Background()) }()
+		log.Info("wasm modules ready", "dir", cfg.WasmDir, "ms", time.Since(start).Milliseconds())
+		w.Runner, w.Queue = wr, runner.JobsKey(runner.WasmImage(""))
+	}
+	log.Info("worker started", "runner", cfg.Runner, "concurrency", cfg.Concurrency)
 	return w.Serve(ctx)
 }
