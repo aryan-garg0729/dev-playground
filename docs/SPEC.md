@@ -6,7 +6,7 @@ This is the source of truth for building CodeQuest (working name), a gamified, h
 
 Prompt Claude Code one phase at a time, for example: "Implement Phase 1 from docs/SPEC.md. Stop when its acceptance criteria pass and summarize what you built."
 
-Design references live in `docs/design/`: `tokens.json` (all design tokens), `README.md` (the design system's rules), `components/` (component guidelines and HTML previews) and `screens/` (a PNG of every designed screen).
+How to write courses, chapters and lessons is in `docs/CONTENT.md`. Design references live in `docs/design/`: `tokens.json` (all design tokens), `README.md` (the design system's rules), `components/` (component guidelines and HTML previews) and `screens/` (a PNG of every designed screen).
 
 ## Product in one paragraph
 
@@ -27,7 +27,7 @@ Use a single monorepo with a Go API, a React SPA, a separate sandbox runner page
 | Backend | Go 1.23+, `net/http` + chi router | Plain handlers, no heavy framework |
 | DB | PostgreSQL 16 | Migrations with `golang-migrate`; queries with `sqlc` |
 | Cache / leaderboards | Redis 7 | Sorted sets for leagues; rate limiting |
-| Server-side execution | Docker containers (later gVisor) | Worker pool behind a Redis job queue |
+| Server-side execution | Docker containers (later gVisor) for Python; WASI modules under wazero for Go and JS (Phase 10) | Worker pools behind Redis job queues |
 | Auth | Email magic link + GitHub OAuth | Session cookie, `HttpOnly`, `SameSite=Lax` |
 | Payments | Stripe (global), Razorpay (India) | Behind one `billing` interface |
 | AI tutor | LLM API via a Go `tutor` package | Provider behind an interface |
@@ -65,7 +65,7 @@ codequest/
   sandbox/                  # static runner page (served from separate origin)
     index.html  src/main.ts src/worker.ts   # Pyodide / sql.js execution
     src/protocol.ts         # zod message schemas (identical copy in web/src/runner-client)
-  content/                  # courses as files (see Content format)
+  content/                  # courses as files (see Content format); paths.yaml lists career paths
 ```
 
 ## Architecture overview
@@ -124,7 +124,7 @@ free: true                  # in the free tier
 boss: false                 # true for chapter bosses (see Boss fights)
 spec:
   language: python
-  runner: pyodide           # pyodide | sqljs | js | docker-python | docker-go
+  runner: pyodide           # pyodide | docker-python (python); wasm (go, js)
   starter: starter.py
   entry: main.py
   limits: { timeout_ms: 3000, memory_mb: 128 }
@@ -179,6 +179,10 @@ description: ...
 order: 1                    # position among courses (then id)
 published: true             # default true
 chapters: [01-chat-models, 02-prompt-templates]   # folder names, in order
+icon: lc                    # 1-4 lowercase letters or digits for the catalog tile; default: first 2 of the id
+level: intermediate         # beginner (default) | intermediate | advanced
+tags: [Python, AI]          # catalog filters, at most 4, each 1-20 characters
+topics: Chat models, prompts  # one line for the course card, at most 60 characters
 
 # chapter.yaml
 id: lc.chat-models          # lowercase words joined by . or -, globally unique
@@ -186,6 +190,7 @@ title: Chat models & messages
 exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 ```
 
+- Career paths (decided 2026-11-06, `screens/courses.png`): an optional `paths.yaml` at the root of a folder of courses lists paths in order: `paths: [{id (slug), title, description, goal, courses: [{course, note}]}]`. `goal` is an onboarding goal (`zero`, `backend`, `interviews`, `ai`), at most one path per goal; it makes the path "Your path" for learners who picked that goal. Every course must exist in the tree and be published; `note` (≤ 60 characters) is the line under the course on the path card. `cq build` upserts `career_paths` and unpublishes paths no longer listed. The catalog holds only real courses; "coming soon" stubs, course prerequisites and estimated hours from the design are not built.
 - Every folder must be listed, and every listed folder must exist with its manifest; both are errors otherwise. Hidden folders (`.x`) are ignored; folders inside an exercise (e.g. `wrong/`) belong to that exercise.
 - Exercise header: `id`, `type`, `version` (≥ 1), `title` and `xp` (≥ 0) are required; `difficulty` defaults to 1 (1–2 shows as Easy), `tags` to `[]`, `free` and `boss` to false. Only `code` exercises can be bosses.
 - `cq validate <dir>` and `cq build <dir>` print every problem as `path: reason` and exit 1. `<dir>` is a folder of courses or a single course folder.
@@ -193,6 +198,7 @@ exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 - mcq: `question` names a markdown file; options may carry `image: assets/<file>` (Phase 9; the option's `text` is still required and is its alt text); `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
 - Run location (decided in Phase 3): `code` and `sql` specs take `run: browser | server | off`. `browser` runs in the sandbox iframe (Pyodide for Python, sql.js for SQL); `server` sends the answer to `POST /exercises/{id}/run`, which runs it on the grading worker with visible checks only, ungraded and not stored; `off` hides Run. Defaults: `pyodide` → browser, `docker-python` → server, `sql` → browser. Changing it is a manifest edit plus `cq build`; content CI checks the solution's visible checks wherever `run:` points, so a lesson moved to `browser` whose packages don't load there fails CI.
 - code (decided in Phase 2): `language: python`; `runner: docker-python` (submit-only) or `pyodide` (server grades it on `docker-python`); `prompt` (markdown), `entry` (a module file name such as `main.py`), `starter` and `solution` are required files; `limits` default to 3000 ms / 128 MB, capped at 10000 ms / 512 MB; `examples`, `constraints` and `hints` are optional and public. At least one check. `solution.*` and `wrong/*.py` are read by `cq build`/`cq test` but never stored in `private_spec`; hidden test sources are stored there (server-only). Visible test files are sent to the browser as `visible_tests`.
+- code in other languages (decided in Phase 10): `language: go` or `js` with `runner: wasm`, `run: server` (default) or `off`; `entry` is `main.go` / `main.js` style, and `wrong/` holds files of that extension. Checks are `stdout_equals`, `stdout_regex`, `io_cases` (at most one per exercise) and `exit_code`; `unit_tests` and `forbidden_calls` are Python-only. Go is interpreted (yaegi) with a fixed standard-library allowlist, so `go build` rules such as "declared and not used" are not enforced. JS is ES2015+ (goja) with Node-like `console`, `process.exit`, `process.stdout.write` and `require("fs").readFileSync(0)` for stdin; no modules or npm. See `docs/CONTENT.md`.
 - Test files are Python modules with top-level `test_*` functions that import from the entry module. A test's docstring is its row name. `from cq import expect` gives `expect(got, expected)`, which compares exact types (so a learner object with a rigged `__eq__` cannot pass) and reports got/expected. Label hidden tests in words: a hidden label that looks like code (contains `()[]{}=`) is replaced by "Hidden test N". A hidden test may declare its input on a docstring line `input: <call>` (e.g. `input: fizzbuzz(15)[14]`); the harness parent reads it from the AST, the API keeps it server-side (`submissions.hidden_inputs`, never serialized in a `Result`) and only Peek reveals it, for one failed check. The API cuts it at `==`, `->` or `→`, so never write the expected value there. `cq.fakes` (fake chat models) is available to tests and learner code in the image.
 
 ## Exercise type plugin system
@@ -276,7 +282,7 @@ The server is the only authority on whether a submission passed. The browser run
 1. **Run (client, ungraded).** The learner clicks Run. The sandbox executes their code plus visible tests and shows output. Nothing is stored.
 2. **Submit (server, authoritative).** The browser POSTs the answer. The API calls the type's `Grade`, which executes all checks (visible and hidden) on a server runner, stores the result, and returns it. Only this path awards XP.
 
-Client runners map to server runners: `pyodide` → `docker-python`, `js` → `docker-node`, `sqljs` → SQLite in the `docker-python` grading container (decided in Phase 3, instead of in-process `modernc.org/sqlite`, so untrusted SQL never runs inside the API process). `mcq` grades in-process with no runner. The same test files must produce the same result on both.
+Client runners map to server runners: `pyodide` → `docker-python`, `sqljs` → SQLite in the `docker-python` grading container (decided in Phase 3, instead of in-process `modernc.org/sqlite`, so untrusted SQL never runs inside the API process). `mcq` grades in-process with no runner. The same test files must produce the same result on both. `wasm` lessons (Phase 10) have no browser runner yet: Run goes to the server, which runs the same module Submit uses.
 
 ### Contracts
 
@@ -318,6 +324,8 @@ A grader runs the `checks` list from the manifest. Each kind is a small function
 | `unit_tests` | Runs a test file against learner code; one CheckResult per test | code |
 | `stdout_equals` | Exact match on program output (trim trailing whitespace) | code |
 | `stdout_regex` | Regex match on output | code |
+| `io_cases` | Runs the program once per stdin; output must equal each case's stdout; one row per case | code (wasm) |
+| `exit_code` | The program's exit code equals `expected` | code |
 | `forbidden_calls` | AST/static scan for banned names | code |
 | `max_runtime` | Fails if runtime exceeds N ms | code |
 | `exact_choice` | Selected option ids equal the answer set | mcq |
@@ -339,6 +347,8 @@ Manifest fields (every code check also takes `name`, `visible`, `weight ≥ 0`):
 | `unit_tests` | `file` (a `.py` in the exercise folder) | `visible: false`; one row per test, weight applies per row; `name` not allowed |
 | `stdout_equals` | `expected` | `visible: true`, name "Program output"; runs the entry as `__main__`; trailing whitespace per line and trailing blank lines ignored |
 | `stdout_regex` | `pattern` (Go RE2, unanchored), `message` | `visible: true` |
+| `io_cases` | `cases: [{stdin, stdout, name?, visible?}]`, 1-50 | `visible: true` (per case overridable), rows "<name> N" (name default "Case"); compared like `stdout_equals`; hidden rows show no got/expected and their stdin is never sent on Run; `runner: wasm` only, one per exercise |
+| `exit_code` | `expected` (0-125) | `visible: true`, name "Exit code"; runs the entry as a program with empty stdin |
 | `sql_result_equals` | `ordered`, `expected: {columns, rows}` (required when visible), `setup` (a `.sql` file; only on hidden checks) | `visible: true`; values only (column count must match, names may differ); numbers compare with a small tolerance; one statement; `ATTACH`/`DETACH`/`PRAGMA` denied; 1000-row cap |
 | `forbidden_calls` | `names` (identifiers), `message` | static AST scan of learner files: `f(...)` and `x.f(...)` count. A teaching aid, not a sandbox |
 
@@ -358,6 +368,8 @@ type Output struct { Stdout, Stderr string; ExitCode, RuntimeMs int; TimedOut bo
 
 Files reach the container on stdin (decided in Phase 2), so the root filesystem stays read-only and no host path is ever mounted; this also works when the worker itself runs in a container.
 
+Wasm runner (`api/internal/runner/wasm`, Phase 10): job image `wasm:<language>`, same job JSON and report as the Python harness (plus `cases` in and `cases` out). Each phase is a fresh instance of the language's WASI module under wazero with the entry as the only file (read-only, `/work`), empty environment, no sockets or subprocesses (WASI preview 1 has none), real clocks, a memory cap (`limits.memory_mb` as wasm pages) and a deadline; the whole job shares 2 × `timeout_ms`, as the Python harness's two phases do. stdout is capped at the job's output limit and stderr at 16 KB; out-of-memory becomes "Memory limit: your program used more than N MB". The interpreters exit 3 with `<line>:<col>: <message>` on a compile error, which becomes `syntax_error`. Modules are built from pinned source (`runners/wasm`, go.sum) with `make wasm-modules` and never fetched at run time; the worker compiles them once at start (about 7 s, cached on disk).
+
 Docker runner (docker CLI): `--network none`, `--read-only` with tmpfs `/work` (16 MB) and `/tmp` (8 MB, noexec), `--user 10001`, `--cap-drop ALL`, `no-new-privileges`, `--memory` = `--memory-swap`, `--pids-limit 64`, `--cpus 1`, nofile/fsize ulimits, no logging, stdout capped at 256 KB and stderr at 16 KB, and a hard kill (`docker rm -f`) at 2 × timeout + 5 s.
 
 Python harness (`runners/python/harness`), PID 1 in the container and non-dumpable (no ptrace or `/proc/1/mem` from learner code):
@@ -371,11 +383,11 @@ Python harness (`runners/python/harness`), PID 1 in the container and non-dumpab
 
 Known limit: tests execute in the learner's process, so a determined learner could introspect or monkey-patch test objects in memory. Hidden tests deter casual peeking; they are not a vault. The grade itself still comes only from the server.
 
-Server grading runs in `cmd/worker`, which pulls jobs from Redis (`cq:jobs` list; reply on `cq:result:<id>`, 2 min TTL; jobs older than 60 s in the queue are skipped). The worker has no database access. The API grades in a goroutine and waits up to 15 s: a result in time is stored with progress in one transaction (200); otherwise a `pending` submission is stored, the API returns `202 {submission_id, status: "pending"}`, and the background grade finishes it. `GET /submissions/{id}` polls (owner only). A runner outage before the wait ends is `503 grader_unavailable` and nothing is stored; after it, the submission becomes `error` and does not count as an attempt. At startup, submissions pending for over 5 minutes are marked `error`.
+Server grading runs in `cmd/worker`, which pulls jobs from Redis (`cq:jobs` for Docker jobs and `cq:jobs:wasm` for wasm jobs, each served by its own worker kind, `WORKER_RUNNER=docker|wasm`; a job on the wrong queue gets an error reply and never runs; reply on `cq:result:<id>`, 2 min TTL; jobs older than 60 s in the queue are skipped). The worker has no database access. The API grades in a goroutine and waits up to 15 s: a result in time is stored with progress in one transaction (200); otherwise a `pending` submission is stored, the API returns `202 {submission_id, status: "pending"}`, and the background grade finishes it. `GET /submissions/{id}` polls (owner only). A runner outage before the wait ends is `503 grader_unavailable` and nothing is stored; after it, the submission becomes `error` and does not count as an attempt. At startup, submissions pending for over 5 minutes are marked `error`.
 
 ### Content CI (`cq test`)
 
-`cq test <dir>` (needs Docker and the runner image; part of `make test`) grades every `Testable` exercise's reference answer and wrong answers on the Docker runner and prints one line per case. For mcq, the wrong answers are each single non-answer option. For `project_cli`, the solution and wrong answers are the recorded `solution.json` and `wrong/*.json`. For every exercise, CI must verify:
+`cq test <dir>` (needs Docker and the runner image, and `make wasm-modules` for Go/JS lessons, which it runs in-process; part of `make test`) grades every `Testable` exercise's reference answer and wrong answers on the Docker runner and prints one line per case. For mcq, the wrong answers are each single non-answer option. For `project_cli`, the solution and wrong answers are the recorded `solution.json` and `wrong/*.json`. For every exercise, CI must verify:
 
 - [ ] Manifest parses and matches its type's spec schema.
 - [ ] `solution.*` passes every check on the server runner.
@@ -400,6 +412,7 @@ Server-side rules:
   - **Exception (decision 2026-11-04, at the author's request): `project_cli` lessons.** Their steps must run on the learner's machine, so the server judges output the CLI *reports* (the boot.dev model), and a determined learner can forge it. They still go through the normal submit path and count for everything: XP, streaks, leagues, Bytes, quests and medals. What stays server-side: the verdict, captures (recomputed from raw output) and the tests. Every other type is unchanged.
 - Rate-limit submissions per user (30/min) and per IP (120/min) in Redis, fixed one-minute windows; over the limit is `429 rate_limited` with `Retry-After`. If Redis is down, submits are refused (503), never let through unlimited.
 - Docker runner hardening as listed under Grading. The worker host runs no other services and has no credentials to the database beyond writing results.
+- **Wasm worker (decision 2026-11-06, Phase 10).** Wasm jobs run inside the worker process, so the wasm worker is never the Docker worker (which holds the root-equivalent Docker socket). It runs in its own container: non-root, read-only root, `cap_drop: ALL`, `no-new-privileges`, memory and pids limits, tmpfs `/tmp` only, and on an internal network that reaches only Redis. Learner code is contained by WASI first (only its own file, no network, no environment) and by that container second. This replaces "one container per submission" for Go and JS lessons only; Python lessons keep the Docker runner.
 - Store passwords nowhere (magic link + OAuth only). CSRF protection on all state-changing endpoints. Validate all request bodies.
 
 ## Data model and API
@@ -414,7 +427,8 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | `sessions` | id (SHA-256 of the cookie value, never the value), user_id, expires_at, created_at |
 | `magic_links` | token_hash, email, next, expires_at, used_at (single use, 15 minutes) |
 | `oauth_identities` | provider, provider_user_id, user_id |
-| `courses` | id (slug), title, description, order_index, published |
+| `courses` | id (slug), title, description, order_index, published, icon, level, tags (text[]), topics |
+| `career_paths` | id, title, description, goal, order_index, steps (jsonb `[{course, note}]`), published |
 | `chapters` | id, course_id, title, order_index, published |
 | `exercises` | id (manifest id), chapter_id, type, version, title, xp, difficulty, free, boss, tags (text[]), order_index, public_view (jsonb), private_spec (jsonb, server-only), assets (jsonb: image name → `<sha256>.<ext>`), published |
 | `content_assets` | sha256 (key), mime, size (≤ 1 MB), bytes: lesson images, content-addressed, upserted by `cq build` and never deleted |
@@ -450,8 +464,9 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | GET | `/cli/next` | The learner's next unpassed `project_cli` lesson (locks apply on `GET /exercises/{id}`) |
 | GET | `/me` | Current user (with `goal`, `onboarded`), stats (XP, level, streak, league tier, daily goal) and `features` (`tutor`); entitlement in Phase 5 |
 | PATCH | `/me` | Name, timezone, daily goal, title, onboarding goal, `onboarded: true`. XP, level, streak and league fields are rejected |
-| GET | `/home` | Continue card, today (goal, streak week), paths, league summary |
-| GET | `/courses` | Course list with progress |
+| GET | `/home` | Continue card, today (goal, streak week), path cards (started courses plus the next course on the learner's path, with next boss), league summary, activity |
+| GET | `/profile` | The signed-in learner's own profile: joined date, path, projects shipped, activity (lessons per local day for 53 weeks), projects (every boss: defeated, next, upcoming), skills, recent passes. Never public |
+| GET | `/courses` | Course list with progress, status, current chapter, catalog fields, where lessons run (`browser`, `cli`), free lesson count; and career paths |
 | GET | `/courses/{id}` | Chapters and exercises with lock state |
 | GET | `/exercises/{id}` | `public_view`, type, `assets` (image name → URL), saved draft, last result; 402 if locked |
 | GET | `/assets/{sha256}.{ext}` | A lesson image (public; `Cache-Control: immutable`, ETag, `nosniff`, `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox`, `Cross-Origin-Resource-Policy: same-site`); 404 for an unknown hash or an extension that does not match the stored type |
@@ -614,7 +629,14 @@ Lesson screen layout (`/learn/:courseId/:exerciseId`; `screens/lesson-*.png`):
 5. Resizable panes (decision 2026-11-03): a drag handle between the problem and editor panes (problem width 240–720px, default 320, the editor keeps at least 360px) and one between the editor and the checks once a result is shown (checks height 96–720px, default 240, the editor keeps at least 160px). The handles are WAI-ARIA window splitters: pointer drag, arrow keys (Shift for larger steps), Home/End, and Enter or double-click to reset. Sizes are remembered per device (`cq-panes` in localStorage).
 6. Below 900px the panes stack in one column, the handles are hidden and the rail stays collapsed.
 
-Other screens and their references: Home (`home.png`), Course map (`course-map.png`), Pass celebration overlay (`pass-celebration.png`), Onboarding (`onboarding.png`), Landing (`landing.png`), Pricing (`pricing.png`), Boss fight (`boss-fight.png`), Power-ups (`power-ups-shop.png`), Profile medals (`profile-medals.png`). Only the lesson screen is drawn in both themes; build every screen from tokens so Light works everywhere.
+Other screens and their references: Home (`home.png`), Courses (`courses.png`), Course map (`course-map.png`), Pass celebration overlay (`pass-celebration.png`), Onboarding (`onboarding.png`), Landing (`landing.png`), Pricing (`pricing.png`), Boss fight (`boss-fight.png`), Power-ups (`power-ups-shop.png`), Profile overview (`profile-overview.png`), Profile medals (`profile-medals.png`). Only the lesson screen is drawn in both themes; build every screen from tokens so Light works everywhere.
+
+Screens updated 2026-11-06 (`home.png`, `courses.png`, `profile-overview.png`), as built:
+
+- **Activity heatmap** (`components/Heatmap`): one column per week (Monday first), one square per local day, colored by lessons passed (0, 1, 2, 3, 4+ via `surface-raised`, `accent-line` and `accent` at rising opacity), today outlined. Home shows 27 weeks with active days, lessons passed (both for the shown weeks) and the streak ("best yet" when it is the longest); the profile shows 53 weeks.
+- **Home path cards**: courses the learner has started ("8 chapters · 2 done · next boss: …"), then the first unstarted course on their path ("Up next", "After <previous course> · <topics>"). With no path and nothing started, the first course is up next.
+- **Courses** (`/courses`): career path cards (steps with status dots, % of lessons passed, Continue or Start path) and course cards (icon tile, status, level, where it runs, progress with the current chapter, topics, action). Status: In progress / Completed / Free to start (has free lessons) / Pro (no free lessons, action "Preview"). Search matches title, description, topics and tags; `/` focuses it. Topic filters come from course tags.
+- **Profile** (`/profile`, `/profile/medals`, `/profile/projects`, `/profile/activity`): header (path, joined month, worn title colored by its medal tier), Level, Total XP, Current streak, Projects shipped (defeated bosses). Overview: year heatmap, Projects completed (latest 3 defeated plus the next boss; "View code" opens the lesson, which shows the learner's last answer), Skills, Recent medals. Skills rate each chapter of the course the learner last worked in: Bronze once a lesson is passed, Silver when all are, Gold when all passed on the first try (reviews will replace this when they exist). "Edit profile" is an inline form for name and title. The design's @handle and "Share profile" are left out: profiles are private until public profiles are decided.
 
 ## Build phases
 
@@ -737,10 +759,59 @@ As built:
 - **Effects lab** (`/dev/effects`, development builds only: the route and its chunk are left out of production builds by `import.meta.env.DEV`): buttons for every sound, each lesson-clear scenario (plain, level up, boss with chest, boss with level up), a boss attack with any number of checks and hits, and the daily chest with a fast server, a slow server or an error. It needs no sign-in and makes no requests; it drives the real components with made-up `Result`s and `Outcome`s.
 - There are no PNG designs for these moments; component notes are in `docs/design/components/ChestOpen`, `LevelUpBurst` and `SoundToggle`.
 
+### Phase 10 — WASM runner and more languages
+
+> Decision 2026-11-06: proposed and accepted the same day at the author's request ("start building"), with Phase 5 still skipped. Each new language runs as an interpreter compiled to WebAssembly (WASI) on the server, so adding a language is a module plus a registry entry rather than a Docker image and a harness. Python keeps the Docker runner, which is also the tier for lessons that need compiled libraries (LangChain, numpy). Taken during the build: the modules are Go programs (yaegi for Go, goja for JS) built from pinned source instead of downloaded binaries; Run for wasm lessons goes to the server for now, because the modules are 12 MB and 21 MB; wasm jobs run in a separate, locked-down worker, never in the Docker worker that holds the Docker socket. Git and Docker courses use `project_cli` (Phase 8) and need no grader change.
+
+Scope:
+- `runners/wasm`: a Go module with `cmd/go` (yaegi; the standard library limited to the allowlist in `symbols/`, regenerated with `make -C runners/wasm symbols`) and `cmd/js` (goja plus `prelude.js`).
+- `api/internal/runner/wasm`: the wazero runner.
+- Queue routing by image, a `Route` runner for `cq test`, and `WORKER_RUNNER=wasm`.
+- The `worker-wasm` Compose service and `runners/wasm/Dockerfile`.
+- The `io_cases` and `exit_code` checks, and `code` lessons with `language: go | js`.
+- Go and JavaScript highlighting in Monaco.
+- Sample courses `content/go-basics` and `content/js-basics`.
+
+Adding a language: a WASI module in `runners/wasm/cmd/<lang>` that runs `<lang> /work/<entry>` and follows the exit-code convention (3 plus `<line>:<col>: <message>` for compile errors); an entry in `wasm.Languages` and `runner.WasmLanguages`; a line in `languages` in `exercise/code`; the Monaco language; a sample lesson. No grading code changes.
+
+- [x] `runner: wasm` grades a Go and a JS sample course with `solution` and `wrong/`. `cq test` passes all 7 lessons (7 solutions pass, 14 wrong answers fail), and `make test` runs them with `CQ_REQUIRE_WASM=1`.
+- [~] Browser and server give the same rows: wasm lessons have no browser runner yet. Run uses the server and the same module as Submit. The Playwright content spec passes every Go and JS solution through the real API, Redis queue and `worker-wasm` (about 100–200 ms each).
+- [x] Abuse ends within limits and the runner keeps serving (`wasm_test.go`):
+  - an infinite loop over five phases ends within the 2 × `timeout_ms` job budget;
+  - a single 100 MB allocation fails under a 64 MB cap and succeeds under 256 MB;
+  - an output flood is cut at the output limit;
+  - a normal job still runs afterwards.
+- [x] Learner code can't escape its file or reach the network (`TestIsolation`):
+  - it cannot read `/etc/passwd`, `/proc/self/environ` or `../` paths, and cannot write to `/work`;
+  - it sees an empty environment;
+  - `net`, `net/http`, `os/exec`, `syscall` and `unsafe` fail to compile;
+  - JS has no `fetch` and no `require` beyond `fs` stdin.
+- [x] Hidden cases stay server-side. Their stdin and stdout are not in the public view, Run never sends them, and hidden rows show no got/expected (`code/wasm_test.go`, `checks/io_cases_test.go`).
+- [x] Wasm jobs never reach the Docker worker, and a job on the wrong queue gets an error reply without running (`TestQueueRoutesWasmJobs`).
+- [x] `worker-wasm` starts in its container: non-root, read-only, no capabilities, internal network to Redis only. It compiles both modules in about 7 s.
+- [x] Grading benchmark: 30 grades of each boss on the same machine (below).
+- [x] Security sections updated (Browser sandbox and security, Grading).
+
+Benchmark, 30 grades each, with the solution and every check on the same machine:
+
+| Lesson | Runner | p50 | p95 | Notes |
+| --- | --- | --- | --- | --- |
+| `go.tower.tonnage-board` (6 io cases) | wasm | 287 ms | 311 ms | 7 module runs, about 40 ms each |
+| `js.board.receipt` (5 io cases) | wasm | 136 ms | 147 ms | 6 runs, about 22 ms each |
+| `fd.py.fizzbuzz-boss` | Docker | 218 ms | 248 ms | 1 container |
+
+The wasm worker holds about 350 MB resident for all its jobs, mostly compiled modules. Cases run one after another; running them in parallel is the next lever if a lesson's grading feels slow.
+
+Known limits:
+- yaegi doesn't enforce `go build` rules such as unused variables and imports.
+- Go panics read "reflect: slice index out of range" instead of the compiler's wording.
+- `encoding/json` is not in the Go allowlist (Go 1.27's version doesn't extract).
+- JS output formatting follows Node only for common values.
+
 ## Conventions and rules for Claude Code
 
 - Work one phase at a time. Before coding, list the files you will create or change. After coding, run tests and report which acceptance criteria pass.
-- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `zod` (sandbox message validation), `pyodide`, `sql.js` (self-hosted browser runtimes), `@playwright/test` (browser tests, run from the official Docker image so no browsers are installed on the host), `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk), `lighthouse` 13.5.0 (dev only: the landing page audit in `make lighthouse`, using the Playwright image's Chromium). The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
+- Do not add dependencies beyond the stack table without stating why in the summary. Added so far: `zod` (sandbox message validation), `pyodide`, `sql.js` (self-hosted browser runtimes), `@playwright/test` (browser tests, run from the official Docker image so no browsers are installed on the host), `openapi-fetch` + `openapi-typescript` (typed client from `openapi.yaml`), `react-markdown` (lesson prompts without `innerHTML`), `go.yaml.in/yaml/v3` (manifests), `google/uuid`, `redis/go-redis/v9` (queue and rate limits), `monaco-editor` (self-hosted via `loader.config({ monaco })`, never the CDN; one lazy chunk), `lighthouse` 13.5.0 (dev only: the landing page audit in `make lighthouse`, using the Playwright image's Chromium), `tetratelabs/wazero` (pure-Go WASI runtime for the wasm runner; no cgo), and in the separate `runners/wasm` module `traefik/yaegi` (Go interpreter) and `dop251/goja` (JS engine), compiled to WASI. The runner image pins `langchain-core 1.7.3`, `langchain-ollama 1.1.0`, `pydantic 2.14.2`. Pinned: Tailwind 3 (the generated config is v3 format), TypeScript 5 (`openapi-typescript` needs its compiler API), Go directive 1.26 (golangci-lint's build).
 - Go: standard layout above, `gofmt` + `golangci-lint`, errors wrapped with `fmt.Errorf("...: %w", err)`, `context.Context` first argument, table-driven tests, no global state except the plugin registries.
 - SQL only through `sqlc`-generated queries. Every schema change is a new migration; never edit an applied one.
 - React: function components, TypeScript strict mode, no `any` outside the renderer registry, server state through TanStack Query, components under 200 lines.
@@ -759,5 +830,6 @@ As built:
 - Phase 2 interim UI: Run became available in Phase 3; the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats arrived in Phase 4.
 - Dev Compose mounts the host Docker socket into the worker (root-equivalent). Production runs the worker on a dedicated host (later gVisor).
 - LangChain in the browser (Phase 3): Pyodide would need self-hosted `langchain-core` and `pydantic` wheels (CSP forbids fetching from PyPI). Decide whether these exercises are submit-only, graded on the server.
+- ~~More languages (proposed 2026-11-06).~~ Resolved: Phase 10 accepted and built; Go and JS run on the `wasm` runner. Still open: Run in the browser for wasm lessons (modules are 12 MB for Go and 21 MB for JS, so it waits on a size and load-time decision), unit tests in Go/JS, and moving plain Python to WASI CPython.
 - Exact prices per plan and per country tier. Needed before Phase 5.
 - ~~LLM provider for the tutor.~~ Development: local Ollama (Phase 6). The production provider and model are still open, along with the guardrails that come with them.

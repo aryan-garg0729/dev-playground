@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -20,6 +22,7 @@ import (
 	"github.com/aryangarg/codequest/api/internal/content"
 	_ "github.com/aryangarg/codequest/api/internal/exercise/all" // register exercise types
 	"github.com/aryangarg/codequest/api/internal/runner"
+	"github.com/aryangarg/codequest/api/internal/runner/wasm"
 )
 
 const usage = `usage:
@@ -77,7 +80,13 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		if bin == "" {
 			bin = "docker"
 		}
-		failed := contentTest(ctx, b, runner.Docker{Binary: bin}, stdout)
+		wasmDir := os.Getenv("CQ_WASM_DIR")
+		if wasmDir == "" {
+			wasmDir = filepath.Join("..", "runners", "wasm", "dist")
+		}
+		lw := &lazyWasm{dir: wasmDir}
+		defer lw.close(ctx)
+		failed := contentTest(ctx, b, runner.Route{Docker: runner.Docker{Binary: bin}, Wasm: lw}, stdout)
 		if failed > 0 {
 			sayf(stderr, "%d content check(s) failed\n", failed)
 			return 1
@@ -108,6 +117,32 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	default:
 		say(stderr, usage)
 		return 2
+	}
+}
+
+// lazyWasm loads the wasm modules on the first wasm job, so content without
+// Go or JS lessons needs no modules. Content is the author's code, so cq test
+// runs wasm jobs in-process.
+type lazyWasm struct {
+	dir  string
+	once sync.Once
+	r    *wasm.Runner
+	err  error
+}
+
+func (l *lazyWasm) Run(ctx context.Context, job runner.Job) (runner.Output, error) {
+	l.once.Do(func() {
+		l.r, l.err = wasm.New(ctx, l.dir, filepath.Join(os.TempDir(), "codequest-wasm-cache"))
+	})
+	if l.err != nil {
+		return runner.Output{}, l.err
+	}
+	return l.r.Run(ctx, job)
+}
+
+func (l *lazyWasm) close(ctx context.Context) {
+	if l.r != nil {
+		_ = l.r.Close(ctx)
 	}
 }
 

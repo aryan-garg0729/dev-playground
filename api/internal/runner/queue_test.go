@@ -94,3 +94,56 @@ func TestDockerArgsHardening(t *testing.T) {
 		}
 	}
 }
+
+// Wasm jobs go to their own queue: a Docker worker never sees them, and a wasm
+// worker refuses a Docker job pushed onto its queue.
+func TestQueueRoutesWasmJobs(t *testing.T) {
+	rdb, prefix := testredis.New(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	docker, wasm := &echoRunner{}, &echoRunner{}
+	for _, w := range []*Worker{
+		{Redis: rdb, Prefix: prefix, Runner: docker, Concurrency: 1},
+		{Redis: rdb, Prefix: prefix, Queue: "jobs:wasm", Runner: wasm, Concurrency: 1},
+	} {
+		go func() { _ = w.Serve(ctx) }()
+	}
+	q := &Queue{Redis: rdb, Prefix: prefix}
+	for range 3 {
+		if _, err := q.Run(ctx, Job{Image: WasmImage("go"), Stdin: []byte("w")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := q.Run(ctx, Job{Image: "codequest/python:3.12", Stdin: []byte("d")}); err != nil {
+		t.Fatal(err)
+	}
+	if docker.calls.Load() != 1 || wasm.calls.Load() != 3 {
+		t.Fatalf("docker ran %d, wasm ran %d; want 1 and 3", docker.calls.Load(), wasm.calls.Load())
+	}
+
+	// A Docker job forced onto the wasm queue gets an error reply, not a run.
+	b := []byte(`{"id":"forced","job":{"image":"codequest/python:3.12"},"deadline":"2999-01-01T00:00:00Z"}`)
+	if err := rdb.LPush(ctx, prefix+"jobs:wasm", b).Err(); err != nil {
+		t.Fatal(err)
+	}
+	res, err := rdb.BLPop(ctx, 5*time.Second, prefix+"result:forced").Result()
+	if err != nil || !strings.Contains(res[1], "on queue jobs:wasm") {
+		t.Fatalf("reply = %v, %v", res, err)
+	}
+	if wasm.calls.Load() != 3 {
+		t.Fatal("wasm worker ran a Docker job")
+	}
+}
+
+func TestRoute(t *testing.T) {
+	docker, wasm := &echoRunner{}, &echoRunner{}
+	r := Route{Wasm: wasm, Docker: docker}
+	_, _ = r.Run(context.Background(), Job{Image: "wasm:js"})
+	_, _ = r.Run(context.Background(), Job{Image: "codequest/python:3.12"})
+	if docker.calls.Load() != 1 || wasm.calls.Load() != 1 {
+		t.Fatalf("docker %d wasm %d", docker.calls.Load(), wasm.calls.Load())
+	}
+	if _, err := (Route{Docker: docker}).Run(context.Background(), Job{Image: "wasm:go"}); !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("missing side: %v", err)
+	}
+}

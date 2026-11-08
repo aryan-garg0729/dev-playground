@@ -18,6 +18,7 @@ services:
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+    networks: [default, grading]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
@@ -86,6 +87,26 @@ services:
       redis: { condition: service_healthy }
       runner-python: { condition: service_completed_successfully }
 
+  # Wasm grading worker (Go, JS lessons): runs learner code as WASI modules
+  # in-process, so it gets no Docker socket. It is locked down like a runner
+  # container and can reach only Redis.
+  worker-wasm:
+    build: { context: ., dockerfile: runners/wasm/Dockerfile }
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      WORKER_CONCURRENCY: "4"
+    read_only: true
+    tmpfs: ["/tmp:size=512m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    user: "10001"
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    pids_limit: 128
+    networks: [grading]
+    depends_on:
+      redis: { condition: service_healthy }
+
   # Browser runner page (Pyodide, sql.js) on its own origin; the app embeds it
   # in <iframe sandbox="allow-scripts">.
   sandbox:
@@ -110,6 +131,12 @@ services:
       - web_node_modules:/app/node_modules
     depends_on:
       api: { condition: service_healthy }
+
+networks:
+  default:
+  # Redis and the wasm worker only: no route to Postgres or the API.
+  grading:
+    internal: true
 
 volumes:
   pgdata:

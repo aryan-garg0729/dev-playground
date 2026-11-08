@@ -1,11 +1,14 @@
 // Monaco, self-hosted (no CDN) and loaded lazily: import this module only via React.lazy.
 import Editor, { loader, type OnMount } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/editor';
+import 'monaco-editor/languages/definitions/go/register';
+import 'monaco-editor/languages/definitions/javascript/register';
 import 'monaco-editor/languages/definitions/python/register';
 import 'monaco-editor/languages/definitions/sql/register';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import { useEffect, useRef } from 'react';
 import { useTheme } from '../../stores/theme';
+import { monacoLanguage } from './language';
 import { buildTheme } from './monacoTheme';
 
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
@@ -55,7 +58,7 @@ export default function CodeEditor({ value, onChange, language, errorLine, ariaL
   return (
     <Editor
       value={value}
-      language={language}
+      language={monacoLanguage(language)}
       theme={`cq-${theme}`}
       onChange={(v) => onChange(v ?? '')}
       onMount={onMount}

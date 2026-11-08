@@ -60,7 +60,7 @@ export function App() {
           <Route path="/learn/:courseId/:exerciseId" element={auth(<ExercisePage />)} />
           <Route path="/league" element={auth(<LeaguePage />)} />
           <Route path="/shop" element={auth(<ShopPage />)} />
-          <Route path="/profile" element={auth(<ProfilePage />)} />
+          <Route path="/profile/:tab?" element={auth(<ProfilePage />)} />
           {EffectsLab && <Route path="/dev/effects" element={<EffectsLab />} />}
           <Route path="*" element={<LoadError error={new Error('Page not found')} />} />
         </Routes>

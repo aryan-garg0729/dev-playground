@@ -1,0 +1,29 @@
+id: js.board.dozens
+type: code
+version: 1
+title: Dozens
+xp: 20
+difficulty: 1
+tags: [input, numbers]
+free: true
+spec:
+  language: js
+  runner: wasm
+  prompt: prompt.md
+  entry: main.js
+  starter: starter.js
+  solution: solution.js
+  examples:
+    - { input: "26", output: "2 boxes, 2 loose" }
+  hints:
+    - What does % give you after dividing by 12?
+    - Math.floor drops the fraction.
+  checks:
+    - kind: io_cases
+      name: Rolls
+      cases:
+        - { stdin: "26\n", stdout: "2 boxes, 2 loose\n" }
+        - { stdin: "12\n", stdout: "1 boxes, 0 loose\n" }
+        - { stdin: "7\n", stdout: "0 boxes, 7 loose\n", visible: false, name: Less than a dozen }
+        - { stdin: "0\n", stdout: "0 boxes, 0 loose\n", visible: false, name: Sold out }
+        - { stdin: "1000\n", stdout: "83 boxes, 4 loose\n", visible: false, name: Wedding order }

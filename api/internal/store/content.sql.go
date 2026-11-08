@@ -12,6 +12,44 @@ import (
 	"github.com/google/uuid"
 )
 
+const courseCurrentChapters = `-- name: CourseCurrentChapters :many
+SELECT DISTINCT ON (ch.course_id) ch.course_id, ch.title,
+    (SELECT count(*) FROM chapters c2
+      WHERE c2.course_id = ch.course_id AND c2.published AND c2.order_index <= ch.order_index)::int AS chapter_index
+FROM exercises e
+JOIN chapters ch ON ch.id = e.chapter_id
+LEFT JOIN progress p ON p.exercise_id = e.id AND p.user_id = $1
+WHERE ch.published AND e.published AND COALESCE(p.status, '') <> 'passed'
+ORDER BY ch.course_id, ch.order_index, e.order_index
+`
+
+type CourseCurrentChaptersRow struct {
+	CourseID     string `json:"course_id"`
+	Title        string `json:"title"`
+	ChapterIndex int32  `json:"chapter_index"`
+}
+
+// Per course, the chapter of the user's first unpassed lesson (1-based index).
+func (q *Queries) CourseCurrentChapters(ctx context.Context, userID uuid.UUID) ([]CourseCurrentChaptersRow, error) {
+	rows, err := q.db.Query(ctx, courseCurrentChapters, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CourseCurrentChaptersRow
+	for rows.Next() {
+		var i CourseCurrentChaptersRow
+		if err := rows.Scan(&i.CourseID, &i.Title, &i.ChapterIndex); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getContentAsset = `-- name: GetContentAsset :one
 SELECT mime, bytes FROM content_assets WHERE sha256 = $1
 `
@@ -132,6 +170,46 @@ func (q *Queries) GetExerciseForGrading(ctx context.Context, id string) (GetExer
 	return i, err
 }
 
+const listCareerPaths = `-- name: ListCareerPaths :many
+SELECT id, title, description, goal, steps FROM career_paths
+WHERE published
+ORDER BY order_index, id
+`
+
+type ListCareerPathsRow struct {
+	ID          string          `json:"id"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Goal        string          `json:"goal"`
+	Steps       json.RawMessage `json:"steps"`
+}
+
+func (q *Queries) ListCareerPaths(ctx context.Context) ([]ListCareerPathsRow, error) {
+	rows, err := q.db.Query(ctx, listCareerPaths)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCareerPathsRow
+	for rows.Next() {
+		var i ListCareerPathsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Goal,
+			&i.Steps,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listChapters = `-- name: ListChapters :many
 SELECT id, title FROM chapters
 WHERE course_id = $1 AND published
@@ -222,7 +300,7 @@ func (q *Queries) ListCourseExercises(ctx context.Context, arg ListCourseExercis
 }
 
 const listCourses = `-- name: ListCourses :many
-SELECT c.id, c.title, c.description,
+SELECT c.id, c.title, c.description, c.icon, c.level, c.tags, c.topics,
     (SELECT count(*) FROM chapters ch
       WHERE ch.course_id = c.id AND ch.published)::int AS chapter_count,
     (SELECT count(*) FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
@@ -231,19 +309,41 @@ SELECT c.id, c.title, c.description,
        JOIN exercises e ON e.id = p.exercise_id
        JOIN chapters ch ON ch.id = e.chapter_id
       WHERE ch.course_id = c.id AND ch.published AND e.published
-        AND p.status = 'passed' AND p.user_id = $1)::int AS passed_count
+        AND p.status = 'passed' AND p.user_id = $1)::int AS passed_count,
+    -- Chapters with lessons, every one of them passed.
+    (SELECT count(*) FROM chapters ch
+      WHERE ch.course_id = c.id AND ch.published
+        AND EXISTS (SELECT 1 FROM exercises e WHERE e.chapter_id = ch.id AND e.published)
+        AND NOT EXISTS (
+            SELECT 1 FROM exercises e
+            LEFT JOIN progress p ON p.exercise_id = e.id AND p.user_id = $1
+            WHERE e.chapter_id = ch.id AND e.published AND COALESCE(p.status, '') <> 'passed'))::int AS chapters_done,
+    (SELECT count(*) FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
+      WHERE ch.course_id = c.id AND ch.published AND e.published AND e.free)::int AS free_count,
+    EXISTS (SELECT 1 FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
+      WHERE ch.course_id = c.id AND ch.published AND e.published AND e.type = 'project_cli')::bool AS has_cli,
+    EXISTS (SELECT 1 FROM exercises e JOIN chapters ch ON ch.id = e.chapter_id
+      WHERE ch.course_id = c.id AND ch.published AND e.published AND e.type <> 'project_cli')::bool AS has_browser
 FROM courses c
 WHERE c.published
 ORDER BY c.order_index, c.id
 `
 
 type ListCoursesRow struct {
-	ID            string `json:"id"`
-	Title         string `json:"title"`
-	Description   string `json:"description"`
-	ChapterCount  int32  `json:"chapter_count"`
-	ExerciseCount int32  `json:"exercise_count"`
-	PassedCount   int32  `json:"passed_count"`
+	ID            string   `json:"id"`
+	Title         string   `json:"title"`
+	Description   string   `json:"description"`
+	Icon          string   `json:"icon"`
+	Level         string   `json:"level"`
+	Tags          []string `json:"tags"`
+	Topics        string   `json:"topics"`
+	ChapterCount  int32    `json:"chapter_count"`
+	ExerciseCount int32    `json:"exercise_count"`
+	PassedCount   int32    `json:"passed_count"`
+	ChaptersDone  int32    `json:"chapters_done"`
+	FreeCount     int32    `json:"free_count"`
+	HasCli        bool     `json:"has_cli"`
+	HasBrowser    bool     `json:"has_browser"`
 }
 
 func (q *Queries) ListCourses(ctx context.Context, userID uuid.NullUUID) ([]ListCoursesRow, error) {
@@ -259,9 +359,17 @@ func (q *Queries) ListCourses(ctx context.Context, userID uuid.NullUUID) ([]List
 			&i.ID,
 			&i.Title,
 			&i.Description,
+			&i.Icon,
+			&i.Level,
+			&i.Tags,
+			&i.Topics,
 			&i.ChapterCount,
 			&i.ExerciseCount,
 			&i.PassedCount,
+			&i.ChaptersDone,
+			&i.FreeCount,
+			&i.HasCli,
+			&i.HasBrowser,
 		); err != nil {
 			return nil, err
 		}
@@ -271,6 +379,15 @@ func (q *Queries) ListCourses(ctx context.Context, userID uuid.NullUUID) ([]List
 		return nil, err
 	}
 	return items, nil
+}
+
+const unpublishCareerPathsNotIn = `-- name: UnpublishCareerPathsNotIn :exec
+UPDATE career_paths SET published = false WHERE NOT (id = ANY ($1::text[]))
+`
+
+func (q *Queries) UnpublishCareerPathsNotIn(ctx context.Context, ids []string) error {
+	_, err := q.db.Exec(ctx, unpublishCareerPathsNotIn, ids)
+	return err
 }
 
 const unpublishChaptersNotIn = `-- name: UnpublishChaptersNotIn :exec
@@ -297,6 +414,39 @@ UPDATE exercises SET published = false WHERE NOT (id = ANY ($1::text[]))
 
 func (q *Queries) UnpublishExercisesNotIn(ctx context.Context, ids []string) error {
 	_, err := q.db.Exec(ctx, unpublishExercisesNotIn, ids)
+	return err
+}
+
+const upsertCareerPath = `-- name: UpsertCareerPath :exec
+INSERT INTO career_paths (id, title, description, goal, order_index, steps, published)
+VALUES ($1, $2, $3, $4, $5, $6, true)
+ON CONFLICT (id) DO UPDATE SET
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    goal = EXCLUDED.goal,
+    order_index = EXCLUDED.order_index,
+    steps = EXCLUDED.steps,
+    published = true
+`
+
+type UpsertCareerPathParams struct {
+	ID          string          `json:"id"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Goal        string          `json:"goal"`
+	OrderIndex  int32           `json:"order_index"`
+	Steps       json.RawMessage `json:"steps"`
+}
+
+func (q *Queries) UpsertCareerPath(ctx context.Context, arg UpsertCareerPathParams) error {
+	_, err := q.db.Exec(ctx, upsertCareerPath,
+		arg.ID,
+		arg.Title,
+		arg.Description,
+		arg.Goal,
+		arg.OrderIndex,
+		arg.Steps,
+	)
 	return err
 }
 
@@ -352,21 +502,29 @@ func (q *Queries) UpsertContentAsset(ctx context.Context, arg UpsertContentAsset
 }
 
 const upsertCourse = `-- name: UpsertCourse :exec
-INSERT INTO courses (id, title, description, order_index, published)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO courses (id, title, description, order_index, published, icon, level, tags, topics)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (id) DO UPDATE SET
     title = EXCLUDED.title,
     description = EXCLUDED.description,
     order_index = EXCLUDED.order_index,
-    published = EXCLUDED.published
+    published = EXCLUDED.published,
+    icon = EXCLUDED.icon,
+    level = EXCLUDED.level,
+    tags = EXCLUDED.tags,
+    topics = EXCLUDED.topics
 `
 
 type UpsertCourseParams struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	OrderIndex  int32  `json:"order_index"`
-	Published   bool   `json:"published"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	OrderIndex  int32    `json:"order_index"`
+	Published   bool     `json:"published"`
+	Icon        string   `json:"icon"`
+	Level       string   `json:"level"`
+	Tags        []string `json:"tags"`
+	Topics      string   `json:"topics"`
 }
 
 func (q *Queries) UpsertCourse(ctx context.Context, arg UpsertCourseParams) error {
@@ -376,6 +534,10 @@ func (q *Queries) UpsertCourse(ctx context.Context, arg UpsertCourseParams) erro
 		arg.Description,
 		arg.OrderIndex,
 		arg.Published,
+		arg.Icon,
+		arg.Level,
+		arg.Tags,
+		arg.Topics,
 	)
 	return err
 }

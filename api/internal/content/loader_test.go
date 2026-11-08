@@ -126,6 +126,26 @@ func TestLoadProblems(t *testing.T) {
 			"c/ch1/chapter.yaml", "empty"},
 		{"folder without course.yaml", func(m map[string]string) { m["stray/readme.md"] = "hi" },
 			"stray", "no course.yaml"},
+		{"bad icon", func(m map[string]string) { m["c/course.yaml"] += "icon: Python\n" },
+			"c/course.yaml", "icon"},
+		{"bad level", func(m map[string]string) { m["c/course.yaml"] += "level: expert\n" },
+			"c/course.yaml", "level"},
+		{"too many tags", func(m map[string]string) { m["c/course.yaml"] += "tags: [a, b, c, d, e]\n" },
+			"c/course.yaml", "at most 4"},
+		{"duplicate tag", func(m map[string]string) { m["c/course.yaml"] += "tags: [AI, ai]\n" },
+			"c/course.yaml", "listed twice"},
+		{"path with unknown course", func(m map[string]string) {
+			m["paths.yaml"] = "paths:\n  - { id: p, title: P, courses: [{ course: nope }] }\n"
+		}, "paths.yaml: paths[0]", `"nope" is not a course`},
+		{"path with bad goal", func(m map[string]string) {
+			m["paths.yaml"] = "paths:\n  - { id: p, title: P, goal: fame, courses: [{ course: c }] }\n"
+		}, "paths.yaml: paths[0]", "goal"},
+		{"two paths with one goal", func(m map[string]string) {
+			m["paths.yaml"] = "paths:\n  - { id: p, title: P, goal: ai, courses: [{ course: c }] }\n  - { id: q, title: Q, goal: ai, courses: [{ course: c }] }\n"
+		}, "paths.yaml: paths[1]", "already belongs"},
+		{"unknown path field", func(m map[string]string) {
+			m["paths.yaml"] = "paths:\n  - { id: p, title: P, colour: red, courses: [{ course: c }] }\n"
+		}, "paths.yaml", "colour"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -145,6 +165,31 @@ func TestLoadProblems(t *testing.T) {
 			}
 			t.Fatalf("no problem at %s containing %q; got:\n%v", tt.wantPath, tt.wantMsg, verr)
 		})
+	}
+}
+
+func TestLoadCatalogAndPaths(t *testing.T) {
+	files := baseTree()
+	files["c/course.yaml"] += "icon: py\nlevel: intermediate\ntags: [Python, AI]\ntopics: Loops and lists\n"
+	files["paths.yaml"] = "paths:\n  - id: p\n    title: P\n    goal: ai\n    courses:\n      - { course: c, note: First steps }\n"
+	b, err := Load(writeTree(t, files))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := b.Courses[0]
+	if c.Icon != "py" || c.Level != "intermediate" || strings.Join(c.Tags, ",") != "Python,AI" || c.Topics != "Loops and lists" {
+		t.Fatalf("catalog fields: %+v", c)
+	}
+	if len(b.Paths) != 1 || b.Paths[0].Goal != "ai" || b.Paths[0].Steps[0] != (PathStep{Course: "c", Note: "First steps"}) {
+		t.Fatalf("paths: %+v", b.Paths)
+	}
+
+	plain, err := Load(writeTree(t, baseTree()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := plain.Courses[0]; c.Icon != "c" || c.Level != "beginner" || c.Tags == nil || len(plain.Paths) != 0 {
+		t.Fatalf("defaults: %+v, paths %+v", c, plain.Paths)
 	}
 }
 

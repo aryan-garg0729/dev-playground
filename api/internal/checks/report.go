@@ -16,6 +16,7 @@ type Report struct {
 	SyntaxError *SyntaxError `json:"syntax_error"`
 	Forbidden   []Forbidden  `json:"forbidden"`
 	Program     *Phase       `json:"program"` // nil unless a stdout check asked for it
+	Cases       []Phase      `json:"cases"`   // one program run per io_cases stdin, in order (wasm)
 	Tests       *TestPhase   `json:"tests"`
 	TimedOut    bool         `json:"timed_out"`
 	RuntimeMs   int          `json:"runtime_ms"`

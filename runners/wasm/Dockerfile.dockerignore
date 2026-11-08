@@ -1,0 +1,10 @@
+*
+!api/go.mod
+!api/go.sum
+!api/cmd
+!api/internal
+!api/db
+!runners/wasm/go.mod
+!runners/wasm/go.sum
+!runners/wasm/cmd
+!runners/wasm/symbols

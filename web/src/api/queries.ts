@@ -12,6 +12,7 @@ export const keys = {
   shop: ['shop'] as const,
   quests: ['quests'] as const,
   medals: ['medals'] as const,
+  profile: ['profile'] as const,
   courses: ['courses'] as const,
   course: (id: string) => ['course', id] as const,
   exercise: (id: string) => ['exercise', id] as const,
@@ -94,6 +95,7 @@ export function useSubmit(exerciseId: string, courseId: string | undefined) {
       void qc.invalidateQueries({ queryKey: keys.shop });
       void qc.invalidateQueries({ queryKey: keys.quests });
       void qc.invalidateQueries({ queryKey: keys.medals });
+      void qc.invalidateQueries({ queryKey: keys.profile });
       if (courseId) void qc.invalidateQueries({ queryKey: keys.course(courseId) });
     },
   });
@@ -190,6 +192,22 @@ export function useMedals() {
   return useQuery({ queryKey: keys.medals, queryFn: () => unwrap(api.GET('/medals')) });
 }
 
+export function useProfile() {
+  return useQuery({ queryKey: keys.profile, queryFn: () => unwrap(api.GET('/profile')) });
+}
+
+/** Saves the profile form: display name and worn title. */
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; title: string }) => unwrap(api.PATCH('/me', { body })),
+    onSuccess: (me) => {
+      qc.setQueryData(keys.me, me);
+      void qc.invalidateQueries({ queryKey: keys.medals });
+    },
+  });
+}
+
 /** A fresh idempotency key per action: a retried request cannot spend twice. */
 const requestId = () => crypto.randomUUID();
 
@@ -198,7 +216,7 @@ function useEconomyMutation<T, V>(fn: (v: V, id: string) => Promise<T>) {
   return useMutation({
     mutationFn: (v: V) => fn(v, requestId()),
     onSettled: () => {
-      for (const k of [keys.shop, keys.me, keys.quests, keys.home, keys.medals]) void qc.invalidateQueries({ queryKey: k });
+      for (const k of [keys.shop, keys.me, keys.quests, keys.home, keys.medals, keys.profile]) void qc.invalidateQueries({ queryKey: k });
     },
   });
 }
@@ -224,17 +242,6 @@ export function useUsePowerup() {
 
 export function useOpenChest() {
   return useEconomyMutation((_: void, id) => unwrap(api.POST('/quests/chest/open', { body: { request_id: id } })));
-}
-
-export function useSetTitle() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (title: string) => unwrap(api.PATCH('/me', { body: { title } })),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: keys.me });
-      void qc.invalidateQueries({ queryKey: keys.medals });
-    },
-  });
 }
 
 export type MeUpdate = paths['/me']['patch']['requestBody']['content']['application/json'];

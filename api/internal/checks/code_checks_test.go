@@ -158,6 +158,11 @@ func TestValidateRejects(t *testing.T) {
 		{"stdout_regex", `{"pattern":"("}`},
 		{"forbidden_calls", `{"names":[]}`},
 		{"forbidden_calls", `{"names":["os.system"]}`},
+		{"io_cases", `{}`},
+		{"io_cases", `{"cases":[{"stdin":"1"}]}`},
+		{"io_cases", `{"cases":[{"stdin":"1","stdout":"1","extra":1}]}`},
+		{"exit_code", `{"expected":-1}`},
+		{"exit_code", `{"expected":0,"extra":1}`},
 		{"no_such_kind", `{}`},
 	}
 	for _, tt := range tests {

@@ -51,6 +51,14 @@ paths:
           description: Continue card, today's goal and streak week, paths, league summary
           content: { application/json: { schema: { $ref: "#/components/schemas/Home" } } }
         "401": { $ref: "#/components/responses/Error" }
+  /profile:
+    get:
+      operationId: getProfile
+      responses:
+        "200":
+          description: The signed-in user's own profile (activity, projects, skills); never public
+          content: { application/json: { schema: { $ref: "#/components/schemas/Profile" } } }
+        "401": { $ref: "#/components/responses/Error" }
   /leagues/current:
     get:
       operationId: getCurrentLeague
@@ -304,9 +312,10 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [courses]
+                required: [courses, paths]
                 properties:
                   courses: { type: array, items: { $ref: "#/components/schemas/CourseSummary" } }
+                  paths: { type: array, items: { $ref: "#/components/schemas/CareerPath" } }
   /courses/{courseId}:
     get:
       operationId: getCourse
@@ -862,10 +871,108 @@ components:
                   weekly_xp: { type: integer }
                   you: { type: boolean }
                   zone: { $ref: "#/components/schemas/LeagueZone" }
+    Activity:
+      type: object
+      description: Lessons passed per local day over the last 53 weeks; only days with a pass are listed
+      required: [from, to, days, longest_streak]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date, description: The user's local today }
+        longest_streak: { type: integer }
+        days:
+          type: array
+          items:
+            type: object
+            required: [date, lessons]
+            properties:
+              date: { type: string, format: date }
+              lessons: { type: integer }
+    CareerPath:
+      type: object
+      required: [id, title, description, yours, steps, exercise_count, passed_count]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        yours: { type: boolean, description: The path matches the user's onboarding goal }
+        exercise_count: { type: integer }
+        passed_count: { type: integer }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [course_id, title, note, status]
+            properties:
+              course_id: { type: string }
+              title: { type: string }
+              note: { type: string }
+              status: { $ref: "#/components/schemas/CourseStatus" }
+    CourseStatus:
+      type: string
+      enum: [not_started, in_progress, done]
+    Project:
+      type: object
+      description: A chapter boss
+      required: [exercise_id, course_id, course_title, title, chapter_index, chapter_title, status, first_try, defeated_at]
+      properties:
+        exercise_id: { type: string }
+        course_id: { type: string }
+        course_title: { type: string }
+        title: { type: string }
+        chapter_index: { type: integer }
+        chapter_title: { type: string }
+        status: { type: string, enum: [defeated, next, upcoming] }
+        first_try: { type: boolean }
+        defeated_at: { oneOf: [{ type: "null" }, { type: string, format: date-time }] }
+    Profile:
+      type: object
+      required: [joined_at, path, projects_shipped, activity, projects, skills, recent]
+      properties:
+        joined_at: { type: string, format: date-time }
+        path:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [id, title]
+              properties: { id: { type: string }, title: { type: string } }
+        projects_shipped: { type: integer }
+        activity: { $ref: "#/components/schemas/Activity" }
+        projects: { type: array, items: { $ref: "#/components/schemas/Project" } }
+        skills:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [course_id, course_title, chapters]
+              properties:
+                course_id: { type: string }
+                course_title: { type: string }
+                chapters:
+                  type: array
+                  items:
+                    type: object
+                    required: [title, tier, passed, lessons]
+                    properties:
+                      title: { type: string }
+                      tier: { type: string, enum: ["", bronze, silver, gold] }
+                      passed: { type: integer }
+                      lessons: { type: integer }
+        recent:
+          type: array
+          items:
+            type: object
+            required: [date, exercise_id, title, boss, course_id, course_title]
+            properties:
+              date: { type: string, format: date }
+              exercise_id: { type: string }
+              title: { type: string }
+              boss: { type: boolean }
+              course_id: { type: string }
+              course_title: { type: string }
     Home:
       type: object
-      required: [continue, today, paths, league]
+      required: [continue, today, paths, league, activity]
       properties:
+        activity: { $ref: "#/components/schemas/Activity" }
         continue:
           oneOf:
             - type: "null"
@@ -884,20 +991,37 @@ components:
             allOf:
               - $ref: "#/components/schemas/CourseSummary"
               - type: object
-                required: [status]
+                required: [next_boss, up_next, after]
                 properties:
-                  status: { type: string, enum: [not_started, in_progress, done] }
+                  next_boss: { type: [string, "null"], description: Title of the course's first undefeated boss }
+                  up_next: { type: boolean, description: The next course on the user's career path, not started yet }
+                  after: { type: string, description: The course before it on the path ("" for the first) }
         league: { $ref: "#/components/schemas/LeagueSummary" }
     CourseSummary:
       type: object
-      required: [id, title, description, chapter_count, exercise_count, passed_count]
+      required: [id, title, description, icon, level, tags, topics, runs, chapter_count, exercise_count, passed_count, chapters_done, free_count, status, current_chapter]
       properties:
         id: { type: string }
         title: { type: string }
         description: { type: string }
+        icon: { type: string, description: 1-4 lowercase characters for the course tile }
+        level: { type: string, enum: [beginner, intermediate, advanced] }
+        tags: { type: array, items: { type: string }, description: Catalog filters }
+        topics: { type: string }
+        runs: { type: array, items: { type: string, enum: [browser, cli] } }
         chapter_count: { type: integer }
         exercise_count: { type: integer }
         passed_count: { type: integer }
+        chapters_done: { type: integer }
+        free_count: { type: integer, description: Free lessons; 0 means the course needs Pro }
+        status: { $ref: "#/components/schemas/CourseStatus" }
+        current_chapter:
+          description: Chapter of the first unpassed lesson, while in progress
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [index, title]
+              properties: { index: { type: integer }, title: { type: string } }
     ProgressStatus:
       type: string
       enum: [not_started, started, passed]

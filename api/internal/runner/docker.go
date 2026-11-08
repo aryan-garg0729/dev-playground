@@ -28,7 +28,7 @@ type Docker struct {
 
 // Args returns the docker run arguments for a job (exported for tests).
 func (d Docker) Args(name string, job Job) []string {
-	l := job.Limits.withDefaults()
+	l := job.Limits.WithDefaults()
 	mem := strconv.Itoa(l.MemoryMB) + "m"
 	return []string{
 		"run", "--rm", "-i", "--name", name,
@@ -60,7 +60,7 @@ func (d Docker) Run(ctx context.Context, job Job) (Output, error) {
 	if bin == "" {
 		bin = "docker"
 	}
-	l := job.Limits.withDefaults()
+	l := job.Limits.WithDefaults()
 	hard := 2*time.Duration(l.TimeoutMs)*time.Millisecond + hardGrace
 	runCtx, cancel := context.WithTimeout(ctx, hard)
 	defer cancel()

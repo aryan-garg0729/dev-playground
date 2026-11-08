@@ -1,4 +1,4 @@
-import type { Me, Outcome } from '../api/client';
+import type { CourseSummary, Me, Outcome } from '../api/client';
 
 export const me: Me = {
   user: { id: '00000000-0000-0000-0000-000000000001', email: 'ada@example.com', name: 'Ada Lovelace', avatar: '', timezone: 'UTC', goal: 'backend', onboarded: true },
@@ -19,3 +19,10 @@ export const firstPass: Outcome = {
 export const nothing: Outcome = {
   ...firstPass, xp_awarded: 0, breakdown: null, first_try: false, streak_extended: false,
 };
+
+/** A course card: Foundations, in progress in chapter 1. */
+export const course = (o: Partial<CourseSummary> = {}): CourseSummary => ({
+  id: 'foundations', title: 'Foundations', description: 'Quick warm-ups in Python and SQL.', icon: 'fd', level: 'beginner',
+  tags: ['Python', 'SQL'], topics: 'Loops, dicts, SELECT', runs: ['browser'], chapter_count: 2, exercise_count: 6,
+  passed_count: 2, chapters_done: 0, free_count: 5, status: 'in_progress', current_chapter: { index: 1, title: 'Python warm-up' }, ...o,
+});
