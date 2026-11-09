@@ -683,6 +683,7 @@ export interface components {
         };
         ChestDrop: {
             bytes: number;
+            /** @description The power-up won, or "" when the chest held none (half of all chests) */
             powerup: string;
         };
         RequestID: {
@@ -697,9 +698,9 @@ export interface components {
             unavailable?: string;
             owned: number;
             /** @enum {string} */
-            state: "buy" | "max_held" | "streak_safe" | "repair" | "pro" | "coming_soon" | "bet_open" | "place_bet";
+            state: "buy" | "max_held" | "needs_bosses" | "streak_safe" | "repair" | "pro" | "coming_soon" | "bet_open" | "place_bet";
             /** @enum {string} */
-            use: "auto" | "now" | "lessons" | "";
+            use: "auto" | "now" | "lessons" | "chapter" | "";
             usable_now: boolean;
         };
         Bet: {
@@ -743,6 +744,8 @@ export interface components {
             };
             bet?: components["schemas"]["Bet"];
             streak?: number;
+            /** @description The chapter a Skeleton Key opened */
+            unlocked_chapter?: string;
             balance: number;
         };
         Quest: {
@@ -764,6 +767,7 @@ export interface components {
             chest: {
                 ready: boolean;
                 opened: null | components["schemas"]["ChestDrop"];
+                /** @description Weights out of 100; powerup "" is no power-up */
                 odds: {
                     powerup: string;
                     weight: number;
@@ -1371,6 +1375,8 @@ export interface operations {
                     request_id: string;
                     /** @description second_wind and peek */
                     exercise_id?: string;
+                    /** @description skeleton_key: the locked chapter to open (the first locked one of its course) */
+                    chapter_id?: string;
                     /** @description double_or_nothing: 100-500 */
                     stake?: number;
                 };

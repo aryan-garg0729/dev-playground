@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -65,7 +66,7 @@ func TestBytesLedgerAndIdempotency(t *testing.T) {
 	e := setup(t, true)
 	e.grant(100)
 
-	// Too poor for Focus Boost (150): refused, nothing changes.
+	// Too poor for Focus Boost (200): refused, nothing changes.
 	body := e.post("/api/v1/shop/focus_boost/buy", req("r1"), http.StatusConflict)
 	if !strings.Contains(string(body), "insufficient_bytes") || e.balance() != 100 || e.owned("focus_boost") != 0 {
 		t.Fatalf("refused buy changed state: %s balance %d", body, e.balance())
@@ -74,7 +75,7 @@ func TestBytesLedgerAndIdempotency(t *testing.T) {
 	e.grant(1000)
 	first := e.post("/api/v1/shop/focus_boost/buy", req("r2"), http.StatusOK)
 	again := e.post("/api/v1/shop/focus_boost/buy", req("r2"), http.StatusOK)
-	if string(first) != string(again) || e.balance() != 950 || e.owned("focus_boost") != 1 {
+	if string(first) != string(again) || e.balance() != 900 || e.owned("focus_boost") != 1 {
 		t.Fatalf("replayed buy: %s / %s, balance %d, owned %d", first, again, e.balance(), e.owned("focus_boost"))
 	}
 	// The same id cannot be reused for another action.
@@ -323,5 +324,71 @@ func TestQuestsAndDailyChest(t *testing.T) {
 	second := e.post("/api/v1/quests/chest/open", req("c2"), http.StatusOK) // another id: same chest, no new payout
 	if e.balance() != 40 || !strings.Contains(string(first), `"bytes":40`) || string(first) != string(second) || e.owned("focus_boost") != 1 {
 		t.Fatalf("chest: %s / %s, balance %d", first, second, e.balance())
+	}
+}
+
+// Skeleton Key: sold only after 5 bosses, held one at a time; it opens the
+// first locked chapter (demo.more, behind demo.basics.sum) without passing
+// that boss, and only once per course.
+func TestSkeletonKey(t *testing.T) {
+	e := setup(t, true)
+	ctx := context.Background()
+	e.grant(13000)
+	if body := e.post("/api/v1/shop/skeleton_key/buy", req("k1"), http.StatusConflict); !strings.Contains(string(body), "5 bosses") || e.balance() != 13000 {
+		t.Fatalf("key before 5 bosses: %s, balance %d", body, e.balance())
+	}
+	if _, err := e.pool.Exec(ctx, `INSERT INTO counters (user_id, key, value) VALUES ($1, 'bosses', 5)`, e.user.UUID); err != nil {
+		t.Fatal(err)
+	}
+	e.post("/api/v1/shop/skeleton_key/buy", req("k2"), http.StatusOK)
+	if e.balance() != 7000 || e.owned("skeleton_key") != 1 {
+		t.Fatalf("after buying: balance %d, owned %d", e.balance(), e.owned("skeleton_key"))
+	}
+	if body := e.post("/api/v1/shop/skeleton_key/buy", req("k3"), http.StatusConflict); !strings.Contains(string(body), "already hold") || e.balance() != 7000 {
+		t.Fatalf("second key held: %s, balance %d", body, e.balance())
+	}
+
+	// An open chapter and an unknown one are refused and keep the key.
+	e.post("/api/v1/powerups/skeleton_key/use", req("u1", `,"chapter_id":"demo.basics"`), http.StatusConflict)
+	e.post("/api/v1/powerups/skeleton_key/use", req("u2", `,"chapter_id":"nope"`), http.StatusBadRequest)
+	if e.owned("skeleton_key") != 1 {
+		t.Fatal("a refused use spent the key")
+	}
+
+	after := "/api/v1/exercises/demo.more.after"
+	if code, _ := e.do(http.MethodGet, after, "", nil); code != http.StatusForbidden {
+		t.Fatalf("demo.more before the key = %d", code)
+	}
+	var used struct {
+		Remaining       int    `json:"remaining"`
+		UnlockedChapter string `json:"unlocked_chapter"`
+	}
+	_ = json.Unmarshal(e.post("/api/v1/powerups/skeleton_key/use", req("u3", `,"chapter_id":"demo.more"`), http.StatusOK), &used)
+	if used.UnlockedChapter != "demo.more" || used.Remaining != 0 {
+		t.Fatalf("use = %+v", used)
+	}
+	if code, body := e.do(http.MethodGet, after, "", nil); code != http.StatusOK {
+		t.Fatalf("demo.more after the key = %d %s", code, body)
+	}
+	var course struct{ Chapters []struct{ Locked bool } }
+	e.getJSON("/api/v1/courses/demo", &course)
+	if course.Chapters[1].Locked {
+		t.Fatal("course map still shows demo.more locked")
+	}
+	// The boss stays undefeated: not passed, no boss chest.
+	var passed, chests int
+	if err := e.pool.QueryRow(ctx, `SELECT
+		(SELECT count(*) FROM progress WHERE user_id = $1 AND exercise_id = 'demo.basics.sum' AND status = 'passed'),
+		(SELECT count(*) FROM chests WHERE user_id = $1)`, e.user.UUID).Scan(&passed, &chests); err != nil {
+		t.Fatal(err)
+	}
+	if passed != 0 || chests != 0 {
+		t.Fatalf("key passed the boss (%d) or opened a chest (%d)", passed, chests)
+	}
+
+	// Once per course, even with another key in hand.
+	e.post("/api/v1/shop/skeleton_key/buy", req("k4"), http.StatusOK)
+	if body := e.post("/api/v1/powerups/skeleton_key/use", req("u4", `,"chapter_id":"demo.more"`), http.StatusConflict); !strings.Contains(string(body), "this course") {
+		t.Fatalf("second key in a course: %s", body)
 	}
 }

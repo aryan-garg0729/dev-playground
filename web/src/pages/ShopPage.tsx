@@ -8,6 +8,7 @@ import { LoadError, Loading } from './states';
 
 const stateLabel: Record<string, string> = {
   max_held: 'Max held',
+  needs_bosses: 'Needs 5 bosses',
   streak_safe: 'Streak is safe',
   coming_soon: 'Coming soon',
   pro: 'Pro',
@@ -112,7 +113,9 @@ function Inventory({ shop }: { shop: Shop }) {
                 {i.usable_now ? 'Use now' : 'Used'}
               </Button>
             ) : (
-              <span className="text-small text-text-muted">{i.use === 'auto' ? 'used automatically' : 'in lessons'}</span>
+              <span className="text-small text-text-muted">
+                {i.use === 'auto' ? 'used automatically' : i.use === 'chapter' ? 'on a locked chapter' : 'in lessons'}
+              </span>
             )}
             <span className="text-game-sm w-8 text-right text-text">×{i.owned}</span>
           </li>

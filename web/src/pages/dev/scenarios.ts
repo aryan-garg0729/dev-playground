@@ -40,7 +40,7 @@ const base: Outcome = {
 const bossRewards = (chestPowerup: string): Outcome['rewards'] => ({
   bytes: [{ reason: 'chapter', label: 'Chapter complete', amount: 150 }],
   medals: [{ id: 'boss_slayer', name: 'Boss Slayer', tier: 'bronze', title: 'Boss Slayer I' }],
-  quests_done: ['Pass a coding lesson'],
+  quests_done: ['Pass a hands-on lesson'],
   chest_ready: false,
   chapter_complete: true,
   boss: { max_hp: 5, hp: 0, defeated: true, chest: { bytes: 300, powerup: chestPowerup }, unlocked_chapter: 'next' },

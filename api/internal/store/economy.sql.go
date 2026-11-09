@@ -171,6 +171,30 @@ func (q *Queries) BytesEarnedSince(ctx context.Context, arg BytesEarnedSincePara
 	return total, err
 }
 
+const chapterGate = `-- name: ChapterGate :one
+SELECT prev.id FROM chapters ch
+JOIN chapters prev ON prev.course_id = ch.course_id AND prev.published AND prev.order_index < ch.order_index
+JOIN exercises b ON b.chapter_id = prev.id AND b.boss AND b.published
+LEFT JOIN progress p ON p.exercise_id = b.id AND p.user_id = $1
+WHERE ch.id = $2 AND COALESCE(p.status, '') <> 'passed'
+  AND NOT EXISTS (SELECT 1 FROM chapter_keys k WHERE k.user_id = $1 AND k.gate_chapter_id = prev.id)
+ORDER BY prev.order_index DESC LIMIT 1
+`
+
+type ChapterGateParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	ChapterID string    `json:"chapter_id"`
+}
+
+// The latest chapter before @chapter_id whose boss the user has not passed and no key waived:
+// the boss that locks it.
+func (q *Queries) ChapterGate(ctx context.Context, arg ChapterGateParams) (string, error) {
+	row := q.db.QueryRow(ctx, chapterGate, arg.UserID, arg.ChapterID)
+	var id string
+	err := row.Scan(&id)
+	return id, err
+}
+
 const chapterProgress = `-- name: ChapterProgress :many
 SELECT e.id, e.boss, COALESCE(p.status, '')::text AS status, COALESCE(p.first_try, false)::bool AS first_try
 FROM exercises e
@@ -299,6 +323,22 @@ func (q *Queries) CourseChaptersDone(ctx context.Context, arg CourseChaptersDone
 	var i CourseChaptersDoneRow
 	err := row.Scan(&i.Chapters, &i.Done)
 	return i, err
+}
+
+const courseKey = `-- name: CourseKey :one
+SELECT chapter_id FROM chapter_keys WHERE user_id = $1 AND course_id = $2
+`
+
+type CourseKeyParams struct {
+	UserID   uuid.UUID `json:"user_id"`
+	CourseID string    `json:"course_id"`
+}
+
+func (q *Queries) CourseKey(ctx context.Context, arg CourseKeyParams) (string, error) {
+	row := q.db.QueryRow(ctx, courseKey, arg.UserID, arg.CourseID)
+	var chapter_id string
+	err := row.Scan(&chapter_id)
+	return chapter_id, err
 }
 
 const createBet = `-- name: CreateBet :one
@@ -437,6 +477,23 @@ func (q *Queries) ExerciseChapter(ctx context.Context, id string) (ExerciseChapt
 	return i, err
 }
 
+const getChapter = `-- name: GetChapter :one
+SELECT id, course_id, order_index FROM chapters WHERE id = $1 AND published
+`
+
+type GetChapterRow struct {
+	ID         string `json:"id"`
+	CourseID   string `json:"course_id"`
+	OrderIndex int32  `json:"order_index"`
+}
+
+func (q *Queries) GetChapter(ctx context.Context, id string) (GetChapterRow, error) {
+	row := q.db.QueryRow(ctx, getChapter, id)
+	var i GetChapterRow
+	err := row.Scan(&i.ID, &i.CourseID, &i.OrderIndex)
+	return i, err
+}
+
 const getChest = `-- name: GetChest :one
 SELECT bytes, powerup, opened_at FROM chests WHERE user_id = $1 AND kind = $2 AND ref_id = $3
 `
@@ -458,6 +515,22 @@ func (q *Queries) GetChest(ctx context.Context, arg GetChestParams) (GetChestRow
 	var i GetChestRow
 	err := row.Scan(&i.Bytes, &i.Powerup, &i.OpenedAt)
 	return i, err
+}
+
+const getCounter = `-- name: GetCounter :one
+SELECT COALESCE((SELECT value FROM counters WHERE user_id = $1 AND key = $2), 0)::int AS value
+`
+
+type GetCounterParams struct {
+	UserID uuid.UUID `json:"user_id"`
+	Key    string    `json:"key"`
+}
+
+func (q *Queries) GetCounter(ctx context.Context, arg GetCounterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getCounter, arg.UserID, arg.Key)
+	var value int32
+	err := row.Scan(&value)
+	return value, err
 }
 
 const getEconomyStats = `-- name: GetEconomyStats :one
@@ -583,6 +656,28 @@ func (q *Queries) InsertByteEvent(ctx context.Context, arg InsertByteEventParams
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const insertChapterKey = `-- name: InsertChapterKey :exec
+INSERT INTO chapter_keys (user_id, course_id, gate_chapter_id, chapter_id)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertChapterKeyParams struct {
+	UserID        uuid.UUID `json:"user_id"`
+	CourseID      string    `json:"course_id"`
+	GateChapterID string    `json:"gate_chapter_id"`
+	ChapterID     string    `json:"chapter_id"`
+}
+
+func (q *Queries) InsertChapterKey(ctx context.Context, arg InsertChapterKeyParams) error {
+	_, err := q.db.Exec(ctx, insertChapterKey,
+		arg.UserID,
+		arg.CourseID,
+		arg.GateChapterID,
+		arg.ChapterID,
+	)
+	return err
 }
 
 const inventoryCount = `-- name: InventoryCount :one
@@ -829,7 +924,8 @@ WHERE ch.course_id = $1 AND ch.published AND EXISTS (
     JOIN exercises b ON b.chapter_id = prev.id AND b.boss AND b.published
     LEFT JOIN progress p ON p.exercise_id = b.id AND p.user_id = $2
     WHERE prev.course_id = ch.course_id AND prev.published AND prev.order_index < ch.order_index
-      AND COALESCE(p.status, '') <> 'passed')
+      AND COALESCE(p.status, '') <> 'passed'
+      AND NOT EXISTS (SELECT 1 FROM chapter_keys k WHERE k.user_id = $2 AND k.gate_chapter_id = prev.id))
 `
 
 type LockedChaptersParams struct {
@@ -837,7 +933,8 @@ type LockedChaptersParams struct {
 	UserID   uuid.NullUUID `json:"user_id"`
 }
 
-// Chapters behind an undefeated boss: every chapter after one whose boss the user has not passed.
+// Chapters behind an undefeated boss: every chapter after one whose boss the user has not
+// passed, unless a Skeleton Key waived that boss (chapter_keys.gate_chapter_id).
 func (q *Queries) LockedChapters(ctx context.Context, arg LockedChaptersParams) ([]string, error) {
 	rows, err := q.db.Query(ctx, lockedChapters, arg.CourseID, arg.UserID)
 	if err != nil {

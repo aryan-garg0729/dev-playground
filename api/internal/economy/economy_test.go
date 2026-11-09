@@ -151,7 +151,7 @@ func TestStreakRepair(t *testing.T) {
 	if _, err := f.econ.Use(context.Background(), f.user, economy.StreakRepair, economy.UseRequest{RequestID: "r1"}); err != nil {
 		t.Fatal(err)
 	}
-	if s, _, b := f.stats(); s != 4 || b != 1500 {
+	if s, _, b := f.stats(); s != 4 || b != 1000 {
 		t.Fatalf("after repair: streak %d, bytes %d", s, b)
 	}
 	if out := f.grade("demo.basics.query", "pass"); out.StreakDays != 5 {
@@ -286,4 +286,66 @@ func TestQuestProgress(t *testing.T) {
 	if v.Weekly.Event == "lessons" && v.Weekly.Progress != 1 {
 		t.Errorf("weekly progress = %d", v.Weekly.Progress)
 	}
+}
+
+// Half of all chests hold no power-up: the "" slot of ChestOdds pays only Bytes.
+func TestChestOddsHalfEmpty(t *testing.T) {
+	total, empty := 0, 0
+	for _, o := range economy.ChestOdds {
+		total += o.Weight
+		if o.PowerUp == "" {
+			empty += o.Weight
+		}
+		if o.PowerUp == economy.SkeletonKey {
+			t.Fatal("a chest can drop the Skeleton Key")
+		}
+	}
+	if total != 100 || empty != 50 {
+		t.Fatalf("odds total %d, empty %d; want 100 and 50", total, empty)
+	}
+	f := setup(t)
+	f.econ.Rand = func(n int) int { return n - 1 } // the last slot: no power-up
+	out := f.grade("demo.basics.sum", "pass")      // the boss: opens the boss chest
+	c := out.Rewards.Boss.Chest
+	if c == nil || c.PowerUp != "" || c.Bytes != economy.BossBytes {
+		t.Fatalf("boss chest = %+v", c)
+	}
+	var held int
+	if err := f.pool.QueryRow(context.Background(), `SELECT COALESCE(sum(count), 0) FROM inventory WHERE user_id = $1`, f.user).Scan(&held); err != nil {
+		t.Fatal(err)
+	}
+	if held != 0 {
+		t.Fatalf("an empty chest added %d power-ups", held)
+	}
+}
+
+// The "hands-on lesson" daily quest counts project_cli lessons, so CLI-only
+// courses can finish it.
+func TestHandsOnQuestCountsCLI(t *testing.T) {
+	f := setup(t)
+	f.exec(`UPDATE exercises SET type = 'project_cli' WHERE id = 'demo.basics.pick'`)
+	for d := range 20 { // find a day the quest is drawn for this user
+		f.day(d)
+		v, err := f.econ.Quests(context.Background(), f.user)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, q := range v.Daily {
+			if q.ID != "d.code1" {
+				continue
+			}
+			f.grade("demo.basics.pick", "pass")
+			v, err = f.econ.Quests(context.Background(), f.user)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, q := range v.Daily {
+				if q.ID == "d.code1" && q.Progress != 1 {
+					t.Fatalf("hands-on quest after a CLI pass = %d", q.Progress)
+				}
+			}
+			return
+		}
+	}
+	t.Fatal("d.code1 was never drawn in 20 days")
 }

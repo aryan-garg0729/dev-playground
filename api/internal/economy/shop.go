@@ -19,9 +19,9 @@ import (
 type ShopItem struct {
 	PowerUp
 	Owned int `json:"owned"`
-	// State: buy | max_held | streak_safe | repair | pro | coming_soon | bet_open | place_bet
+	// State: buy | max_held | needs_bosses | streak_safe | repair | pro | coming_soon | bet_open | place_bet
 	State string `json:"state"`
-	// Use: how a held one is used: auto | now | lessons | "" (not held)
+	// Use: how a held one is used: auto | now | lessons | chapter | "" (not held)
 	Use string `json:"use"`
 	// UsableNow: a "now" power-up can be used at this moment.
 	UsableNow bool `json:"usable_now"`
@@ -56,7 +56,7 @@ type ShopView struct {
 }
 
 var usage = map[string]string{
-	StreakFreeze: "auto", FocusBoost: "now", LeagueShield: "now", SecondWind: "lessons", Peek: "lessons",
+	StreakFreeze: "auto", FocusBoost: "now", LeagueShield: "now", SecondWind: "lessons", Peek: "lessons", SkeletonKey: "chapter",
 }
 
 // Shop returns the shop with the user's balance, inventory and effects.
@@ -97,13 +97,19 @@ func (s *Service) Shop(ctx context.Context, user uuid.UUID) (ShopView, error) {
 		}
 		v.Bet = bet
 		repairable := canRepair(st, d.Today)
+		bosses, err := q.GetCounter(ctx, store.GetCounterParams{UserID: user, Key: "bosses"})
+		if err != nil {
+			return err
+		}
 		for _, p := range PowerUps {
 			it := ShopItem{PowerUp: p, Owned: held[p.ID], State: "buy", Use: usage[p.ID]}
 			switch {
 			case p.Unavailable != "":
 				it.State = p.Unavailable
-			case p.ID == StreakFreeze && it.Owned >= MaxFreezes:
+			case p.ID == StreakFreeze && it.Owned >= MaxFreezes, p.ID == SkeletonKey && it.Owned >= 1:
 				it.State = "max_held"
+			case p.ID == SkeletonKey && bosses < SkeletonKeyBosses:
+				it.State = "needs_bosses"
 			case p.ID == StreakRepair && !repairable:
 				it.State = "streak_safe"
 			case p.ID == StreakRepair:
@@ -129,6 +135,7 @@ func (s *Service) Shop(ctx context.Context, user uuid.UUID) (ShopView, error) {
 		for _, e := range [][2]string{
 			{"Daily chest (3 quests)", fmt.Sprintf("%d–%d", ChestMinBytes, ChestMaxBytes)},
 			{"Chapter complete", strconv.Itoa(ChapterBytes)}, {"Boss defeated", strconv.Itoa(BossBytes)},
+			{"Weekly quest", strconv.Itoa(WeeklyQuestByte)},
 			{"Medal earned", "50–500"}, {"League top 5", strconv.Itoa(LeagueTop5Bytes)},
 		} {
 			v.Earn = append(v.Earn, struct {
@@ -159,6 +166,11 @@ func (s *Service) Buy(ctx context.Context, user uuid.UUID, powerup, requestID st
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = once(ctx, tx, user, requestID, "buy:"+powerup, func(q *store.Queries) (any, error) {
+			if powerup == SkeletonKey {
+				if err := canBuyKey(ctx, q, user); err != nil {
+					return nil, err
+				}
+			}
 			if _, err := credit(ctx, q, user, -p.Cost, "buy:"+powerup, requestID); err != nil {
 				return nil, err
 			}
@@ -197,6 +209,7 @@ func (s *Service) Buy(ctx context.Context, user uuid.UUID, powerup, requestID st
 type UseRequest struct {
 	RequestID  string `json:"request_id"`
 	ExerciseID string `json:"exercise_id"` // second_wind, peek
+	ChapterID  string `json:"chapter_id"`  // skeleton_key: the locked chapter to open
 	Stake      int    `json:"stake"`       // double_or_nothing
 }
 
@@ -208,7 +221,9 @@ type UseResult struct {
 	Peek      *PeekShown `json:"peek,omitempty"`
 	Bet       *Bet       `json:"bet,omitempty"`
 	Streak    int        `json:"streak,omitempty"`
-	Balance   int        `json:"balance"`
+	// UnlockedChapter: the chapter a Skeleton Key opened.
+	UnlockedChapter string `json:"unlocked_chapter,omitempty"`
+	Balance         int    `json:"balance"`
 }
 
 // PeekShown is what Peek reveals: a failed hidden check's input, nothing else.
@@ -271,6 +286,8 @@ func (s *Service) Use(ctx context.Context, user uuid.UUID, powerup string, req U
 				err = s.useSecondWind(ctx, q, user, req.ExerciseID, &res)
 			case Peek:
 				err = s.usePeek(ctx, q, user, req.ExerciseID, &res)
+			case SkeletonKey:
+				err = s.useKey(ctx, q, user, req.ChapterID, &res)
 			case StreakRepair:
 				err = s.repair(ctx, q, user, req.RequestID, d.Today, &res)
 			case DoubleOrNothing:
@@ -302,6 +319,8 @@ func useRef(powerup string, req UseRequest, now time.Time) string {
 		return game.WeekStart(now).Format(time.DateOnly)
 	case SecondWind, Peek:
 		return req.ExerciseID
+	case SkeletonKey:
+		return req.ChapterID
 	}
 	return ""
 }
@@ -413,4 +432,66 @@ func contains(xs []string, x string) bool {
 		}
 	}
 	return false
+}
+
+// canBuyKey: a Skeleton Key needs SkeletonKeyBosses bosses defeated and is
+// held one at a time.
+func canBuyKey(ctx context.Context, q *store.Queries, user uuid.UUID) error {
+	bosses, err := q.GetCounter(ctx, store.GetCounterParams{UserID: user, Key: "bosses"})
+	if err != nil {
+		return err
+	}
+	if bosses < SkeletonKeyBosses {
+		return LimitError{fmt.Sprintf("Defeat %d bosses to unlock the Skeleton Key", SkeletonKeyBosses)}
+	}
+	held, err := q.InventoryCount(ctx, store.InventoryCountParams{UserID: user, Powerup: SkeletonKey})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if held > 0 {
+		return LimitError{"You already hold a Skeleton Key"}
+	}
+	return nil
+}
+
+// useKey opens one locked chapter: the first locked one of its course, whose
+// only lock is the undefeated boss of an earlier chapter. That boss is waived
+// for the chapters after it (chapter_keys), but stays unpassed: no XP, Bytes,
+// boss chest or Boss Slayer progress, and its own chapter is not complete.
+// One key per course.
+func (s *Service) useKey(ctx context.Context, q *store.Queries, user uuid.UUID, chapterID string, res *UseResult) error {
+	ch, err := q.GetChapter(ctx, chapterID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("%w: unknown chapter", ErrBadRequest)
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := q.CourseKey(ctx, store.CourseKeyParams{UserID: user, CourseID: ch.CourseID}); err == nil {
+		return LimitError{"You already used a Skeleton Key in this course"}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	locked, err := q.LockedChapters(ctx, store.LockedChaptersParams{UserID: uuid.NullUUID{UUID: user, Valid: true}, CourseID: ch.CourseID})
+	if err != nil {
+		return err
+	}
+	if !contains(locked, chapterID) {
+		return LimitError{"This chapter is already open"}
+	}
+	gate, err := q.ChapterGate(ctx, store.ChapterGateParams{UserID: user, ChapterID: chapterID})
+	if err != nil {
+		return fmt.Errorf("chapter gate: %w", err)
+	}
+	if contains(locked, gate) { // another boss further back still locks it
+		return LimitError{"A Skeleton Key opens only the next locked chapter"}
+	}
+	if res.Remaining, err = take(ctx, q, user, SkeletonKey); err != nil {
+		return err
+	}
+	if err := q.InsertChapterKey(ctx, store.InsertChapterKeyParams{UserID: user, CourseID: ch.CourseID, GateChapterID: gate, ChapterID: chapterID}); err != nil {
+		return fmt.Errorf("chapter key: %w", err)
+	}
+	res.UnlockedChapter = chapterID
+	return nil
 }

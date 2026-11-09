@@ -48,6 +48,29 @@ describe('CoursePage (course map)', () => {
     expect(within(screen.getByRole('list', { name: 'Chapter 2 lessons' })).getByRole('link')).toHaveAttribute('href', '/learn/lc/a1');
   });
 
+  it('offers a held Skeleton Key on the first locked chapter only', async () => {
+    const locked = {
+      ...course,
+      chapters: [
+        { id: 'a', title: 'Alpha chapter', exercises: [ex('a1', 'Only', 'passed')] },
+        { id: 'b', title: 'Beta chapter', locked: true, exercises: [ex('b1', 'First')] },
+        { id: 'c', title: 'Gamma chapter', locked: true, exercises: [ex('c1', 'First')] },
+      ],
+    };
+    const shop = { balance: 0, earned_today: 0, effects: [], bet: null, earn: [], items: [{ id: 'skeleton_key', owned: 1 }] };
+    const fetch = stubApi({
+      'GET /api/v1/courses/lc': [200, locked],
+      'GET /api/v1/shop': [200, shop],
+      'POST /api/v1/powerups/skeleton_key/use': [200, { powerup: 'skeleton_key', remaining: 0, balance: 0, unlocked_chapter: 'b' }],
+    });
+    renderRoute('/courses/lc', '/courses/:courseId', <CoursePage />);
+    const keys = await screen.findAllByRole('button', { name: 'Use Skeleton Key' });
+    expect(keys).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Use Skeleton Key' }));
+    const use = fetch.mock.calls.map(([r]) => r as Request).find((r) => r.method === 'POST');
+    expect(await use?.clone().json()).toMatchObject({ chapter_id: 'b' });
+  });
+
   it('shows not found for an unknown course', async () => {
     stubApi({});
     renderRoute('/courses/nope', '/courses/:courseId', <CoursePage />);

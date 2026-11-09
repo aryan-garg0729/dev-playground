@@ -230,14 +230,28 @@ export function useBuy() {
 }
 
 export function useUsePowerup() {
-  return useEconomyMutation((v: { powerup: string; exerciseId?: string; stake?: number }, id) =>
+  return useEconomyMutation((v: { powerup: string; exerciseId?: string; chapterId?: string; stake?: number }, id) =>
     unwrap(
       api.POST('/powerups/{powerup}/use', {
         params: { path: { powerup: v.powerup } },
-        body: { request_id: id, exercise_id: v.exerciseId, stake: v.stake },
+        body: { request_id: id, exercise_id: v.exerciseId, chapter_id: v.chapterId, stake: v.stake },
       }),
     ),
   );
+}
+
+/** Opens a locked chapter with a held Skeleton Key, then reloads the course map. */
+export function useSkeletonKey(courseId: string) {
+  const qc = useQueryClient();
+  const use = useUsePowerup();
+  return {
+    ...use,
+    open: (chapterId: string, onError: (e: Error) => void) =>
+      use.mutate(
+        { powerup: 'skeleton_key', chapterId },
+        { onError, onSettled: () => void qc.invalidateQueries({ queryKey: keys.course(courseId) }) },
+      ),
+  };
 }
 
 export function useOpenChest() {

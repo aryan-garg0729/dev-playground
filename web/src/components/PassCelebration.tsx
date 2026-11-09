@@ -8,7 +8,7 @@ import { ChestOpen, type Loot } from './ChestOpen';
 import { levelProgress } from './GameStats';
 import { CheckIcon, ChestIcon, FlameIcon } from './icons';
 import { LevelUpBurst } from './LevelUpBurst';
-import { powerupName } from './powerups';
+import { lootText } from './powerups';
 
 interface Props {
   outcome: Outcome;
@@ -25,7 +25,7 @@ function RewardsList({ outcome, onOpenChest }: { outcome: Outcome; onOpenChest: 
   const chest = r?.boss?.defeated ? r.boss.chest : null;
   const lines: string[] = [];
   if (outcome.second_wind_kept) lines.push('Second Wind kept your first-try bonus');
-  if (chest) lines.push(`Boss chest: +${chest.bytes} Bytes and ${powerupName(chest.powerup)}`);
+  if (chest) lines.push(`Boss chest: ${lootText(chest)}`);
   if (r?.boss?.unlocked_chapter) lines.push('Next chapter unlocked');
   for (const m of r?.medals ?? []) lines.push(`Medal: ${m.name} (${m.tier}) · title "${m.title}"`);
   for (const q of r?.quests_done ?? []) lines.push(`Quest done: ${q}`);

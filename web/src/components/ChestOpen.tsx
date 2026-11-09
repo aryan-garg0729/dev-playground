@@ -87,7 +87,8 @@ export function ChestOpen({ title, loot, error, onClose }: Props) {
               <p className="cq-pop text-game text-[28px] leading-[32px] text-accent-text">
                 +<CountUp to={loot.bytes} duration={900} onDone={() => setCounted(true)} /> Bytes
               </p>
-              {(counted || reduced) && (
+              {(counted || reduced) && !loot.powerup && <p className="cq-rise text-small text-text-muted">No power-up this time</p>}
+              {(counted || reduced) && loot.powerup && (
                 <p className="cq-rise flex items-center gap-2 rounded-md border border-border bg-surface-raised px-3 py-2">
                   <PowerUpIcon id={loot.powerup} className="text-accent-text" />
                   <span className="text-section text-text">{powerupName(loot.powerup)}</span>
