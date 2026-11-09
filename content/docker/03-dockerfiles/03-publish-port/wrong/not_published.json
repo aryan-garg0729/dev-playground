@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "status=running image=elixirbytes/brewd:v1\nno public port '8080/tcp' published for eb-web\n"}}, {"http": {"status": 0, "headers": {}, "body": "", "error": "dial tcp [::1]:18080: connect: connection refused"}}, {"http": {"status": 0, "headers": {}, "body": "", "error": "dial tcp [::1]:18080: connect: connection refused"}}]}

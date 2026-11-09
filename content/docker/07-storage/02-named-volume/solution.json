@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "name=eb-orders driver=local\n"}}, {"cli": {"exit_code": 0, "stdout": "volume:eb-orders:/data \n"}}, {"cli": {"exit_code": 0, "stdout": "phoenix\nbasilisk\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "phoenix\nbasilisk\n"}}]}

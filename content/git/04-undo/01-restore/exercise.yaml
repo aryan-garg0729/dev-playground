@@ -1,0 +1,28 @@
+id: gt.undo.restore
+type: project_cli
+version: 1
+title: Throw Away One Edit
+xp: 15
+difficulty: 1
+tags: [restore]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: oncall.md matches the last commit again
+      cli_command:
+        command: "git diff --quiet HEAD -- oncall.md && echo oncall=restored || echo oncall=changed"
+        tests:
+          - stdout_contains_all: ["oncall=restored"]
+    - description: Your CONTRIBUTING.md edit is still there, unstaged
+      cli_command:
+        command: git diff --name-only
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["CONTRIBUTING.md"]
+    - description: The edit says what it should
+      cli_command:
+        command: git diff -- CONTRIBUTING.md
+        tests:
+          - stdout_contains_all: ["+Ask Priya before renaming files."]

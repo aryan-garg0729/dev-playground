@@ -1,0 +1,23 @@
+id: dk.images.digests-quiz
+type: mcq
+version: 1
+title: Tags Move, Digests Don't
+xp: 5
+difficulty: 2
+tags: [images, digests]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing: a tag like 2.4 always means the same bytes" }
+    - { id: b, text: "The tag was moved to a new image, so the second server pulled different bytes" }
+    - { id: c, text: "Docker Hub sent a corrupted download" }
+    - { id: d, text: "The second server has a different CPU, so the tag means something else" }
+  answer: [b]
+  explain: >
+    Tags are mutable: whoever publishes an image can point an existing tag at a new image at any
+    time, and maintainers do this routinely for patch releases. A digest (sha256:...) is a hash
+    of the image's content, so it can never point at anything else. CPU architecture is a real
+    thing (one tag can cover several platforms), but each platform gets its own fixed image and
+    that doesn't change from week to week. If you need the same bytes everywhere, pin the digest.

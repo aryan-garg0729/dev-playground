@@ -1,0 +1,50 @@
+id: dk.cache.release-boss
+type: project_cli
+version: 1
+title: Release 1.5.0
+xp: 60
+difficulty: 3
+tags: [cache, build-args, labels]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd reports 1.5.0
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:1.5.0 brewd --version
+        tests:
+          - stdout_contains_all: ["brewd 1.5.0"]
+    - description: The image label says 1.5.0
+      cli_command:
+        command: "docker image inspect -f 'version={{index .Config.Labels \"org.opencontainers.image.version\"}}' elixirbytes/brewd:1.5.0"
+        tests:
+          - stdout_contains_all: ["version=1.5.0"]
+    - description: No build argument leaked into the runtime environment
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:1.5.0 env
+        tests:
+          - stdout_contains_none: ["BUILD_VERSION"]
+    - description: Dependencies are downloaded before the source is copied
+      cli_command:
+        command: |-
+          docker history --no-trunc --format '{{.CreatedBy}}' elixirbytes/brewd:1.5.0 | awk '/go mod download/{d=NR} /COPY app\/ \./{c=NR} END{if (d > c && c > 0) print "order=deps-first"; else print "order=source-first"}'
+        tests:
+          - stdout_contains_all: ["order=deps-first"]
+    - description: In release.log, the dependency step was reused
+      cli_command:
+        command: grep -A1 'RUN go mod download' release.log
+        tests:
+          - stdout_contains_all: ["CACHED"]
+    - description: In release.log, the changed source was copied fresh, not from cache
+      cli_command:
+        command: grep -A1 'COPY app/ \.' release.log
+        tests:
+          - stdout_contains_all: ["COPY app/"]
+          - stdout_contains_none: ["CACHED"]
+    - description: In release.log, the build used the compiler cache and the release version
+      cli_command:
+        command: grep -- '--mount=type=cache' release.log
+        tests:
+          - stdout_contains_all: ["main.version=1.5.0"]

@@ -1,0 +1,30 @@
+id: dk.production.lockdown
+type: project_cli
+version: 1
+title: Lock It Down
+xp: 30
+difficulty: 3
+tags: [security]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18093
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-locked has a read-only root, no capabilities and no privilege escalation
+      cli_command:
+        command: "docker inspect -f 'ro={{.HostConfig.ReadonlyRootfs}} caps={{json .HostConfig.CapDrop}} sec={{json .HostConfig.SecurityOpt}} tmpfs={{json .HostConfig.Tmpfs}}' eb-locked"
+        tests:
+          - stdout_contains_all: ["ro=true"]
+          - stdout_contains_all: ["caps=[\"ALL\"]"]
+          - stdout_contains_all: ["no-new-privileges"]
+    - description: Nothing outside the mounts can be written
+      cli_command:
+        command: docker exec eb-locked sh -c 'touch /etc/x 2>&1; echo done'
+        tests:
+          - stdout_contains_all: ["Read-only file system"]
+    - description: Orders still work, through the volume
+      http_request:
+        request: { method: POST, url: "${baseURL}/orders?potion=shield" }
+        tests:
+          - status_code: 201

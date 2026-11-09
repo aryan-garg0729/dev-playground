@@ -1,0 +1,22 @@
+id: dk.compose.depends-quiz
+type: mcq
+version: 1
+title: depends_on Doesn't Wait
+xp: 5
+difficulty: 3
+tags: [compose, healthchecks]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Until brewd is answering requests" }
+    - { id: b, text: "Until the api container has been started, which says nothing about whether brewd is ready" }
+    - { id: c, text: "It doesn't change the start order at all" }
+    - { id: d, text: "Until the api container has exited successfully" }
+  answer: [b]
+  explain: >
+    Plain depends_on only orders container starts: api's container is started, then front's.
+    Whether the program inside is ready is invisible to Docker, so front can start while brewd
+    is still loading. With condition: service_healthy, Compose waits for api's healthcheck to
+    report healthy. (condition: service_completed_successfully is the "exited 0" option, for
+    one-off jobs like migrations.)

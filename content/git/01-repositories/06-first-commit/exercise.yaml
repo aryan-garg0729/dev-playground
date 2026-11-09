@@ -1,0 +1,42 @@
+id: gt.repos.first-commit
+type: project_cli
+version: 1
+title: The First Snapshot
+xp: 20
+difficulty: 1
+tags: [commit]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: A commit labelled A1 exists
+      cli_command:
+        command: "git --no-pager log --format=%s"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["A1:"]
+    - description: A1 holds both handbook pages
+      cli_command:
+        command: "git ls-tree -r --name-only ':/^A1:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["index.md", "oncall.md"]
+    - description: A1 was made with your ElixirBytes email
+      cli_command:
+        command: "git log -1 --format='author=%ae' ':/^A1:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@elixirbytes.shop"]
+    - description: The pager number made it into the commit
+      cli_command:
+        command: "git show HEAD:oncall.md"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Primary pager: +1-555-0142", "Handover: Mondays, 10:00", "## Rotation"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

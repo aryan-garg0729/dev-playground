@@ -1,0 +1,10 @@
+id: dk.storage
+title: Storage
+exercises:
+  - 01-vanished-quiz
+  - 02-named-volume
+  - 03-bind-mount
+  - 04-mount-syntax-quiz
+  - 05-read-only
+  - 06-tmpfs-quiz
+  - 07-ledger-boss

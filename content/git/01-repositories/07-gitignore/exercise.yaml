@@ -1,0 +1,43 @@
+id: gt.repos.gitignore
+type: project_cli
+version: 1
+title: Things Git Should Ignore
+xp: 20
+difficulty: 1
+tags: [gitignore, commit]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: answers.txt is ignored by a rule in .gitignore
+      cli_command:
+        command: git check-ignore -v answers.txt
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: [".gitignore"]
+    - description: .gitignore and the runbook are tracked, answers.txt is not
+      cli_command:
+        command: git ls-files
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: [".gitignore", "runbooks/deploy.md"]
+          - stdout_contains_none: ["answers.txt"]
+    - description: Find commit A1
+      cli_command:
+        command: "git log -1 --format=%H ':/^A1:'"
+        captures: [{ name: a1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: B1 sits directly on top of A1
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^B1:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["parents=${a1}"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

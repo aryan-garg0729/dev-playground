@@ -1,0 +1,48 @@
+id: dk.images.delivery-boss
+type: project_cli
+version: 1
+title: Air-Gapped Delivery
+xp: 50
+difficulty: 3
+tags: [images, tags, digests, layers]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: elixirbytes/storefront:1.0 is the same image as nginx:1.27-alpine
+      cli_command:
+        command: "docker image inspect -f '{{.Id}}' nginx:1.27-alpine elixirbytes/storefront:1.0 2>&1 | sort -u | wc -l | awk '{print \"distinct=\" $1}'"
+        tests:
+          - stdout_contains_all: ["distinct=1"]
+    - description: The bundle carries only the storefront tag
+      cli_command:
+        command: tar -xOf delivery/storefront.tar manifest.json
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["elixirbytes/storefront:1.0"]
+          - stdout_contains_none: ["nginx:1.27-alpine"]
+    - description: Look up the image's digest
+      cli_command:
+        command: "docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' nginx:1.27-alpine"
+        captures: [{ name: digest, regex: "@(sha256:[0-9a-f]{64})" }]
+        tests:
+          - stdout_contains_all: ["@sha256:"]
+    - description: delivery/MANIFEST pins that digest
+      cli_command:
+        command: "grep -x 'digest=${digest}' delivery/MANIFEST"
+        tests:
+          - exit_code: 0
+    - description: Count the image's filesystem layers
+      cli_command:
+        command: "docker image inspect -f 'layers={{len .RootFS.Layers}}' nginx:1.27-alpine"
+        captures: [{ name: layers, regex: "layers=(\\d+)" }]
+        tests:
+          - stdout_contains_all: ["layers="]
+    - description: delivery/MANIFEST records the layer count
+      cli_command:
+        command: "grep -x 'layers=${layers}' delivery/MANIFEST"
+        tests:
+          - exit_code: 0

@@ -1,0 +1,20 @@
+id: git
+title: Git
+description: >
+  Take over the ElixirBytes ops handbook and learn Git by running it: commits,
+  branches, rebase, undoing mistakes, remotes, conflicts, stash, tags and bisect.
+  Every lesson and boss is real Git on your own machine.
+order: 3
+published: true
+chapters:
+  - 01-repositories
+  - 02-branches
+  - 03-rebase
+  - 04-undo
+  - 05-remotes
+  - 06-conflicts
+  - 07-power-tools
+icon: git
+level: beginner
+tags: [Git, CLI, Version control]
+topics: Commits, branches, rebase, reset, remotes, conflicts

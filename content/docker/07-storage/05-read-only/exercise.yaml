@@ -1,0 +1,27 @@
+id: dk.storage.read-only
+type: project_cli
+version: 1
+title: Look, Don't Touch
+xp: 20
+difficulty: 2
+tags: [storage, mounts, security]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-ro mounts config/ read-only at /config
+      cli_command:
+        command: "docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Destination}}:rw={{.RW}} {{end}}' eb-ro"
+        tests:
+          - stdout_contains_all: ["bind:/config:rw=false"]
+    - description: The container can read the config
+      cli_command:
+        command: docker exec eb-ro cat /config/motd.txt
+        tests:
+          - stdout_contains_all: ["welcome, brewer"]
+    - description: The container cannot change it
+      cli_command:
+        command: docker exec eb-ro sh -c 'echo hacked > /config/motd.txt 2>&1; echo done'
+        tests:
+          - stdout_contains_all: ["Read-only file system"]

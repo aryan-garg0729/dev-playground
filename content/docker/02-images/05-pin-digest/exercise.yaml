@@ -1,0 +1,33 @@
+id: dk.images.pin-digest
+type: project_cli
+version: 1
+title: Pin It by Digest
+xp: 20
+difficulty: 2
+tags: [images, digests]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Look up alpine:3.20's digest
+      cli_command:
+        command: "docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' alpine:3.20"
+        captures: [{ name: digest, regex: "@(sha256:[0-9a-f]{64})" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@sha256:"]
+    - description: eb-pinned was started by digest, not by tag
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} exit={{.State.ExitCode}}' eb-pinned"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@${digest}", "exit=0"]
+          - stdout_contains_none: ["alpine:3.20"]
+    - description: eb-pinned printed the Alpine release
+      cli_command:
+        command: docker logs eb-pinned
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["3.20."]

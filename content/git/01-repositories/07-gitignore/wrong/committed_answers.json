@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":0,"stdout":"answers.txt\nindex.md\noncall.md\nrunbooks/deploy.md\n"}},{"cli":{"exit_code":0,"stdout":"8b6a6edd4c44c1e691d87af6c260d3ada3742eed\n"}},{"cli":{"exit_code":0,"stdout":"parents=8b6a6edd4c44c1e691d87af6c260d3ada3742eed\n"}},{"cli":{"exit_code":0,"stdout":""}}]}

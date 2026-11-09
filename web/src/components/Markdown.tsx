@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ImageLightbox } from './ImageLightbox';
 import { useLessonAsset } from './LessonAssets';
 
@@ -26,7 +27,8 @@ function LessonImage({ src, alt }: { src: string; alt: string }) {
 }
 
 /**
- * Renders author-written markdown (lesson prompts). Raw HTML in the source is not
+ * Renders author-written markdown (lesson prompts), with GitHub-flavoured tables,
+ * strikethrough and task lists. Raw HTML in the source is not
  * rendered (react-markdown's default), and nothing goes through innerHTML.
  * Images load only from the lesson's own assets; any other image (another site,
  * a missing file, or an image in tutor output) shows as its alt text.
@@ -36,7 +38,48 @@ export function Markdown({ children }: { children: string }) {
   return (
     <div className="text-body flex flex-col gap-3 text-text-secondary">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
+          // Wide tables scroll inside their own box instead of widening the pane.
+          table: ({ children }) => (
+            <div className="overflow-x-auto rounded-md border border-border">
+              <table className="text-small w-full border-collapse text-left">{children}</table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-surface-raised text-text">{children}</thead>,
+          th: ({ children, style }) => (
+            <th style={style} className="border-b border-border px-3 py-2 font-semibold">
+              {children}
+            </th>
+          ),
+          td: ({ children, style }) => (
+            <td style={style} className="border-t border-border px-3 py-2 align-top">
+              {children}
+            </td>
+          ),
+          // The CSS reset strips list markers and indentation, so lists bring their own.
+          // Items can hold code blocks and nested lists, so their children get spacing too.
+          ul: ({ children, className }) => (
+            <ul
+              className={
+                className?.includes('contains-task-list')
+                  ? 'flex flex-col gap-1.5'
+                  : 'flex list-disc flex-col gap-1.5 pl-5 marker:text-text-muted'
+              }
+            >
+              {children}
+            </ul>
+          ),
+          ol: ({ children, start }) => (
+            <ol start={start} className="flex list-decimal flex-col gap-1.5 pl-6 marker:text-text-muted">
+              {children}
+            </ol>
+          ),
+          li: ({ children, className }) => (
+            <li className={`pl-1 [&>*+*]:mt-2 ${className?.includes('task-list-item') ? 'list-none [&_input]:mr-2' : ''}`}>
+              {children}
+            </li>
+          ),
           strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
           pre: ({ children }) => (
             <pre className="text-code-sm overflow-x-auto border-l-2 border-border-strong pl-[14px] text-text-secondary [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-text-secondary">{children}</pre>

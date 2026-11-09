@@ -1,0 +1,22 @@
+id: dk.cache.stale-index-quiz
+type: mcq
+version: 1
+title: The Cache Is Too Good
+xp: 5
+difficulty: 3
+tags: [cache, dockerfile]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Alpine's servers are caching an old curl" }
+    - { id: b, text: "Line 2 is CACHED from months ago, so line 3 installs from that old package index" }
+    - { id: c, text: "apk always installs the oldest version unless you pin one" }
+    - { id: d, text: "Line 3 is never cached, so the problem must be in line 1" }
+  answer: [b]
+  explain: >
+    The cache key for RUN is the instruction text, not what the command would do today. "RUN
+    apk update" never changes, so it stays CACHED with a months-old package index, and line 3,
+    whose text also never changes, reuses that too. Put the update and the install in one RUN
+    (RUN apk add --no-cache curl, which fetches a fresh index and doesn't keep it) so they
+    always run together. Pinning versions (curl=8.x) makes it explicit when you upgrade.

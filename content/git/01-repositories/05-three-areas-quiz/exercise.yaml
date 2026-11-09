@@ -1,0 +1,22 @@
+id: gt.repos.three-areas-quiz
+type: mcq
+version: 1
+title: Three Places a Change Can Be
+xp: 5
+difficulty: 1
+tags: [staging]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Both files, because they're both in the folder" }
+    - { id: b, text: "Only index.md, the one that was staged" }
+    - { id: c, text: "Only index.md, and oncall.md is deleted from disk" }
+    - { id: d, text: "Nothing, because oncall.md was never added" }
+  answer: [b]
+  explain: >
+    git commit snapshots the staging area, not the folder. index.md was staged with git add,
+    so it goes in. oncall.md is untracked: Git sees it (git status lists it) but leaves it
+    alone, still on disk, until you git add it. The staging area is what lets you build a
+    commit out of exactly the changes you choose.

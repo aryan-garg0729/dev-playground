@@ -1,0 +1,41 @@
+id: gt.remotes.publish
+type: project_cli
+version: 1
+title: A Server in a Folder
+xp: 25
+difficulty: 2
+tags: [remotes, push]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: handbook-origin.git is a bare repository
+      cli_command:
+        command: git --git-dir=../handbook-origin.git rev-parse --is-bare-repository
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["true"]
+    - description: origin points at it
+      cli_command:
+        command: git remote get-url origin
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["handbook-origin.git"]
+    - description: Find your main
+      cli_command:
+        command: git rev-parse main
+        captures: [{ name: main, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: The remote's main is the same commit
+      cli_command:
+        command: git --git-dir=../handbook-origin.git rev-parse main
+        tests:
+          - stdout_contains_all: ["${main}"]
+    - description: Your main tracks origin/main
+      cli_command:
+        command: "git rev-parse --abbrev-ref main@{upstream}"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["origin/main"]

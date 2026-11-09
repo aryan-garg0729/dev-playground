@@ -1,0 +1,47 @@
+id: dk.containers.night-shift-boss
+type: project_cli
+version: 1
+title: Night Shift Triage
+xp: 50
+difficulty: 2
+tags: [exit-codes, logs, signals]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-case-mana crashed and was kept as evidence
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' eb-case-mana"
+        captures: [{ name: mana, regex: "exit=(\\d+)" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=exited"]
+    - description: triage.txt records eb-case-mana's exit code
+      cli_command:
+        command: "grep -x 'mana_exit=${mana}' triage.txt"
+        tests:
+          - exit_code: 0
+    - description: eb-case-frost is still running and was never restarted
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} restarts={{.RestartCount}}' eb-case-frost"
+        tests:
+          - stdout_contains_all: ["status=running", "restarts=0"]
+    - description: eb-case-frost logged its batch number
+      cli_command:
+        command: docker logs eb-case-frost
+        captures: [{ name: batch, regex: "frost batch (\\d+) ready" }]
+        tests:
+          - stdout_contains_all: ["ready"]
+    - description: triage.txt records the frost batch number
+      cli_command:
+        command: "grep -x 'frost_batch=${batch}' triage.txt"
+        tests:
+          - exit_code: 0
+    - description: eb-case-fire was shut down gracefully, not killed
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' eb-case-fire"
+        tests:
+          - stdout_contains_all: ["status=exited", "exit=143"]

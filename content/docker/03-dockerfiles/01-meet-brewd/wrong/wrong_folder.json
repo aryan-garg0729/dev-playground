@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "cat: app/go.mod: No such file or directory\n"}}, {"cli": {"exit_code": 2, "stdout": "grep: app/main.go: No such file or directory\n"}}, {"cli": {"exit_code": 1, "stdout": "ls: app/testdata: No such file or directory\n"}}]}

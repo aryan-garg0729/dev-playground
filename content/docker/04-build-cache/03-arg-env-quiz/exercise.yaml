@@ -1,0 +1,22 @@
+id: dk.cache.arg-env-quiz
+type: mcq
+version: 1
+title: ARG vs ENV
+xp: 5
+difficulty: 2
+tags: [dockerfile, build-args]
+spec:
+  question: prompt.md
+  multiple: true
+  options:
+    - { id: a, text: "docker build --build-arg SHOP=elixirbytes changes what the RUN line prints" }
+    - { id: b, text: "Inside a running container, $SHOP is set" }
+    - { id: c, text: "Inside a running container, $TIER is set to gold" }
+    - { id: d, text: "docker run -e TIER=silver overrides TIER for that container" }
+  answer: [a, c, d]
+  explain: >
+    ARG exists only while the image is being built: --build-arg changes it (a), but it's gone
+    once the build finishes, so a container has no $SHOP (b is wrong). ENV is saved in the
+    image's config, so every container starts with TIER=gold (c), and docker run -e replaces it
+    for that one container (d). Rule of thumb: ARG for build-time knobs like versions, ENV for
+    settings the running program reads.

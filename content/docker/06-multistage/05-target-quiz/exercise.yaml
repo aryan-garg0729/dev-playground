@@ -1,0 +1,22 @@
+id: dk.multistage.target-quiz
+type: mcq
+version: 1
+title: Which Stages Get Built?
+xp: 5
+difficulty: 3
+tags: [multistage, buildkit]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "All four, top to bottom" }
+    - { id: b, text: "build and final" }
+    - { id: c, text: "build, test and final" }
+    - { id: d, text: "Only final" }
+  answer: [b]
+  explain: >
+    BuildKit works backwards from the target stage (the last one by default) and builds only
+    the stages it depends on: final copies from build, so build runs. Nothing depends on
+    test or docs, so they're skipped entirely, which is why a slow test stage doesn't slow
+    down every release build. Running docker build --target test builds build and test
+    instead: a handy way to run tests in CI with the same Dockerfile.

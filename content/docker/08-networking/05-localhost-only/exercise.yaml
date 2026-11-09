@@ -1,0 +1,25 @@
+id: dk.networking.localhost-only
+type: project_cli
+version: 1
+title: For Your Eyes Only
+xp: 20
+difficulty: 2
+tags: [networking, ports, security]
+spec:
+  prompt: prompt.md
+  base_url: http://127.0.0.1:18089
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-admin is published on 127.0.0.1 only
+      cli_command:
+        command: docker port eb-admin 8080/tcp
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["127.0.0.1:18089"]
+          - stdout_contains_none: ["0.0.0.0", "[::]"]
+    - description: It answers from this machine
+      http_request:
+        request: { method: GET, url: "${baseURL}/healthz" }
+        tests:
+          - status_code: 200

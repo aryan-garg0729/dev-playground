@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "bind:/config:rw=false \n"}}, {"cli": {"exit_code": 0, "stdout": "welcome, brewer\n"}}, {"cli": {"exit_code": 0, "stdout": "sh: can't create /config/motd.txt: Read-only file system\ndone\n"}}]}

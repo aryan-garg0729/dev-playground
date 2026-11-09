@@ -1,0 +1,45 @@
+id: gt.rebase.friday-boss
+type: project_cli
+version: 1
+title: Clean History Friday
+xp: 50
+difficulty: 3
+tags: [rebase, squash]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find F3 (Priya's change on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^F3:'"
+        captures: [{ name: f3, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Exactly one G3, and no wip left anywhere
+      cli_command:
+        command: "echo \"g3_commits=$(git log --all --format=%s | grep -c '^G3:')\"; git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_all: ["g3_commits=1\n"]
+          - stdout_contains_none: ["wip"]
+    - description: G3 was rebased onto F3 and is main's tip
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["G3:", "parents=${f3}"]
+    - description: History since F3 is a straight line
+      cli_command:
+        command: "echo \"merges=$(git rev-list --merges --count ${f3}..main)\""
+        tests:
+          - stdout_contains_all: ["merges=0\n"]
+    - description: The glossary has all three terms
+      cli_command:
+        command: "git show main:glossary.md"
+        tests:
+          - stdout_contains_all: ["SLO", "MTTR", "Canary"]
+    - description: docs/glossary was deleted
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - stdout_contains_none: ["docs/glossary"]

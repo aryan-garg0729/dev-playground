@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "test=[\"CMD-SHELL\",\"wget -qO- http://localhost:80/healthz || exit 1\"] interval=5s\n"}}, {"cli": {"exit_code": 0, "stdout": "status=running health=unhealthy\n"}}]}

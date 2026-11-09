@@ -228,8 +228,8 @@ func (l *loader) exercise(dir string) (Compiled, bool) {
 	if !known {
 		l.problem(path, "type %q is not registered (known: %s)", h.Type, strings.Join(exercise.Names(), ", "))
 	}
-	if h.Boss && h.Type != "code" {
-		l.problem(path, "boss: only code exercises can be bosses")
+	if h.Boss && h.Type != "code" && h.Type != "project_cli" {
+		l.problem(path, "boss: only code and project_cli exercises can be bosses")
 	}
 	if !known {
 		return Compiled{}, false

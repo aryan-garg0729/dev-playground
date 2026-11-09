@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"D5: add supplier pricing\nC5: link the contacts page\n"}},{"cli":{"exit_code":0,"stdout":".gitignore\nCONTRIBUTING.md\ncontacts.md\netiquette.md\nglossary.md\nindex.md\nmenu.md\noncall.md\nplaybook.md\nprices.md\npricing.md\nrefunds.md\nrunbooks\nspecials.md\n"}},{"cli":{"exit_code":0,"stdout":"## main...origin/main [ahead 1]\n"}}]}

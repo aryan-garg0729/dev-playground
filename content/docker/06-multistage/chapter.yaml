@@ -1,0 +1,9 @@
+id: dk.multistage
+title: Multi-stage builds
+exercises:
+  - 01-what-ships-quiz
+  - 02-two-stages
+  - 03-bases-quiz
+  - 04-scratch
+  - 05-target-quiz
+  - 06-ship-small-boss

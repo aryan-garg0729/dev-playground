@@ -1,0 +1,34 @@
+id: gt.branches.fast-forward
+type: project_cli
+version: 1
+title: Fast-Forward
+xp: 20
+difficulty: 1
+tags: [merge]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: You're on main
+      cli_command:
+        command: git branch --show-current
+        tests:
+          - stdout_contains_all: ["main"]
+    - description: Find add-menu's commit
+      cli_command:
+        command: git rev-parse add-menu
+        captures: [{ name: menu, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: main now points at exactly that commit
+      cli_command:
+        command: git rev-parse main
+        tests:
+          - stdout_contains_all: ["${menu}"]
+    - description: No merge commit was made
+      cli_command:
+        command: "echo \"merges=$(git rev-list --merges --count main)\""
+        tests:
+          - stdout_contains_all: ["merges=0\n"]

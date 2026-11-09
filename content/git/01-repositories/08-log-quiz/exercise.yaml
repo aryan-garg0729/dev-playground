@@ -1,0 +1,23 @@
+id: gt.repos.log-quiz
+type: mcq
+version: 1
+title: Reading the Log
+xp: 5
+difficulty: 1
+tags: [log]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "7c1e9d0, because it's at the top" }
+    - { id: b, text: "9a04b31, because log lists commits oldest first" }
+    - { id: c, text: "7c1e9d0 is the newest commit, and its parent is 9a04b31" }
+    - { id: d, text: "They're unrelated commits that happen to be on the same branch" }
+  answer: [c]
+  explain: >
+    git log starts at the commit you're on and walks backwards through parents, so the
+    newest commit is on top and the root commit is at the bottom. --parents prints each
+    commit's parent after its own hash: 7c1e9d0's parent is 9a04b31, and 9a04b31 has none,
+    which makes it the root. The commits aren't just neighbours in a list; each one points
+    at the one before it.

@@ -1,0 +1,22 @@
+id: dk.storage.mount-syntax-quiz
+type: mcq
+version: 1
+title: "-v vs --mount"
+xp: 5
+difficulty: 3
+tags: [storage, mounts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Docker fails with an error about a missing folder" }
+    - { id: b, text: "It bind-mounts ./orders, because Docker guesses you meant the folder" }
+    - { id: c, text: "It quietly creates and mounts a named volume called orders, and the host folder never gets the data" }
+    - { id: d, text: "It mounts the host's /orders folder" }
+  answer: [c]
+  explain: >
+    -v decides the type from the first part: if it looks like a path (starts with / or .),
+    it's a bind mount; otherwise it's a volume name, and Docker creates that volume on the spot.
+    "orders" is a valid volume name, so there's no error: brewd happily writes into a new volume
+    and the host folder stays empty. --mount type=bind,src=orders,... refuses a relative path,
+    and a missing source folder is an error instead of a guess. Verbose, but explicit.

@@ -1,0 +1,41 @@
+id: dk.dockerfile.shop-boss
+type: project_cli
+version: 1
+title: Open the Potion Shop
+xp: 60
+difficulty: 3
+tags: [dockerfile, build, ports]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18081
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: elixirbytes/brewd:shop starts brewd from /src, in JSON form
+      cli_command:
+        command: "docker image inspect -f 'cmd={{json .Config.Cmd}} workdir={{.Config.WorkingDir}}' elixirbytes/brewd:shop"
+        tests:
+          - stdout_contains_all: ["brewd\"]", "workdir=/src"]
+          - stdout_contains_none: ["/bin/sh\",\"-c"]
+    - description: The image holds the source and none of the junk
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:shop ls -a /src
+        tests:
+          - stdout_contains_all: ["main.go"]
+          - stdout_contains_none: ["testdata", "Dockerfile", "triage.txt"]
+    - description: The shop answers on port 18081
+      http_request:
+        request: { method: GET, url: "${baseURL}/healthz" }
+        tests:
+          - status_code: 200
+    - description: A potion can be ordered
+      http_request:
+        request: { method: POST, url: "${baseURL}/orders?potion=moonwater" }
+        tests:
+          - status_code: 201
+    - description: The order is on the books
+      http_request:
+        request: { method: GET, url: "${baseURL}/orders" }
+        tests:
+          - body_contains: "moonwater"

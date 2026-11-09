@@ -1,0 +1,11 @@
+id: dk.dockerfile
+title: Dockerfiles
+exercises:
+  - 01-meet-brewd
+  - 02-first-dockerfile
+  - 03-publish-port
+  - 04-ports-quiz
+  - 05-context-quiz
+  - 06-dockerignore
+  - 07-run-cd-quiz
+  - 08-shop-boss

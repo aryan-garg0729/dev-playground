@@ -1,0 +1,34 @@
+id: dk.storage.named-volume
+type: project_cli
+version: 1
+title: Named Volumes
+xp: 25
+difficulty: 2
+tags: [storage, volumes]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18087
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The eb-orders volume exists
+      cli_command:
+        command: "docker volume inspect -f 'name={{.Name}} driver={{.Driver}}' eb-orders"
+        tests:
+          - stdout_contains_all: ["name=eb-orders", "driver=local"]
+    - description: eb-store keeps /data in the eb-orders volume
+      cli_command:
+        command: "docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Name}}:{{.Destination}} {{end}}' eb-store"
+        tests:
+          - stdout_contains_all: ["volume:eb-orders:/data"]
+    - description: Both orders survived in the volume
+      cli_command:
+        command: docker run --rm -v eb-orders:/data alpine:3.20 cat /data/orders.log
+        tests:
+          - stdout_contains_all: ["phoenix", "basilisk"]
+    - description: The running shop sees both orders
+      http_request:
+        request: { method: GET, url: "${baseURL}/orders" }
+        tests:
+          - body_contains: "phoenix"
+          - body_contains: "basilisk"

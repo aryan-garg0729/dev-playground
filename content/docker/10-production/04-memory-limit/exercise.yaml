@@ -1,0 +1,28 @@
+id: dk.production.memory-limit
+type: project_cli
+version: 1
+title: Give It Less
+xp: 25
+difficulty: 3
+tags: [limits, exit-codes]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-hog was capped at 32 MB with no extra swap
+      cli_command:
+        command: "docker inspect -f 'mem={{.HostConfig.Memory}} swap={{.HostConfig.MemorySwap}}' eb-hog"
+        tests:
+          - stdout_contains_all: ["mem=33554432", "swap=33554432"]
+    - description: It was killed, not stopped
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' eb-hog"
+        tests:
+          - stdout_contains_all: ["status=exited", "exit=137"]
+    - description: Its logs show it growing, then dying well before 48 MB
+      cli_command:
+        command: docker logs eb-hog
+        tests:
+          - stdout_contains_all: ["cauldron holds 3145728 bytes"]
+          - stdout_contains_none: ["cauldron holds 50331648 bytes"]

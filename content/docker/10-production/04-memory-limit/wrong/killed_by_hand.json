@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "mem=33554432 swap=33554432\n"}}, {"cli": {"exit_code": 0, "stdout": "status=running exit=0\n"}}, {"cli": {"exit_code": 0, "stdout": ""}}]}

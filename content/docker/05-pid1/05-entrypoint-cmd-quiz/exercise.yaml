@@ -1,0 +1,22 @@
+id: dk.pid1.entrypoint-cmd-quiz
+type: mcq
+version: 1
+title: How ENTRYPOINT and CMD Combine
+xp: 5
+difficulty: 3
+tags: [dockerfile, cmd, entrypoint]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "brewd --version --help" }
+    - { id: b, text: "brewd --help" }
+    - { id: c, text: "--help" }
+    - { id: d, text: "/usr/local/bin/entrypoint.sh brewd --help" }
+  answer: [b]
+  explain: >
+    The command is ENTRYPOINT followed by CMD. Arguments after the image name in docker run
+    replace CMD and leave ENTRYPOINT alone, so ["brewd"] + ["--help"] gives brewd --help.
+    Replacing the entrypoint itself takes --entrypoint. That's why "program in ENTRYPOINT,
+    default arguments in CMD" is the usual pattern: users pass flags without retyping the
+    program name.

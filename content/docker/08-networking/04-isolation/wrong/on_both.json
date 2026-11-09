@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "nets=eb-net,eb-private,\n"}}, {"cli": {"exit_code": 0, "stdout": "1 packets transmitted, 1 packets received, 0% packet loss\n"}}, {"cli": {"exit_code": 0, "stdout": "1 packets transmitted, 1 packets received, 0% packet loss\n"}}]}

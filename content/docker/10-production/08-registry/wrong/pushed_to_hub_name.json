@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "image=registry:2\n127.0.0.1:15000\n"}}, {"http": {"status": 200, "headers": {}, "body": "{\"repositories\":[]}\n"}}, {"http": {"status": 404, "headers": {}, "body": "{\"errors\":[{\"code\":\"NAME_UNKNOWN\",\"message\":\"repository name not known to registry\"}]}\n"}}]}

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "size=ok layers=ok\n"}}, {"cli": {"exit_code": 0, "stdout": "no-go\nls: /src: No such file or directory\n"}}, {"cli": {"exit_code": 0, "stdout": "version=1.6.0\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "brewd 1.6.0\n"}}]}

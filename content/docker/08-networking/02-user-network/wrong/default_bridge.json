@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "name=eb-net driver=bridge\n"}}, {"cli": {"exit_code": 0, "stdout": "nets=bridge, ports={} image=elixirbytes/brewd:1.6.0\n"}}, {"cli": {"exit_code": 1, "stdout": "wget: bad address 'eb-api:8080'\n"}}]}

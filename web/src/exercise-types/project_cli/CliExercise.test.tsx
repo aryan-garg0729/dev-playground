@@ -61,3 +61,39 @@ describe('CliExercise', () => {
     expect(screen.getByText('404')).toBeInTheDocument();
   });
 });
+
+describe('CliExercise as a boss', () => {
+  function showBoss() {
+    renderRoute(
+      '/l',
+      '/l',
+      <CliExercise
+        header={<h1>Ship it</h1>}
+        publicView={view}
+        draft={undefined}
+        result={undefined}
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        boss={{ reward: 'Boss chest · Boss Slayer medal' }}
+      />,
+    );
+  }
+
+  it('has one HP per test and the defeat reward', async () => {
+    stubApi({ 'GET /api/v1/exercises/cl.local-server': [200, exercise(null)] });
+    showBoss();
+    expect(screen.getByRole('img', { name: '5 of 5 HP left' })).toBeInTheDocument();
+    expect(screen.getByText('Boss chest · Boss Slayer medal')).toBeInTheDocument();
+    expect(await screen.findByText(/No attack yet/)).toBeInTheDocument();
+  });
+
+  it('shows an attack from the terminal as hits and blocks', async () => {
+    stubApi({ 'GET /api/v1/exercises/cl.local-server': [[200, exercise(null)], [200, exercise(failing)]] });
+    showBoss();
+    await userEvent.click(await screen.findByRole('button', { name: 'Check attack result' }));
+    expect(await screen.findByText('1 hit · boss blocked 1', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.getByText('HIT')).toBeInTheDocument();
+    expect(screen.getByText('BLOCK')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '4 of 5 HP left' })).toBeInTheDocument();
+  });
+});

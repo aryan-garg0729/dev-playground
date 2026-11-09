@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "exec brewd \"$@\"\n"}}, {"cli": {"exit_code": 0, "stdout": "status=exited exit=137 image=elixirbytes/brewd:banner\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd starting on fe1348c67a8a\n"}}]}

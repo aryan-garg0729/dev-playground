@@ -1,0 +1,28 @@
+id: dk.compose.env-volumes
+type: project_cli
+version: 1
+title: Settings and Storage
+xp: 25
+difficulty: 2
+tags: [compose, volumes, env]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd is configured to store orders in /orders
+      cli_command:
+        command: docker compose exec -T api printenv DATA_DIR
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/orders"]
+    - description: /orders is the project's ledger volume
+      cli_command:
+        command: "docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Name}}:{{.Destination}} {{end}}' $(docker compose ps -q api)"
+        tests:
+          - stdout_contains_all: ["volume:", "_ledger:/orders"]
+    - description: The starlight order is in the ledger
+      cli_command:
+        command: docker compose exec -T api cat /orders/orders.log
+        tests:
+          - stdout_contains_all: ["starlight"]

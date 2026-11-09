@@ -1,0 +1,23 @@
+id: dk.images.layers-quiz
+type: mcq
+version: 1
+title: Which Steps Add Layers?
+xp: 5
+difficulty: 2
+tags: [images, layers]
+free: true
+spec:
+  question: prompt.md
+  multiple: true
+  options:
+    - { id: a, text: "COPY potions.json /data/" }
+    - { id: b, text: "ENV SHOP=elixirbytes" }
+    - { id: c, text: "RUN apk add --no-cache curl" }
+    - { id: d, text: "CMD [\"brewd\"]" }
+    - { id: e, text: "LABEL team=platform" }
+  answer: [a, c]
+  explain: >
+    Only steps that change files create a filesystem layer: COPY (and ADD) put files in, and RUN
+    executes a command whose file changes are saved. ENV, CMD, LABEL, EXPOSE, WORKDIR-style
+    settings only edit the image's config. They show up in docker history as 0B rows but never
+    in RootFS.Layers. That's why nginx had far fewer layers than history rows.

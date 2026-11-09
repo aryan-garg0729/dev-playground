@@ -1,0 +1,21 @@
+id: dk.production.restart-quiz
+type: mcq
+version: 1
+title: Restart Policies
+xp: 5
+difficulty: 2
+tags: [restart]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "no" }
+    - { id: b, text: "on-failure" }
+    - { id: c, text: "always" }
+    - { id: d, text: "unless-stopped" }
+  answer: [d]
+  explain: >
+    unless-stopped restarts after crashes and after the Docker daemon or the machine restarts,
+    but remembers a deliberate docker stop and leaves the container stopped. always would start
+    it again after a reboot even though Dex stopped it on purpose. on-failure ignores clean
+    exits and (with no count) is mostly for jobs. no never restarts anything.
