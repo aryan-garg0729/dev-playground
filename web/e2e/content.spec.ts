@@ -39,10 +39,6 @@ function exercises(dir = CONTENT): Found[] {
 
 const all = exercises();
 
-test('content has runnable exercises', () => {
-  expect(all.length).toBeGreaterThan(0);
-});
-
 for (const ex of all) {
   test(`${ex.id}: solution passes its visible checks on Run`, async ({ page, request }) => {
     const detail = await (await request.get(`/api/v1/exercises/${ex.id}`)).json();

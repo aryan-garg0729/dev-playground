@@ -40,7 +40,9 @@ content-test: runner-image wasm-modules ## Content CI: every solution passes, ev
 
 e2e: ## Browser tests (sandbox isolation, timeouts, Run speed, content CI in the browser, screenshots)
 	$(COMPOSE) up -d --build --wait
-	cd api && DATABASE_URL='$(DATABASE_URL)' go run ./cmd/cq build ../content
+	# content/ plus the demo fixture (the sandbox tests use its Python lesson), built as one tree.
+	tmp=$$(mktemp -d) && cp -R content/. "$$tmp/" && cp -R api/internal/content/testdata/valid/demo "$$tmp/demo" && \
+	  (cd api && DATABASE_URL='$(DATABASE_URL)' go run ./cmd/cq build "$$tmp"); s=$$?; rm -rf "$$tmp"; exit $$s
 	docker run --rm --network host --ipc host -v "$(CURDIR)":/repo -w /repo/web $(PW_IMAGE) npx playwright test
 
 # Lighthouse on the landing page (production build, served by vite preview and

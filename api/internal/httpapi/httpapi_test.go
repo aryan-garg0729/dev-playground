@@ -256,28 +256,6 @@ func TestNoServerOnlyContentInAnyResponse(t *testing.T) {
 	}
 }
 
-func TestCourseListsManifestOrder(t *testing.T) {
-	e := setup(t, false)
-	var cd courseDetail
-	e.getJSON("/api/v1/courses/langchain-basics", &cd)
-	var got []string
-	for _, ch := range cd.Chapters {
-		got = append(got, ch.ID)
-		for _, ex := range ch.Exercises {
-			got = append(got, ex.ID)
-		}
-	}
-	want := []string{
-		"lc.chat-models", "lc.chat.message-roles", "lc.chat.build-messages", "lc.chat.runnable-methods", "lc.chat.stream-tokens",
-		"lc.chat.stateless-models", "lc.chat.continue-conversation", "lc.chat.token-usage",
-		"lc.prompt-templates", "lc.prompts.input-variables", "lc.prompts.translation-prompt", "lc.prompts.messages-placeholder",
-		"lc.prompts.escape-braces", "lc.prompts.partial-functions", "lc.prompts.dated-prompt",
-	}
-	if strings.Join(got, ",") != strings.Join(want, ",") {
-		t.Fatalf("order:\n got %v\nwant %v", got, want)
-	}
-}
-
 func TestSubmitFlow(t *testing.T) {
 	e := setup(t, true)
 

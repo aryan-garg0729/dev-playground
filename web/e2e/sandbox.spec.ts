@@ -6,8 +6,10 @@ function runButton(page: Page) {
   return page.getByTitle('Run with the visible checks (not graded)');
 }
 
-const SUM = 'fd.py.sum-list';
-const SUM_URL = lesson('foundations', SUM);
+// The demo fixture (api/internal/content/testdata/valid/demo), which make e2e
+// builds next to content/: a Pyodide lesson with timeout_ms 2000.
+const SUM = 'demo.basics.sum';
+const SUM_URL = lesson('demo', SUM);
 // The results pane (Monaco adds its own aria-live regions, so exclude those).
 const resultsPane = (page: Page) => page.locator('[aria-live="polite"]:not(.monaco-status)');
 
@@ -96,7 +98,7 @@ test('an infinite loop is stopped at timeout_ms and the page stays responsive', 
   await withDraft(page, SUM, 1, { files: { 'main.py': 'def sum_list(nums):\n    while True:\n        pass\n' } });
   await page.goto(SUM_URL);
   const run = runButton(page);
-  const stopped = resultsPane(page).getByText('Stopped after 3000 ms');
+  const stopped = resultsPane(page).getByText('Stopped after 2000 ms');
 
   // First Run also loads Pyodide; after it, the spare worker is warm.
   await run.click();
@@ -116,7 +118,7 @@ test('an infinite loop is stopped at timeout_ms and the page stays responsive', 
   await expect(run).toHaveText('Run', { timeout: 10_000 });
   await expect(stopped).toBeVisible();
   const took = Date.now() - start;
-  console.log(`loop stopped after ${took} ms (limit 3000 ms)`);
-  expect(took).toBeGreaterThanOrEqual(3000);
-  expect(took).toBeLessThan(4000);
+  console.log(`loop stopped after ${took} ms (limit 2000 ms)`);
+  expect(took).toBeGreaterThanOrEqual(2000);
+  expect(took).toBeLessThan(3000);
 });

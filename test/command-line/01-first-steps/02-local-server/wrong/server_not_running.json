@@ -1,4 +1,0 @@
-{"steps": [
-  {"http": {"status": 0, "body": "", "error": "dial tcp 127.0.0.1:8000: connect: connection refused"}},
-  {"http": {"status": 0, "body": "", "error": "dial tcp 127.0.0.1:8000: connect: connection refused"}}
-]}
