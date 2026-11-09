@@ -31,12 +31,12 @@ jobs:
         working-directory: api
         run: go build -trimpath -o "$RUNNER_TEMP/cq" ./cmd/cq
       - name: Validate
-        run: "$RUNNER_TEMP/cq" validate content
+        run: $RUNNER_TEMP/cq validate content
       - name: Migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: "$RUNNER_TEMP/cq" migrate up
+        run: $RUNNER_TEMP/cq migrate up
       - name: Publish
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: "$RUNNER_TEMP/cq" build content
+        run: $RUNNER_TEMP/cq build content
