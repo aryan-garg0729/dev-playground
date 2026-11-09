@@ -31,8 +31,27 @@ services, which free plans cannot host (the Python worker needs a Docker daemon)
    - `DATABASE_URL`: the Neon string.
    - The OAuth ids and secrets from step 3. You need at least one provider;
      leave the other pair empty.
-3. Each deploy builds the image; each start applies migrations and loads
-   `content/` (a few seconds), then serves. `git push` to `main` redeploys.
+3. Each deploy builds the image; each start applies migrations, then serves.
+   `git push` to `main` redeploys, except for commits that only touch
+   `content/` or `.github/` (`buildFilter` in `render.yaml`).
+
+## 2b. Publishing content (no redeploy)
+
+Courses live in Postgres and the API reads them per request, so content is
+published straight to the database by `.github/workflows/content.yml`, not by
+a deploy. The image does not contain `content/`.
+
+1. GitHub repo → Settings → Secrets and variables → Actions → New repository
+   secret: `DATABASE_URL`, the same Neon string as on Render.
+2. First publish (and any time you want to republish by hand): Actions →
+   content → Run workflow.
+3. After that, every push to `main` that changes `content/` validates it,
+   applies migrations and runs `cq build`. The change is live when the job is
+   green, usually within a minute, and Render does not rebuild.
+
+A content commit that fails `cq validate` changes nothing: the job stops
+before touching the database, and `cq build` writes in one transaction.
+To publish from your machine instead: `cd api && DATABASE_URL='<neon>' go run ./cmd/cq build ../content`.
 
 ## 3. OAuth apps
 

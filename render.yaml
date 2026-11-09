@@ -13,6 +13,11 @@ services:
     dockerContext: .
     healthCheckPath: /api/v1/healthz
     autoDeploy: true
+    # Content is published by .github/workflows/content.yml, not by a deploy.
+    buildFilter:
+      ignoredPaths:
+        - content/**
+        - .github/**
     envVars:
       - key: APP_ENV
         value: production

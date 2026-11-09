@@ -7,3 +7,4 @@ api/internal/content/testdata
 web/e2e
 web/tsconfig.tsbuildinfo
 test
+content

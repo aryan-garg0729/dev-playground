@@ -1,0 +1,42 @@
+# Publishes content/ to the production database without redeploying the app.
+# The API reads courses from Postgres on every request, so a `cq build` here is
+# live as soon as it commits. Render ignores content/ changes (render.yaml
+# buildFilter) and the container no longer builds content on start, so this
+# workflow is the only thing that writes content to production.
+#
+# Needs the repository secret DATABASE_URL (the Neon connection string).
+name: content
+
+on:
+  push:
+    branches: [main]
+    paths: ['content/**']
+  workflow_dispatch: # run by hand for the first publish or to republish
+
+concurrency:
+  group: content-publish
+  cancel-in-progress: false # never cut a build off mid-transaction; queue instead
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: Build cq
+        working-directory: api
+        run: go build -trimpath -o "$RUNNER_TEMP/cq" ./cmd/cq
+      - name: Validate
+        run: "$RUNNER_TEMP/cq" validate content
+      - name: Migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: "$RUNNER_TEMP/cq" migrate up
+      - name: Publish
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: "$RUNNER_TEMP/cq" build content

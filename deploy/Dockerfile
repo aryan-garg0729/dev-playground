@@ -1,6 +1,9 @@
 # One-service production image for free hosting (Render; build context: repo root).
 # The API serves the built web app on the same origin (WEB_DIR), and every
-# start applies migrations and compiles content/ into Postgres before serving.
+# start applies migrations before serving. Content is not in the image: the
+# GitHub workflow .github/workflows/content.yml publishes content/ straight to
+# Postgres, so a content change needs no redeploy (and a restart cannot roll
+# content back to an older copy).
 # It also serves the learner CLI (/cli/, /install.sh), built for APP_URL.
 # Lessons that run learner code (Python, Go, JS, SQL) need the grading workers
 # and the sandbox, which this image leaves out; the current courses are quiz
@@ -45,8 +48,7 @@ COPY --from=go /out/api /out/cq /usr/local/bin/
 COPY --from=web /web/dist /srv/web
 COPY --from=go /out/cli /srv/web/cli
 COPY --from=go /out/install.sh /srv/web/install.sh
-COPY content /srv/content
 ENV WEB_DIR=/srv/web
 USER app
 EXPOSE 10000
-ENTRYPOINT ["/bin/sh", "-c", "cq migrate up && cq build /srv/content && exec api"]
+ENTRYPOINT ["/bin/sh", "-c", "cq migrate up && exec api"]
