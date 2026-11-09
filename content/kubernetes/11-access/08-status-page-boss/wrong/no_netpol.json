@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"sa=status-page ready=1"}},{"cli":{"exit_code":0,"stdout":"yes\nyes\nyes\n"}},{"cli":{"exit_code":1,"stdout":"no\nno\nno\n"}},{"cli":{"exit_code":1,"stdout":"no\nno\n"}},{"cli":{"exit_code":1,"stdout":"Error from server (NotFound): networkpolicies.networking.k8s.io \"status-page-ingress\" not found\n\nstorefront=allowed\n"}}]}

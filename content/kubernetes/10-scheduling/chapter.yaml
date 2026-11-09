@@ -1,0 +1,10 @@
+id: k8s.scheduling
+title: Scheduling
+exercises:
+  - 01-node-selector
+  - 02-levers-quiz
+  - 03-taints
+  - 04-pending
+  - 05-anti-affinity
+  - 06-spread-quiz
+  - 07-fast-lane-boss

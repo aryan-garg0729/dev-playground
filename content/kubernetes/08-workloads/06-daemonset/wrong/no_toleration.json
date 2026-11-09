@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"nodes=3\n"}},{"cli":{"exit_code":0,"stdout":"desired=2 ready=2."}},{"cli":{"exit_code":0,"stdout":""}},{"cli":{"exit_code":0,"stdout":"scouting elixirbytes-worker\nscouting elixirbytes-worker2\n"}}]}

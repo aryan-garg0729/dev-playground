@@ -1,0 +1,22 @@
+id: k8s.storage.statefulset-quiz
+type: mcq
+version: 1
+title: Scaling a StatefulSet Down
+xp: 5
+difficulty: 3
+tags: [statefulsets, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "vault-2 is deleted, and so is its claim data-vault-2" }
+    - { id: b, text: "A random pod is deleted, and its claim is kept" }
+    - { id: c, text: "vault-2 (the highest ordinal) is deleted; data-vault-2 is kept, and vault-2 gets it back if you scale up again" }
+    - { id: d, text: "vault-0 is deleted first, because it's the oldest" }
+  answer: [c]
+  explain: >
+    StatefulSets remove pods in reverse ordinal order, so the highest number goes first. By
+    default the claims are kept (persistentVolumeClaimRetentionPolicy defaults to Retain for
+    both scale-down and delete), because deleting someone's database disk on a scale-down
+    would be a terrible default. Scale back to 3 and the new vault-2 mounts data-vault-2 again,
+    data intact. To free the storage you delete the PVC yourself.

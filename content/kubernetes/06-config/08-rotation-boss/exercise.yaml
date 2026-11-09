@@ -1,0 +1,45 @@
+id: k8s.config.rotation-boss
+type: project_cli
+version: 1
+title: Black Moon Sale Switch
+xp: 55
+difficulty: 4
+boss: true
+tags: [configmaps, secrets, rollouts]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd-config announces the sale and turns sale mode on
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get configmap brewd-config -o jsonpath='greeting={.data.greeting}. sale-mode={.data.sale-mode}.'
+        tests:
+          - stdout_contains_all: ["greeting=Black Moon sale is live.", "sale-mode=on."]
+    - description: No credentials leaked into the ConfigMap
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get configmap brewd-config -o jsonpath='{.data}'
+        tests:
+          - stdout_contains_none: ["password", "token"]
+    - description: brewd is fully rolled out, 4 ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas} updated={.status.updatedReplicas}'
+        tests:
+          - stdout_contains_all: ["desired=4", "ready=4", "updated=4"]
+    - description: Running brewd pods see SALE_MODE=on
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- sh -c 'echo "sale=$SALE_MODE"'
+        tests:
+          - stdout_contains_all: ["sale=on"]
+    - description: The new api-token reached the pods as a 0400 file
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- ls -lL /etc/creds/api-token | cut -c1-10;
+          [ "$(kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- sh -c 'cksum < /etc/creds/api-token')" = "$(kubectl --context kind-elixirbytes -n shop get secret brewd-db -o jsonpath='{.data.api-token}' | base64 -d | cksum)" ] && echo "token matches"
+        tests:
+          - stdout_contains_all: ["-r--------", "token matches"]
+    - description: Secrets still stay out of the environment
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='from-secret={.spec.template.spec.containers[0].env[*].valueFrom.secretKeyRef.name}{.spec.template.spec.containers[0].envFrom[*].secretRef.name}.'
+        tests:
+          - stdout_contains_all: ["from-secret=."]

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"DB_PORT<-brewd-config/db-port "}},{"cli":{"exit_code":0,"stdout":"config:cm=brewd-config | config@/etc/config "}},{"cli":{"exit_code":0,"stdout":"env=5432 file=5432 greeting=Fresh potions daily v1\n"}}]}

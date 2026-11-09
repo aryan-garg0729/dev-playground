@@ -1,0 +1,40 @@
+id: k8s.health.checkout-boss
+type: project_cli
+version: 1
+title: No More Zombie Pods
+xp: 55
+difficulty: 4
+boss: true
+tags: [probes, resources, services]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: checkout has an HTTP readiness probe and an HTTP liveness probe
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy checkout -o jsonpath='ready={.spec.template.spec.containers[0].readinessProbe.httpGet.path}:{.spec.template.spec.containers[0].readinessProbe.httpGet.port} live={.spec.template.spec.containers[0].livenessProbe.httpGet.path}:{.spec.template.spec.containers[0].livenessProbe.httpGet.port} delay={.spec.template.spec.containers[0].livenessProbe.initialDelaySeconds}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ready=/:80 ", "live=/:80 ", "delay=10"]
+    - description: checkout requests 50m CPU and 32Mi, and is capped at 64Mi
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy checkout -o jsonpath='req={.spec.template.spec.containers[0].resources.requests.cpu}/{.spec.template.spec.containers[0].resources.requests.memory} memlimit={.spec.template.spec.containers[0].resources.limits.memory} cpulimit={.spec.template.spec.containers[0].resources.limits.cpu}.'
+        tests:
+          - stdout_contains_all: ["req=50m/32Mi", "memlimit=64Mi", "cpulimit=."]
+    - description: Its pods are Burstable
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=checkout -o jsonpath='{range .items[*]}{.status.qosClass} {end}'
+        tests:
+          - stdout_contains_all: ["Burstable"]
+          - stdout_contains_none: ["Guaranteed", "BestEffort"]
+    - description: 3 pods ready, and none has ever restarted
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy checkout -o jsonpath='ready={.status.readyReplicas}'; echo " restarts=$(kubectl --context kind-elixirbytes -n shop get pods -l app=checkout -o jsonpath='{.items[*].status.containerStatuses[0].restartCount}')"
+        tests:
+          - stdout_contains_all: ["ready=3", "restarts=0 0 0"]
+    - description: Service checkout has 3 ready endpoints
+      cli_command:
+        command: echo "endpoints=$(kubectl --context kind-elixirbytes -n shop get endpointslices -l kubernetes.io/service-name=checkout -o jsonpath='{range .items[*].endpoints[?(@.conditions.ready==true)]}{.addresses[0]} {end}' | wc -w | tr -d ' ')"
+        tests:
+          - stdout_contains_all: ["endpoints=3"]

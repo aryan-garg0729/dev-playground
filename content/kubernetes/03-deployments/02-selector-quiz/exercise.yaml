@@ -1,0 +1,22 @@
+id: k8s.deployments.selector-quiz
+type: mcq
+version: 1
+title: The ReplicaSet Counts Labels
+xp: 5
+difficulty: 3
+tags: [replicasets, selectors]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing: the ReplicaSet only manages pods it created itself, so there are now 4" }
+    - { id: b, text: "The ReplicaSet sees 4 matching pods, adopts the new one and deletes one, back to 3" }
+    - { id: c, text: "The API server rejects the new pod because the label is already taken" }
+    - { id: d, text: "The ReplicaSet scales itself up to 4 to match" }
+  answer: [b]
+  explain: >
+    A ReplicaSet doesn't keep a list of "my pods". Every loop it counts the pods that match its
+    selector and aren't owned by another controller. A bare pod with app=brewd-rs matches, so
+    the ReplicaSet adopts it (it adds itself as the pod's owner) and now counts 4 against a
+    target of 3, so it deletes one. Labels aren't unique and nothing reserves them; that's
+    exactly why two controllers with overlapping selectors end up fighting.

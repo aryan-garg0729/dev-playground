@@ -1,0 +1,45 @@
+id: k8s.services.menu-api-boss
+type: project_cli
+version: 1
+title: The Menu API Front Door
+xp: 55
+difficulty: 3
+boss: true
+tags: [services, dns, nodeport]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:30080
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: menu-api runs 3 ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy menu-api -o jsonpath='ready={.status.readyReplicas} app={.spec.template.metadata.labels.app}'
+        tests:
+          - stdout_contains_all: ["ready=3", "app=menu-api"]
+    - description: Service menu-api listens on 8080 and forwards to port 80
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc menu-api -o jsonpath='type={.spec.type} port={.spec.ports[0].port} target={.spec.ports[0].targetPort} endpoints=' ; kubectl --context kind-elixirbytes -n shop get endpointslices -l kubernetes.io/service-name=menu-api -o jsonpath='{range .items[*].endpoints[?(@.conditions.ready==true)]}{.addresses[0]} {end}' | wc -w | tr -d ' '
+        tests:
+          - stdout_contains_all: ["type=ClusterIP", "port=8080", "target=80"]
+          - stdout_contains_all: ["endpoints=3"]
+    - description: visitor in shop-staging reaches it by name on 8080
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop-staging exec visitor -- wget -qO- -T 5 http://menu-api.shop:8080
+        tests:
+          - stdout_contains_all: ["Welcome to nginx"]
+    - description: Public port 30080 now belongs to menu-public
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc menu-public -o jsonpath='type={.spec.type} nodePort={.spec.ports[0].nodePort} selector={.spec.selector.app}'
+        tests:
+          - stdout_contains_all: ["type=NodePort", "nodePort=30080", "selector=menu-api"]
+    - description: brewd-np has been removed
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc brewd-np 2>&1
+        tests:
+          - stdout_contains_all: ["NotFound"]
+    - description: localhost:30080 answers through menu-public
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200

@@ -1,0 +1,22 @@
+id: k8s.access.rbac-quiz
+type: mcq
+version: 1
+title: There Is No Deny
+xp: 5
+difficulty: 3
+tags: [rbac, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Add a rule with verbs: [\"delete\"] and effect: Deny to pod-reader" }
+    - { id: b, text: "Create a second Role that removes delete, and bind it too" }
+    - { id: c, text: "Find the binding that grants delete (the edit ClusterRole) and remove it, or replace it with one granting less; RBAC only adds" }
+    - { id: d, text: "Delete the menu-reader ServiceAccount's token" }
+  answer: [c]
+  explain: >
+    RBAC rules only ever grant, and a subject's permissions are the union of all of its
+    bindings. There's no deny field, and a second Role can only add more. So the only fix is
+    to remove the grant: find which binding gives delete (kubectl get rolebindings -o wide, or
+    auth can-i --list), and delete it or swap it for a narrower Role. Deleting a token doesn't
+    change permissions; the pod just gets a new one.

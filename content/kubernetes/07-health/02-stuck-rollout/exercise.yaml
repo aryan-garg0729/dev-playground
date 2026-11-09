@@ -1,0 +1,27 @@
+id: k8s.health.stuck-rollout
+type: project_cli
+version: 1
+title: The Rollout That Stopped Itself
+xp: 25
+difficulty: 3
+tags: [probes, rollouts, rollback]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd is back on the working probe, 4 pods ready and updated
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='path={.spec.template.spec.containers[0].readinessProbe.httpGet.path} ready={.status.readyReplicas} updated={.status.updatedReplicas}'
+        tests:
+          - stdout_contains_all: ["path=/ ", "ready=4", "updated=4"]
+    - description: The /healthz release was tried and is now scaled to 0
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get rs -l app=brewd -o jsonpath='{range .items[*]}{.spec.template.spec.containers[0].readinessProbe.httpGet.path}={.spec.replicas} {end}'
+        tests:
+          - stdout_contains_all: ["/healthz=0"]
+    - description: answers.txt records how far the bad rollout got
+      cli_command:
+        command: "grep -xE 'stuck_new_ready=0' answers.txt && grep -xE 'stuck_old_ready=4' answers.txt"
+        tests:
+          - exit_code: 0

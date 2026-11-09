@@ -1,0 +1,28 @@
+id: k8s.extending.crd
+type: project_cli
+version: 1
+title: Teaching the Cluster a New Noun
+xp: 25
+difficulty: 4
+tags: [crds, api]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: CRD recipes.elixirbytes.io is established
+      cli_command:
+        command: kubectl --context kind-elixirbytes get crd recipes.elixirbytes.io -o jsonpath='established={.status.conditions[?(@.type=="Established")].status} scope={.spec.scope} kind={.spec.names.kind} short={.spec.names.shortNames[*]}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["established=True", "scope=Namespaced", "kind=Recipe", "short=rcp"]
+    - description: Its schema requires potion and limits difficulty to three values
+      cli_command:
+        command: kubectl --context kind-elixirbytes get crd recipes.elixirbytes.io -o jsonpath='required={.spec.versions[0].schema.openAPIV3Schema.properties.spec.required[*]} difficulty={.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.difficulty.enum[*]} minutes={.spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.brewMinutes.type}'
+        tests:
+          - stdout_contains_all: ["potion", "difficulty=easy tricky legendary", "minutes=integer"]
+    - description: kubectl knows the new kind, by its short name too
+      cli_command:
+        command: kubectl --context kind-elixirbytes api-resources --api-group=elixirbytes.io --no-headers
+        tests:
+          - stdout_contains_all: ["recipes", "rcp", "Recipe"]

@@ -1,17 +1,11 @@
 # Career paths: courses in order. `goal` matches the onboarding goal
 # (zero, backend, interviews, ai) and marks the path as the learner's own.
 paths:
-  - id: ai-engineer
-    title: AI Engineer
-    description: From Python warm-ups to chat models and prompt templates.
-    goal: ai
-    courses:
-      - { course: foundations, note: Python and SQL basics }
-      - { course: langchain-basics, note: Chat models and prompts }
   - id: backend-developer
     title: Backend Developer
     description: Python and SQL in the browser, then real commands on your machine.
     goal: backend
     courses:
-      - { course: foundations, note: Python and SQL basics }
-      - { course: command-line, note: Shell and HTTP on your machine }
+      - { course: git, note: Version control on your machine }
+      - { course: docker, note: Containerise a real service }
+      - { course: kubernetes, note: Run it on a cluster }

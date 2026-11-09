@@ -1,0 +1,10 @@
+id: k8s.ingress
+title: Ingress
+exercises:
+  - 01-controller
+  - 02-resource-quiz
+  - 03-two-shops
+  - 04-path-routing
+  - 05-host-routing
+  - 06-gateway-quiz
+  - 07-front-door-boss

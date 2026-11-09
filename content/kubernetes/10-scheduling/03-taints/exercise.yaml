@@ -1,0 +1,28 @@
+id: k8s.scheduling.taints
+type: project_cli
+version: 1
+title: A Node in Maintenance
+xp: 25
+difficulty: 3
+tags: [scheduling, taints, tolerations]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: elixirbytes-worker2 is tainted maintenance=true:NoSchedule
+      cli_command:
+        command: kubectl --context kind-elixirbytes get node elixirbytes-worker2 -o jsonpath='{range .spec.taints[*]}{.key}={.value}:{.effect} {end}'
+        tests:
+          - stdout_contains_all: ["maintenance=true:NoSchedule"]
+    - description: tolerant tolerates that taint
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy tolerant -o jsonpath='{range .spec.template.spec.tolerations[*]}{.key}:{.effect} {end}ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["maintenance:NoSchedule", "ready=1"]
+    - description: tolerant's pod runs on elixirbytes-worker2
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=tolerant -o jsonpath='{range .items[*]}{.spec.nodeName} {end}'
+        tests:
+          - stdout_contains_all: ["elixirbytes-worker2 "]

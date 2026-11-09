@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"class=nginx rewrite= /potions->potions:Prefix /scrolls->scrolls:Prefix "}},{"http":{"status":404,"body":"<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD>\n"}},{"http":{"status":404,"body":"<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD>\n"}}]}

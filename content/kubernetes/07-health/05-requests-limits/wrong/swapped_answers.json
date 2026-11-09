@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"req=100m/64Mi lim=100m/64Mi ready=1"}},{"cli":{"exit_code":0,"stdout":"qos=Guaranteed"}},{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":0,"stdout":"qos=BestEffort"}},{"cli":{"exit_code":1,"stdout":""}}]}

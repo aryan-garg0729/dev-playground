@@ -1,0 +1,32 @@
+id: k8s.access.resource-names
+type: project_cli
+version: 1
+title: Just That One ConfigMap
+xp: 25
+difficulty: 4
+tags: [rbac, roles]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: menu-reader can get the brewd-config ConfigMap
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i get configmap/brewd-config --as=system:serviceaccount:shop:menu-reader -n shop
+        tests:
+          - stdout_contains_all: ["yes"]
+    - description: menu-reader cannot get any other ConfigMap
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i get configmap/kube-root-ca.crt --as=system:serviceaccount:shop:menu-reader -n shop
+        tests:
+          - stdout_contains_all: ["no"]
+    - description: menu-reader cannot list ConfigMaps, or change brewd-config
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i list configmaps --as=system:serviceaccount:shop:menu-reader -n shop; kubectl --context kind-elixirbytes auth can-i update configmap/brewd-config --as=system:serviceaccount:shop:menu-reader -n shop
+        tests:
+          - stdout_contains_all: ["no\nno"]
+    - description: Its pod permissions are unchanged
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i list pods --as=system:serviceaccount:shop:menu-reader -n shop; kubectl --context kind-elixirbytes auth can-i delete pods --as=system:serviceaccount:shop:menu-reader -n shop
+        tests:
+          - stdout_contains_all: ["yes\nno"]

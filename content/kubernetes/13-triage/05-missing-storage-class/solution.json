@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"phase=Bound class=standard size=1Gi"}},{"cli":{"exit_code":0,"stdout":"storageclass.storage.k8s.io/standard\n"}},{"cli":{"exit_code":0,"stdout":"ready=1\narchive up\n"}},{"cli":{"exit_code":0,"stdout":"archive_cause=pvc asked for storage class fast-ssd which does not exist\n"}}]}

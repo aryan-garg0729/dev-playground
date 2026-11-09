@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"pods=vault-proxy types=Ingress from=vault-client"}},{"cli":{"exit_code":0,"stdout":"ip=10.244.2.59"}},{"cli":{"exit_code":0,"stdout":"blocked\n"}},{"cli":{"exit_code":1,"stdout":"wget: download timed out\ncommand terminated with exit code 1\n"}}]}

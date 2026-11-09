@@ -1,0 +1,21 @@
+id: k8s.services.types-quiz
+type: mcq
+version: 1
+title: Picking a Service Type
+xp: 5
+difficulty: 2
+tags: [services, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "LoadBalancer, so the payments worker can reach it from anywhere" }
+    - { id: b, text: "NodePort, so it has a fixed port" }
+    - { id: c, text: "ClusterIP: only pods inside the cluster need it, and nothing outside should be able to reach it" }
+    - { id: d, text: "No Service: the worker should use the ledger pod's IP directly" }
+  answer: [c]
+  explain: >
+    Only other pods talk to ledger, so it needs a stable in-cluster name and nothing more.
+    ClusterIP gives exactly that, and anything wider is a hole: NodePort opens a port on every
+    node, and LoadBalancer adds a public address (and a cloud bill). Pod IPs change on every
+    restart, so connecting to one directly breaks the next time the pod is replaced.

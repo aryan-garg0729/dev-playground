@@ -1,0 +1,22 @@
+id: k8s.health.qos-quiz
+type: mcq
+version: 1
+title: Who Gets Evicted First
+xp: 5
+difficulty: 3
+tags: [resources, qos, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "steady (Guaranteed), because it reserved the most" }
+    - { id: b, text: "The pod that started most recently" }
+    - { id: c, text: "debug-shell (BestEffort): it asked for nothing, so it's the first to go" }
+    - { id: d, text: "All three equally, chosen at random" }
+  answer: [c]
+  explain: >
+    When a node runs short of memory, the kubelet evicts BestEffort pods first, then Burstable
+    pods that are using more than they requested, and Guaranteed pods last. A pod that declared
+    nothing has no claim on the node's memory at all. That's the practical reason to set
+    requests on everything that matters: it moves the pod up the list of things the node
+    protects.

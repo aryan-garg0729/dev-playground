@@ -1,0 +1,23 @@
+id: k8s.extending.operator-quiz
+type: mcq
+version: 1
+title: What a Controller Adds
+xp: 5
+difficulty: 3
+tags: [crds, operators, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing: the API server reads the Recipe and creates the pod itself" }
+    - { id: b, text: "A controller: a program that watches Recipes, compares each one with what's running, and creates or fixes the pods, in a loop" }
+    - { id: c, text: "A second CRD that links Recipes to Deployments" }
+    - { id: d, text: "A ValidatingWebhook, which runs code whenever a Recipe is created" }
+  answer: [b]
+  explain: >
+    A CRD only gives you storage, validation and the API. Something has to act on the
+    objects, and that's a controller running the same reconcile loop as the ReplicaSet
+    controller from chapter 3: watch the desired state (Recipes), look at the actual state
+    (brewer pods), make one change to close the gap, repeat. A CRD plus a controller is what
+    people call an operator. A validating webhook can reject objects, but it doesn't create
+    anything or keep things in sync afterwards.

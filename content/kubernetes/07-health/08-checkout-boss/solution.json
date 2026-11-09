@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ready=/:80 live=/:80 delay=10"}},{"cli":{"exit_code":0,"stdout":"req=50m/32Mi memlimit=64Mi cpulimit=."}},{"cli":{"exit_code":0,"stdout":"Burstable Burstable Burstable "}},{"cli":{"exit_code":0,"stdout":"ready=3 restarts=0 0 0\n"}},{"cli":{"exit_code":0,"stdout":"endpoints=3\n"}}]}

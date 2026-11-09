@@ -1,0 +1,24 @@
+id: k8s.deployments.replicaset
+type: project_cli
+version: 1
+title: It Keeps Coming Back
+xp: 20
+difficulty: 2
+tags: [replicasets, self-healing]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: ReplicaSet brewd-rs wants 3 pods and has 3 ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get rs brewd-rs -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas} selector={.spec.selector.matchLabels.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["desired=3", "ready=3", "selector=brewd-rs"]
+    - description: Its pods run nginx:1.27-alpine
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=brewd-rs -o jsonpath='{range .items[*]}{.spec.containers[0].image} {end}'
+        tests:
+          - stdout_contains_all: ["nginx:1.27-alpine"]
+          - stdout_contains_none: ["latest"]

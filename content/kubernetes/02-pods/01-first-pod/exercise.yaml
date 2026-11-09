@@ -1,0 +1,29 @@
+id: k8s.pods.first-pod
+type: project_cli
+version: 1
+title: Your First Pod
+xp: 20
+difficulty: 1
+tags: [pods, manifests]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Pod storefront is running nginx with label app=storefront
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod storefront -o jsonpath='phase={.status.phase} image={.spec.containers[0].image} app={.metadata.labels.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["phase=Running", "image=nginx:1.27-alpine", "app=storefront"]
+    - description: The container declares port 80
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod storefront -o jsonpath='port={.spec.containers[0].ports[0].containerPort}'
+        tests:
+          - stdout_contains_all: ["port=80"]
+    - description: The manifest is saved in manifests/
+      cli_command:
+        command: "grep -c 'kind: Pod' manifests/storefront.yaml"
+        tests:
+          - exit_code: 0

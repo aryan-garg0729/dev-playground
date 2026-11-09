@@ -1,0 +1,30 @@
+id: k8s.scheduling.node-selector
+type: project_cli
+version: 1
+title: Choosing a Node
+xp: 20
+difficulty: 2
+tags: [scheduling, labels, nodeselector]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: elixirbytes-worker is labelled tier=fast
+      cli_command:
+        command: kubectl --context kind-elixirbytes get nodes -l tier=fast -o name
+        tests:
+          - stdout_contains_all: ["node/elixirbytes-worker\n"]
+          - stdout_contains_none: ["worker2", "control-plane"]
+    - description: pinned asks for tier=fast and has 2 ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy pinned -o jsonpath='selector={.spec.template.spec.nodeSelector.tier} ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["selector=fast", "ready=2"]
+    - description: Both pinned pods landed on elixirbytes-worker
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=pinned -o jsonpath='{range .items[*]}{.spec.nodeName} {end}'
+        tests:
+          - stdout_contains_all: ["elixirbytes-worker "]
+          - stdout_contains_none: ["worker2", "control-plane"]

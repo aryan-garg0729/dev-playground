@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":1,"stdout":"The Job \"restock\" is invalid: spec.template.spec.restartPolicy: Required value: valid values: \"OnFailure\", \"Never\"\n"}},{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":1,"stdout":""}}]}

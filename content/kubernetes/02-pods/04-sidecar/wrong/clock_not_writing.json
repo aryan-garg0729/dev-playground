@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"names=web clock ready=true true"}},{"cli":{"exit_code":0,"stdout":"shared:emptyDir={} kube-api-access-knt6h:emptyDir= "}},{"cli":{"exit_code":0,"stdout":"web=/usr/share/nginx/html clock=/data "}},{"cli":{"exit_code":0,"stdout":"<h1>Welcome to nginx!</h1>\n"}}]}

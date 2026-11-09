@@ -1,0 +1,41 @@
+id: k8s.pods.menu-boss
+type: project_cli
+version: 1
+title: Potion of the Day Board
+xp: 50
+difficulty: 3
+tags: [pods, sidecars, labels]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: potion-menu is labelled for the frontend and has an owner
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop get pod potion-menu -o jsonpath='app={.metadata.labels.app} tier={.metadata.labels.tier} owner={.metadata.annotations.elixirbytes\.io/owner}.'
+        tests:
+          - stdout_contains_all: ["app=potion-menu", "tier=frontend"]
+          - stdout_contains_none: ["owner=."]
+    - description: It runs web (nginx) and writer (busybox), both ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod potion-menu -o jsonpath='{range .spec.containers[*]}{.name}={.image} {end}ready={.status.containerStatuses[*].ready}'
+        tests:
+          - stdout_contains_all: ["web=nginx:1.27-alpine", "writer=busybox:1.36", "ready=true true"]
+    - description: Both containers share the pages emptyDir
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod potion-menu -o jsonpath='{range .spec.volumes[*]}{.name}:emptyDir={.emptyDir} {end}{range .spec.containers[*]}{.name}@{.volumeMounts[?(@.name=="pages")].mountPath} {end}'
+        tests:
+          - stdout_contains_all: ["pages:emptyDir={", "web@/usr/share/nginx/html", "writer@/out"]
+    - description: nginx serves the potion of the day
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec potion-menu -c web -- cat /usr/share/nginx/html/index.html
+        tests:
+          - stdout_contains_all: ["Potion of the Day"]
+    - description: The broken cauldron pod has been cleaned up
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod cauldron 2>&1
+        tests:
+          - stdout_contains_all: ["NotFound"]

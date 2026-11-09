@@ -1,0 +1,27 @@
+id: k8s.deployments.scale
+type: project_cli
+version: 1
+title: Scaling, and Keeping the File Honest
+xp: 20
+difficulty: 2
+tags: [deployments, scaling, declarative]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd runs 4 ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas}'
+        tests:
+          - stdout_contains_all: ["desired=4", "ready=4"]
+    - description: manifests/brewd.yaml says 4 replicas too
+      cli_command:
+        command: "grep -E '^ *replicas: 4 *$' manifests/brewd.yaml"
+        tests:
+          - exit_code: 0
+    - description: The file and the cluster agree
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop diff -f manifests/brewd.yaml >/dev/null; echo "diff_exit=$?"
+        tests:
+          - stdout_contains_all: ["diff_exit=0"]

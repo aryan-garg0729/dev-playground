@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"cmd=cat /tmp/healthy period=5"}},{"cli":{"exit_code":0,"stdout":"restarts=2 exit=137 "}},{"cli":{"exit_code":0,"stdout":"Liveness probe failed: cat: can't open '/tmp/healthy': No such file or directory\n\n"}},{"cli":{"exit_code":1,"stdout":""}}]}

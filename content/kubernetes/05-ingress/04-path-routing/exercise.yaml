@@ -1,0 +1,32 @@
+id: k8s.ingress.path-routing
+type: project_cli
+version: 1
+title: Routing by Path
+xp: 25
+difficulty: 3
+tags: [ingress, routing]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Ingress shop uses the nginx class and rewrites to /
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop get ingress shop -o jsonpath='class={.spec.ingressClassName} rewrite={.metadata.annotations.nginx\.ingress\.kubernetes\.io/rewrite-target} {range .spec.rules[*].http.paths[*]}{.path}->{.backend.service.name}:{.pathType} {end}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["class=nginx", "rewrite=/ ", "/potions->potions:Prefix", "/scrolls->scrolls:Prefix"]
+    - description: localhost/potions reaches the potions shop
+      http_request:
+        request: { method: GET, url: "${baseURL}/potions" }
+        tests:
+          - status_code: 200
+          - body_contains: "potions shop"
+    - description: localhost/scrolls reaches the scrolls shop
+      http_request:
+        request: { method: GET, url: "${baseURL}/scrolls" }
+        tests:
+          - status_code: 200
+          - body_contains: "scrolls shop"

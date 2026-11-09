@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"established=True scope=Namespaced kind=Recipe short=rcp"}},{"cli":{"exit_code":0,"stdout":"required=potion difficulty difficulty=easy tricky legendary minutes=integer"}},{"cli":{"exit_code":0,"stdout":"recipes   rcp   elixirbytes.io/v1   true   Recipe\n"}}]}

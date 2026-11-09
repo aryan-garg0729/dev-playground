@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"nodes=3\n"}},{"cli":{"exit_code":1,"stdout":"Error from server (NotFound): daemonsets.apps \"node-scout\" not found\n"}},{"cli":{"exit_code":0,"stdout":"node-role.kubernetes.io/control-plane:NoSchedule "}},{"cli":{"exit_code":0,"stdout":"scouting elixirbytes-worker2\nscouting elixirbytes-worker\nscouting elixirbytes-control-plane\n"}}]}

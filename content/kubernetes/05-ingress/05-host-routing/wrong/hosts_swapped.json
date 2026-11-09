@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"class=nginx potions.elixirbytes.local->potions scrolls.elixirbytes.local->scrolls "}},{"cli":{"exit_code":0,"stdout":"scrolls shop\n"}},{"cli":{"exit_code":0,"stdout":"potions shop\n"}}]}

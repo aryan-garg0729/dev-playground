@@ -1,0 +1,22 @@
+id: k8s.ingress.resource-quiz
+type: mcq
+version: 1
+title: An Ingress Is Just Rules
+xp: 5
+difficulty: 2
+tags: [ingress, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The Ingress is broken: its YAML must be invalid" }
+    - { id: b, text: "Nothing is wrong yet, Ingresses take about an hour to propagate" }
+    - { id: c, text: "No ingress controller is running in that cluster, so nothing reads the rules and nothing listens for the traffic" }
+    - { id: d, text: "Ingresses only work for LoadBalancer Services" }
+  answer: [c]
+  explain: >
+    The API server validated and stored the Ingress, which is why kubectl get shows it. But an
+    Ingress is only data. Some controller has to watch Ingress objects, configure a proxy and
+    listen on a port, and in a cluster with no controller installed (or none matching the
+    ingressClassName) nothing does. An Ingress routes to ordinary ClusterIP Services; it
+    doesn't need LoadBalancer ones.

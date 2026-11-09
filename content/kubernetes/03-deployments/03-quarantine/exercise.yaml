@@ -1,0 +1,27 @@
+id: k8s.deployments.quarantine
+type: project_cli
+version: 1
+title: Quarantine a Pod
+xp: 25
+difficulty: 3
+tags: [replicasets, labels, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd-rs is still at 3 ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get rs brewd-rs -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas}'
+        tests:
+          - stdout_contains_all: ["desired=3", "ready=3"]
+    - description: Exactly one quarantined pod is still running
+      cli_command:
+        command: echo "quarantined=$(kubectl --context kind-elixirbytes -n shop get pods -l app=quarantine --field-selector=status.phase=Running -o name | wc -l | tr -d ' ')"
+        tests:
+          - stdout_contains_all: ["quarantined=1"]
+    - description: The quarantined pod no longer belongs to the ReplicaSet
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=quarantine -o jsonpath='name={.items[0].metadata.name} owners={.items[0].metadata.ownerReferences[*].name}.'
+        tests:
+          - stdout_contains_all: ["name=brewd-rs-", "owners=."]

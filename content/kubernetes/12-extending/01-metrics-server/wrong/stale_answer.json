@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ready=1"}},{"cli":{"exit_code":0,"stdout":"elixirbytes-control-plane   122m   3%    1098Mi   18%   \nelixirbytes-worker          81m    2%    463Mi    7%    \nelixirbytes-worker2         77m    1%    410Mi    6%    \n"}},{"cli":{"exit_code":0,"stdout":"menu-board                      1m    4Mi   \n"}},{"cli":{"exit_code":1,"stdout":""}}]}

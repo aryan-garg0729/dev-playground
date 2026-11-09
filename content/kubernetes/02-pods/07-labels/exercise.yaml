@@ -1,0 +1,31 @@
+id: k8s.pods.labels
+type: project_cli
+version: 1
+title: Labels and Selectors
+xp: 20
+difficulty: 2
+tags: [labels, selectors, annotations]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: tier=frontend selects storefront and menu-board, nothing else
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l tier=frontend -o name
+        tests:
+          - stdout_contains_all: ["pod/storefront", "pod/menu-board"]
+          - stdout_contains_none: ["pod/cauldron"]
+    - description: cauldron is tier=backend and quarantined
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l 'tier=backend,status in (quarantined)' -o name
+        tests:
+          - stdout_contains_all: ["pod/cauldron"]
+    - description: storefront carries an owner annotation
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop get pod storefront -o jsonpath='owner={.metadata.annotations.elixirbytes\.io/owner}.'
+        tests:
+          - stdout_contains_all: ["owner="]
+          - stdout_contains_none: ["owner=."]

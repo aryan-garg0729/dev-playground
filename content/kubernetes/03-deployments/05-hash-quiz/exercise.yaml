@@ -1,0 +1,22 @@
+id: k8s.deployments.hash-quiz
+type: mcq
+version: 1
+title: Reading a Pod Name
+xp: 5
+difficulty: 2
+tags: [deployments, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "6d4cf56db6 is a hash of the pod template; it changes when you change the template, giving a new ReplicaSet" }
+    - { id: b, text: "6d4cf56db6 is the node the pod runs on" }
+    - { id: c, text: "6d4cf56db6 is the image digest of nginx:1.27-alpine" }
+    - { id: d, text: "6d4cf56db6 counts up by one for every rollout" }
+  answer: [a]
+  explain: >
+    A Deployment names each ReplicaSet <deployment>-<hash of the pod template>, and adds the
+    same value to its pods as the pod-template-hash label. Change anything in the template
+    (image, env, a label) and the hash changes, so you get a new ReplicaSet. Change only
+    replicas and the template is the same, so the hash, and the ReplicaSet, stay. The last
+    part of the pod name (x2kq9) is random. It isn't a node, a digest or a counter.

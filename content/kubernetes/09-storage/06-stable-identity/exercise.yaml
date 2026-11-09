@@ -1,0 +1,36 @@
+id: k8s.storage.stable-identity
+type: project_cli
+version: 1
+title: Same Name, Same Data
+xp: 20
+difficulty: 3
+tags: [statefulsets, dns, storage]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: vault-0 is newer than vault-1, so it was recreated
+      cli_command:
+        command: >-
+          p=$(kubectl --context kind-elixirbytes -n shop get pod vault-0 -o jsonpath='{.metadata.creationTimestamp}');
+          c=$(kubectl --context kind-elixirbytes -n shop get pod vault-1 -o jsonpath='{.metadata.creationTimestamp}');
+          echo "vault-0=$p vault-1=$c"; expr "$p" \> "$c" >/dev/null && echo "recreated"
+        tests:
+          - stdout_contains_all: ["recreated"]
+    - description: The new vault-0 still has the identity file the first one wrote
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec vault-0 -- cat /data/id
+        tests:
+          - stdout_contains_all: ["I am vault-0"]
+    - description: vault-1 resolves by its own DNS name
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec storefront -- nslookup vault-1.vault.shop.svc.cluster.local
+        tests:
+          - stdout_contains_all: ["Name:", "vault-1.vault.shop.svc.cluster.local"]
+    - description: answers.txt records how many addresses the headless name returns
+      cli_command:
+        command: >-
+          grep -x "vault_addresses=$(kubectl --context kind-elixirbytes -n shop exec storefront -- nslookup vault.shop.svc.cluster.local 2>/dev/null | grep -c '^Address: ')" answers.txt
+        tests:
+          - exit_code: 0

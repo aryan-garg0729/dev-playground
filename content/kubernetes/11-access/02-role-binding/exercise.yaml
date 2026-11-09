@@ -1,0 +1,34 @@
+id: k8s.access.role-binding
+type: project_cli
+version: 1
+title: Roles and Bindings
+xp: 25
+difficulty: 3
+tags: [rbac, roles]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Role pod-reader allows get, list and watch on pods and pods/log
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get role pod-reader -o jsonpath='{range .rules[*]}groups={.apiGroups[*]}. resources={.resources[*]} verbs={.verbs[*]}; {end}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["groups=.", "pods", "pods/log", "get", "list", "watch"]
+          - stdout_contains_none: ["delete", "create", "*"]
+    - description: RoleBinding menu-reader-pods ties menu-reader to pod-reader
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get rolebinding menu-reader-pods -o jsonpath='role={.roleRef.kind}/{.roleRef.name} subjects={range .subjects[*]}{.kind}/{.namespace}/{.name} {end}'
+        tests:
+          - stdout_contains_all: ["role=Role/pod-reader", "ServiceAccount/shop/menu-reader"]
+    - description: menu-reader can list pods and read their logs
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i list pods --as=system:serviceaccount:shop:menu-reader -n shop; kubectl --context kind-elixirbytes auth can-i get pods --subresource=log --as=system:serviceaccount:shop:menu-reader -n shop
+        tests:
+          - stdout_contains_all: ["yes\nyes"]
+    - description: menu-reader cannot delete pods or read secrets
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i delete pods --as=system:serviceaccount:shop:menu-reader -n shop; kubectl --context kind-elixirbytes auth can-i get secrets --as=system:serviceaccount:shop:menu-reader -n shop
+        tests:
+          - stdout_contains_all: ["no\nno"]

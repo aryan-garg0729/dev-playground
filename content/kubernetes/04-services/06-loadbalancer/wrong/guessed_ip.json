@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"type=LoadBalancer selector=brewd nodePort=31161"}},{"cli":{"exit_code":0,"stdout":"external=<pending>\n"}},{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":0,"stdout":"lb_nodeport=31161\n"}}]}

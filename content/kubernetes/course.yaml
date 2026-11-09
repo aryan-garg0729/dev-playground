@@ -1,0 +1,26 @@
+id: kubernetes
+title: Kubernetes
+description: >
+  Move ElixirBytes from one tired server to a Kubernetes cluster: pods, Deployments,
+  Services, Ingress, config, storage, scheduling, RBAC, autoscaling and 3am triage.
+  Every lesson and boss is real kubectl against a kind cluster on your own machine.
+order: 5
+published: true
+chapters:
+  - 01-clusters
+  - 02-pods
+  - 03-deployments
+  - 04-services
+  - 05-ingress
+  - 06-config
+  - 07-health
+  - 08-workloads
+  - 09-storage
+  - 10-scheduling
+  - 11-access
+  - 12-extending
+  - 13-triage
+icon: k8s
+level: intermediate
+tags: [Kubernetes, DevOps, CLI]
+topics: Pods, Deployments, Services, storage, RBAC, triage

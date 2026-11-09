@@ -1,0 +1,28 @@
+id: k8s.deployments.deployment
+type: project_cli
+version: 1
+title: Deployments
+xp: 25
+difficulty: 2
+tags: [deployments, rolling-updates]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Deployment brewd runs 3 ready pods of nginx:1.27-alpine
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas} image={.spec.template.spec.containers[0].image} app={.spec.selector.matchLabels.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["desired=3", "ready=3", "image=nginx:1.27-alpine", "app=brewd"]
+    - description: Rolling updates never drop below 3 serving pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='type={.spec.strategy.type} surge={.spec.strategy.rollingUpdate.maxSurge} unavailable={.spec.strategy.rollingUpdate.maxUnavailable}'
+        tests:
+          - stdout_contains_all: ["type=RollingUpdate", "surge=1", "unavailable=0"]
+    - description: The Deployment made its own ReplicaSet
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get rs -l app=brewd -o jsonpath='{range .items[*]}{.metadata.ownerReferences[0].kind}/{.metadata.ownerReferences[0].name} {end}'
+        tests:
+          - stdout_contains_all: ["Deployment/brewd"]

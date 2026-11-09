@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"class=nginx rewrite=/ /potions->potions:Exact /scrolls->scrolls:Exact "}},{"http":{"status":200,"body":"potions shop\n"}},{"http":{"status":200,"body":"scrolls shop\n"}}]}

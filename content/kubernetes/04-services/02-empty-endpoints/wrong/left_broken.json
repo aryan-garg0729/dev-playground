@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"pods=potion-api ready=2"}},{"cli":{"exit_code":0,"stdout":"selector=potion_api."}},{"cli":{"exit_code":0,"stdout":"endpoints=0\n"}}]}

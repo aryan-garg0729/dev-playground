@@ -1,0 +1,22 @@
+id: k8s.deployments.revision-quiz
+type: mcq
+version: 1
+title: Why the Revision Went Up
+xp: 5
+difficulty: 3
+tags: [rollouts, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It's a bug: undo should have gone back to revision 1" }
+    - { id: b, text: "A rollback is a new rollout of an old template, so it gets the next number; revision 1 became revision 3" }
+    - { id: c, text: "undo always skips one revision to keep a backup" }
+    - { id: d, text: "Revision 3 is a copy, and revision 1 is still in the history unchanged" }
+  answer: [b]
+  explain: >
+    A Deployment never goes backwards. undo takes the old pod template and rolls it out like
+    any other change, so it gets the next revision number. Since the template is identical to
+    revision 1's, it reuses that ReplicaSet (same template hash), which now carries revision
+    3, and revision 1 disappears from the history. History is a sequence of what actually
+    ran, not a list of specs, which is also why you can't recreate it from your YAML files.

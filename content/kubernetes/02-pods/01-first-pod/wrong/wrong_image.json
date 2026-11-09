@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"phase=Running image=nginx:latest app=storefront"}},{"cli":{"exit_code":0,"stdout":"port=80"}},{"cli":{"exit_code":0,"stdout":"1\n"}}]}

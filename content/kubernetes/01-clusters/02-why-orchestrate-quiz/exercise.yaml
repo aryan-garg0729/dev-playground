@@ -1,0 +1,23 @@
+id: k8s.cluster.why-orchestrate-quiz
+type: mcq
+version: 1
+title: What Docker Alone Can't Do
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Run containers from an image" }
+    - { id: b, text: "Notice a container died on a machine that rebooted, and start a replacement on another machine" }
+    - { id: c, text: "Publish a container port on the host" }
+    - { id: d, text: "Restart a container whose process exited, on the same machine" }
+  answer: [b]
+  explain: >
+    Docker runs containers on one host, and with a restart policy it will even restart a
+    crashed container on that same host (option d). What it can't do is look across many
+    machines: if the host itself dies, nothing notices and nothing moves the work. Kubernetes
+    keeps a record of what *should* be running across the whole cluster and keeps fixing the
+    difference, on whichever node can take it. Options a and c are everyday Docker.

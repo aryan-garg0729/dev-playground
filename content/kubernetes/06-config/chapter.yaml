@@ -1,0 +1,11 @@
+id: k8s.config
+title: ConfigMaps and Secrets
+exercises:
+  - 01-configmap
+  - 02-env-and-volume
+  - 03-live-update
+  - 04-restart-quiz
+  - 05-secret
+  - 06-base64-quiz
+  - 07-secret-volume
+  - 08-rotation-boss

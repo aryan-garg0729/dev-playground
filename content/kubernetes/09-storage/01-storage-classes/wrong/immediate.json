@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"default=standard binding=WaitForFirstConsumer reclaim=Delete"}},{"cli":{"exit_code":0,"stdout":"default_sc=standard\n"}},{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":0,"stdout":"sc_reclaim=Delete\n"}}]}

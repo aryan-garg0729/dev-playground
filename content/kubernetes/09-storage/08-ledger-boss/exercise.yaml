@@ -1,0 +1,41 @@
+id: k8s.storage.ledger-boss
+type: project_cli
+version: 1
+title: The Order Vault
+xp: 55
+difficulty: 4
+boss: true
+tags: [statefulsets, storage, dns]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Headless Service ledger and a 3-replica StatefulSet ledger, all ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc ledger -o jsonpath='clusterIP={.spec.clusterIP} '; kubectl --context kind-elixirbytes -n shop get sts ledger -o jsonpath='ready={.status.readyReplicas} service={.spec.serviceName}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["clusterIP=None", "ready=3", "service=ledger"]
+    - description: Each replica has its own 1Gi books claim, bound
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pvc books-ledger-0 books-ledger-1 books-ledger-2 -o jsonpath='{range .items[*]}{.metadata.name}={.status.phase}/{.spec.resources.requests.storage} {end}'
+        tests:
+          - stdout_contains_all: ["books-ledger-0=Bound/1Gi", "books-ledger-1=Bound/1Gi", "books-ledger-2=Bound/1Gi"]
+    - description: ledger-2 is reachable by its own name
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec storefront -- nslookup ledger-2.ledger.shop.svc.cluster.local
+        tests:
+          - stdout_contains_all: ["Name:", "ledger-2.ledger.shop.svc.cluster.local"]
+    - description: ledger-1 kept its books through a restart
+      cli_command:
+        command: echo "boots=$(kubectl --context kind-elixirbytes -n shop exec ledger-1 -- grep -c 'ledger-1 opened the books' /books/journal)"
+        captures: [{ name: boots, regex: "boots=(\\d+)" }]
+        tests:
+          - stdout_contains_none: ["boots=0", "boots=1\n", "boots=\n"]
+    - description: Each journal only holds its own pod's entries
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec ledger-0 -- cat /books/journal
+        tests:
+          - stdout_contains_all: ["ledger-0 opened the books"]
+          - stdout_contains_none: ["ledger-1", "ledger-2"]

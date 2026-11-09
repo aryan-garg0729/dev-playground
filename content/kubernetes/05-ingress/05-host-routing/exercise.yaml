@@ -1,0 +1,28 @@
+id: k8s.ingress.host-routing
+type: project_cli
+version: 1
+title: Routing by Host Name
+xp: 25
+difficulty: 3
+tags: [ingress, routing, hosts]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Ingress shop-hosts has one rule per host name
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get ingress shop-hosts -o jsonpath='class={.spec.ingressClassName} {range .spec.rules[*]}{.host}->{.http.paths[0].backend.service.name} {end}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["class=nginx", "potions.elixirbytes.local->potions", "scrolls.elixirbytes.local->scrolls"]
+    - description: Host potions.elixirbytes.local gets the potions shop at /
+      cli_command:
+        command: "curl -s -m 5 -H 'Host: potions.elixirbytes.local' http://localhost/"
+        tests:
+          - stdout_contains_all: ["potions shop"]
+    - description: Host scrolls.elixirbytes.local gets the scrolls shop at /
+      cli_command:
+        command: "curl -s -m 5 -H 'Host: scrolls.elixirbytes.local' http://localhost/"
+        tests:
+          - stdout_contains_all: ["scrolls shop"]

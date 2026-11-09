@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"phase=Bound"}},{"cli":{"exit_code":0,"stdout":"data:claim= | data@/data "}},{"cli":{"exit_code":1,"stdout":"cat: can't open '/data/orders.log': No such file or directory\nnow=ledger-writer-867ccb584-x8k2m\n"}},{"cli":{"exit_code":0,"stdout":"ledger-writer-867ccb584-2fgh6 is gone, ledger-writer-867ccb584-rcbhn has its data\n"}}]}

@@ -1,0 +1,34 @@
+id: k8s.workloads.daemonset
+type: project_cli
+version: 1
+title: One on Every Node
+xp: 25
+difficulty: 3
+tags: [daemonsets, taints]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Count the cluster's nodes
+      cli_command:
+        command: echo "nodes=$(kubectl --context kind-elixirbytes get nodes --no-headers | wc -l | tr -d ' ')"
+        captures: [{ name: nodes, regex: "nodes=(\\d+)" }]
+        tests:
+          - stdout_contains_all: ["nodes="]
+    - description: DaemonSet node-scout has a ready pod on every node, control plane included
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get ds node-scout -o jsonpath='desired={.status.desiredNumberScheduled} ready={.status.numberReady}.'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["desired=${nodes} ", "ready=${nodes}."]
+    - description: It tolerates the control-plane taint
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get ds node-scout -o jsonpath='{range .spec.template.spec.tolerations[*]}{.key}:{.effect} {end}'
+        tests:
+          - stdout_contains_all: ["node-role.kubernetes.io/control-plane:NoSchedule"]
+    - description: Each pod reports the node it landed on
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop logs -l app=node-scout --tail=1
+        tests:
+          - stdout_contains_all: ["scouting elixirbytes-control-plane", "scouting elixirbytes-worker"]

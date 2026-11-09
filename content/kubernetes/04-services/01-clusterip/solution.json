@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"type=ClusterIP port=80 target=80 selector=brewd"}},{"cli":{"exit_code":0,"stdout":"ready=4"}},{"cli":{"exit_code":0,"stdout":"endpoints=4\n"}}]}

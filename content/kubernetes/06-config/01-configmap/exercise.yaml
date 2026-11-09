@@ -1,0 +1,23 @@
+id: k8s.config.configmap
+type: project_cli
+version: 1
+title: Config Outside the Image
+xp: 20
+difficulty: 2
+tags: [configmaps]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: ConfigMap brewd-config holds db-port and greeting
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get configmap brewd-config -o jsonpath='db-port={.data.db-port} greeting={.data.greeting}.'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["db-port=5432 ", "greeting=Fresh potions daily v1."]
+    - description: The ConfigMap is saved as a manifest
+      cli_command:
+        command: "grep -l 'kind: ConfigMap' manifests/brewd-config.yaml"
+        tests:
+          - exit_code: 0

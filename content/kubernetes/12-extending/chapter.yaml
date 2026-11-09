@@ -1,0 +1,10 @@
+id: k8s.extending
+title: Autoscaling and CRDs
+exercises:
+  - 01-metrics-server
+  - 02-cpu-percent-quiz
+  - 03-hpa
+  - 04-crd
+  - 05-validation
+  - 06-operator-quiz
+  - 07-recipe-book-boss

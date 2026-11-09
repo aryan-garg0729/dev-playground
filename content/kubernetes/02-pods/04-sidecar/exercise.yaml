@@ -1,0 +1,35 @@
+id: k8s.pods.sidecar
+type: project_cli
+version: 1
+title: A Sidecar and a Shared Folder
+xp: 25
+difficulty: 3
+tags: [pods, sidecars, emptydir]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: menu-board runs containers web and clock, both ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod menu-board -o jsonpath='names={.spec.containers[*].name} ready={.status.containerStatuses[*].ready}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["names=web clock", "ready=true true"]
+    - description: The pod has an emptyDir volume named shared
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod menu-board -o jsonpath='{range .spec.volumes[*]}{.name}:emptyDir={.emptyDir}{" "}{end}'
+        tests:
+          - stdout_contains_all: ["shared:emptyDir={"]
+    - description: Both containers mount it where the lesson says
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod menu-board -o jsonpath='{range .spec.containers[*]}{.name}={.volumeMounts[?(@.name=="shared")].mountPath}{" "}{end}'
+        tests:
+          - stdout_contains_all: ["web=/usr/share/nginx/html", "clock=/data"]
+    - description: nginx serves what clock wrote
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec menu-board -c web -- cat /usr/share/nginx/html/index.html
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["menu updated"]

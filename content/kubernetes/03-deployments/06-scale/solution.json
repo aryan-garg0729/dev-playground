@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"desired=4 ready=4"}},{"cli":{"exit_code":0,"stdout":"  replicas: 4\n"}},{"cli":{"exit_code":0,"stdout":"diff_exit=0\n"}}]}

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"db-port=6432 greeting=Fresh potions daily v2."}},{"cli":{"exit_code":0,"stdout":"env=6432 file=6432\n"}},{"cli":{"exit_code":1,"stdout":""}}]}

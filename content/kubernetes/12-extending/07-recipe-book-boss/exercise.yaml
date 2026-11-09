@@ -1,0 +1,46 @@
+id: k8s.extending.recipe-book-boss
+type: project_cli
+version: 1
+title: Recipe Book and Rush Hour
+xp: 60
+difficulty: 4
+boss: true
+tags: [autoscaling, crds, validation]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: menu-api now declares a CPU request
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy menu-api -o jsonpath='req={.spec.template.spec.containers[0].resources.requests.cpu}.'
+        tests:
+          - stdout_contains_none: ["req=."]
+    - description: HPA menu-api keeps 2 to 6 pods at 60% CPU, and reads a real number
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get hpa menu-api -o jsonpath='target={.spec.scaleTargetRef.name} min={.spec.minReplicas} max={.spec.maxReplicas} cpu={.spec.metrics[0].resource.target.averageUtilization} current={.status.currentMetrics[0].resource.current.averageUtilization}.'
+        tests:
+          - stdout_contains_all: ["target=menu-api", "min=2", "max=6", "cpu=60"]
+          - stdout_contains_none: ["current=."]
+    - description: The HPA already lifted menu-api to its minimum
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy menu-api -o jsonpath='replicas={.spec.replicas} ready={.status.readyReplicas}'
+        tests:
+          - stdout_contains_none: ["replicas=1 ", "ready=1"]
+    - description: A Recipe without ingredients is rejected (dry run)
+      cli_command:
+        command: >-
+          printf 'apiVersion: elixirbytes.io/v1\nkind: Recipe\nmetadata:\n  name: probe\nspec:\n  potion: Probe\n  difficulty: easy\n' | kubectl --context kind-elixirbytes -n shop create --dry-run=server -f - 2>&1
+        tests:
+          - stdout_contains_all: ["spec.ingredients", "Required value"]
+    - description: A Recipe with an empty ingredients list is rejected too (dry run)
+      cli_command:
+        command: >-
+          printf 'apiVersion: elixirbytes.io/v1\nkind: Recipe\nmetadata:\n  name: probe\nspec:\n  potion: Probe\n  difficulty: easy\n  ingredients: []\n' | kubectl --context kind-elixirbytes -n shop create --dry-run=server -f - 2>&1
+        tests:
+          - stdout_contains_none: ["created (server dry run)"]
+    - description: elixir-of-focus lists its 3 ingredients, and kubectl shows a Brew column
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get recipe elixir-of-focus -o jsonpath='n={.spec.ingredients[*]}'; echo; kubectl --context kind-elixirbytes -n shop get recipes
+        tests:
+          - stdout_contains_all: ["n=sage moonwater owl feather", "BREW", "elixir-of-focus"]

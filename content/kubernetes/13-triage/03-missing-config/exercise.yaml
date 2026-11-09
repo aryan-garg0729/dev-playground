@@ -1,0 +1,33 @@
+id: k8s.triage.missing-config
+type: project_cli
+version: 1
+title: Starts, Dies, Repeats
+xp: 25
+difficulty: 3
+tags: [debugging, configmaps, crashloop]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: digest-worker is ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get deploy digest-worker -o jsonpath='ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ready=1"]
+    - description: DIGEST_TARGET comes from the digest-config ConfigMap, not a hard-coded value
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get deploy digest-worker -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}<-{.valueFrom.configMapKeyRef.name}/{.valueFrom.configMapKeyRef.key} value={.value}. {end}'
+        tests:
+          - stdout_contains_all: ["DIGEST_TARGET<-digest-config/target value=."]
+    - description: The worker started and says where it posts
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage logs deploy/digest-worker
+        tests:
+          - stdout_contains_all: ["digest worker up, posting to https://elixirbytes.internal/digest"]
+    - description: incident.txt names the cause
+      cli_command:
+        command: grep -Ei '^digest_cause=.*(env|variable|config|DIGEST_TARGET)' incident.txt
+        tests:
+          - exit_code: 0

@@ -1,0 +1,31 @@
+id: k8s.config.live-update
+type: project_cli
+version: 1
+title: The File Changes, the Variable Doesn't
+xp: 25
+difficulty: 3
+tags: [configmaps, env, volumes]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd-config now has the v2 values
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get configmap brewd-config -o jsonpath='db-port={.data.db-port} greeting={.data.greeting}.'
+        tests:
+          - stdout_contains_all: ["db-port=6432 ", "greeting=Fresh potions daily v2."]
+    - description: The same running pod sees the new file but the old variable
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- sh -c 'echo "env=$DB_PORT file=$(cat /etc/brewd/db-port)"'
+        captures:
+          - { name: env, regex: "env=(\\d+)" }
+          - { name: file, regex: "file=(\\d+)" }
+        tests:
+          - stdout_contains_all: ["file=6432"]
+          - stdout_contains_none: ["env=6432"]
+    - description: answers.txt records what the pod saw
+      cli_command:
+        command: grep -x 'env_db_port=${env}' answers.txt && grep -x 'file_db_port=${file}' answers.txt
+        tests:
+          - exit_code: 0

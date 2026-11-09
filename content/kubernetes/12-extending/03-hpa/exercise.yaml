@@ -1,0 +1,34 @@
+id: k8s.extending.hpa
+type: project_cli
+version: 1
+title: Scaling on Demand
+xp: 30
+difficulty: 4
+tags: [autoscaling, hpa]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: rush requests 100m CPU and has a Service
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy rush -o jsonpath='req={.spec.template.spec.containers[0].resources.requests.cpu} lim={.spec.template.spec.containers[0].resources.limits.cpu} '; kubectl --context kind-elixirbytes -n shop get svc rush -o jsonpath='svc={.spec.selector.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["req=100m", "lim=200m", "svc=rush"]
+    - description: HPA rush targets 50% CPU, between 1 and 10 pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get hpa rush -o jsonpath='target={.spec.scaleTargetRef.kind}/{.spec.scaleTargetRef.name} min={.spec.minReplicas} max={.spec.maxReplicas} cpu={.spec.metrics[0].resource.target.averageUtilization}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["target=Deployment/rush", "min=1", "max=10", "cpu=50"]
+    - description: The HPA reads a real CPU number
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get hpa rush -o jsonpath='current={.status.currentMetrics[0].resource.current.averageUtilization}.'
+        tests:
+          - stdout_contains_none: ["current=."]
+    - description: It scaled rush up under load at least once
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get events --field-selector involvedObject.kind=HorizontalPodAutoscaler,involvedObject.name=rush,reason=SuccessfulRescale -o jsonpath='{range .items[*]}{.message}{"\n"}{end}'
+        tests:
+          - stdout_contains_all: ["New size:", "above target"]

@@ -1,0 +1,22 @@
+id: k8s.services.kube-proxy-quiz
+type: mcq
+version: 1
+title: Where Service Traffic Goes
+xp: 5
+difficulty: 3
+tags: [services, kube-proxy, networking]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The Service is broken: a working Service always answers ping" }
+    - { id: b, text: "The ClusterIP isn't a machine at all. kube-proxy wrote forwarding rules for TCP port 80 only, so ping has nothing to answer it" }
+    - { id: c, text: "ICMP is blocked by the Service's selector" }
+    - { id: d, text: "The Service process only listens on the node it was created on" }
+  answer: [b]
+  explain: >
+    No process sits behind a ClusterIP and no interface owns it. kube-proxy, on every node,
+    programs rules (iptables, IPVS or nftables) that rewrite packets for "ClusterIP:80/TCP" to
+    one of the ready pod IPs. ping sends ICMP, which matches no rule, so nothing replies. The
+    wget worked because it used the exact port the rules cover. That's also why a Service
+    works from any node: the rules are on all of them.

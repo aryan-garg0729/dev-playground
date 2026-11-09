@@ -1,0 +1,40 @@
+id: k8s.health.requests-limits
+type: project_cli
+version: 1
+title: Requests, Limits and QoS
+xp: 25
+difficulty: 3
+tags: [resources, qos]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: steady requests exactly what it limits
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy steady -o jsonpath='req={.spec.template.spec.containers[0].resources.requests.cpu}/{.spec.template.spec.containers[0].resources.requests.memory} lim={.spec.template.spec.containers[0].resources.limits.cpu}/{.spec.template.spec.containers[0].resources.limits.memory} ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["req=100m/64Mi", "lim=100m/64Mi", "ready=1"]
+    - description: Read steady's QoS class
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=steady -o jsonpath='qos={.items[0].status.qosClass}'
+        captures: [{ name: qos, regex: "qos=(\\w+)" }]
+        tests:
+          - stdout_contains_all: ["qos="]
+    - description: answers.txt records steady's QoS class
+      cli_command:
+        command: grep -x 'steady_qos=${qos}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: Read the QoS class of a brewd pod
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=brewd -o jsonpath='qos={.items[0].status.qosClass}'
+        captures: [{ name: bqos, regex: "qos=(\\w+)" }]
+        tests:
+          - stdout_contains_all: ["qos="]
+    - description: answers.txt records brewd's QoS class
+      cli_command:
+        command: grep -x 'brewd_qos=${bqos}' answers.txt
+        tests:
+          - exit_code: 0

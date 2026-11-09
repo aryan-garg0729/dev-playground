@@ -1,0 +1,30 @@
+id: k8s.config.env-and-volume
+type: project_cli
+version: 1
+title: Two Ways In
+xp: 25
+difficulty: 3
+tags: [configmaps, env, volumes]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd sets DB_PORT from the ConfigMap's db-port key
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}<-{.valueFrom.configMapKeyRef.name}/{.valueFrom.configMapKeyRef.key} {end}'
+        tests:
+          - stdout_contains_all: ["DB_PORT<-brewd-config/db-port"]
+    - description: brewd mounts the whole ConfigMap at /etc/brewd
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='{range .spec.template.spec.volumes[*]}{.name}:cm={.configMap.name} {end}| {range .spec.template.spec.containers[0].volumeMounts[*]}{.name}@{.mountPath} {end}'
+        captures: [{ name: vol, regex: "(\\S+):cm=brewd-config" }]
+        tests:
+          - stdout_contains_all: [":cm=brewd-config"]
+          - stdout_contains_all: ["${vol}@/etc/brewd "]
+    - description: A running brewd pod sees both
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- sh -c 'echo "env=$DB_PORT file=$(cat /etc/brewd/db-port) greeting=$(cat /etc/brewd/greeting)"'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["env=5432 file=5432 greeting=Fresh potions daily v1"]

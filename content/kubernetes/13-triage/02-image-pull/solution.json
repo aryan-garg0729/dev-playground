@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ready=2 image=nginx:1.27-alpine"}},{"cli":{"exit_code":0,"stdout":"pager_cause=image tag typo, nginx:1.27-alpne does not exist\n"}}]}

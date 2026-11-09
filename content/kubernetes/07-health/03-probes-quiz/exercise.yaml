@@ -1,0 +1,23 @@
+id: k8s.health.probes-quiz
+type: mcq
+version: 1
+title: Liveness or Readiness
+xp: 5
+difficulty: 3
+tags: [probes, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Good idea: a pod that can't reach the database is broken, so restarting it is right" }
+    - { id: b, text: "Dangerous: when the database is slow, every brewd pod fails liveness at once and the kubelet restarts the whole fleet, which fixes nothing and adds load" }
+    - { id: c, text: "Fine, as long as the probe has a long timeout" }
+    - { id: d, text: "It does nothing: liveness probes can only use tcpSocket" }
+  answer: [b]
+  explain: >
+    A liveness failure restarts the container. A database outage isn't something a restart can
+    fix, so every pod fails together, restarts together and comes back to the same slow
+    database, now with a burst of reconnects on top: a restart storm. Liveness should check
+    only "is this process itself wedged?" (a cheap local endpoint). Dependency checks, if any,
+    belong in readiness, which just takes pods out of traffic without killing them. A longer
+    timeout only delays the storm.

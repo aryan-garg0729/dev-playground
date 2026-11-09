@@ -1,0 +1,44 @@
+id: k8s.ingress.front-door-boss
+type: project_cli
+version: 1
+title: The Shop Front Door
+xp: 55
+difficulty: 3
+boss: true
+tags: [ingress, routing, hosts]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Ingress front-door serves shop.elixirbytes.local with the nginx class
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get ingress front-door -o jsonpath='class={.spec.ingressClassName} host={.spec.rules[0].host} rules={.spec.rules[*].host}.'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["class=nginx", "host=shop.elixirbytes.local", "rules=shop.elixirbytes.local."]
+    - description: shop.elixirbytes.local/potions/today reaches the potions shop
+      cli_command:
+        command: "curl -s -m 5 -H 'Host: shop.elixirbytes.local' http://localhost/potions/today"
+        tests:
+          - stdout_contains_all: ["potions shop"]
+    - description: shop.elixirbytes.local/scrolls reaches the scrolls shop
+      cli_command:
+        command: "curl -s -m 5 -H 'Host: shop.elixirbytes.local' http://localhost/scrolls"
+        tests:
+          - stdout_contains_all: ["scrolls shop"]
+    - description: shop.elixirbytes.local/ reaches brewd
+      cli_command:
+        command: "curl -s -m 5 -H 'Host: shop.elixirbytes.local' http://localhost/"
+        tests:
+          - stdout_contains_all: ["Welcome to nginx"]
+    - description: The old catch-all shop Ingress is gone, so bare localhost/potions is a 404
+      cli_command:
+        command: "curl -s -m 5 -o /dev/null -w 'status=%{http_code}' http://localhost/potions"
+        tests:
+          - stdout_contains_all: ["status=404"]
+    - description: shop-hosts still serves the subdomains
+      cli_command:
+        command: "curl -s -m 5 -H 'Host: scrolls.elixirbytes.local' http://localhost/"
+        tests:
+          - stdout_contains_all: ["scrolls shop"]

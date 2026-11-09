@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":1,"stdout":"vault-0=2026-11-09T05:41:02Z vault-1=2026-11-09T05:41:09Z\n"}},{"cli":{"exit_code":0,"stdout":"I am vault-0\n"}},{"cli":{"exit_code":0,"stdout":"Server:\t\t10.96.0.10\nAddress:\t10.96.0.10:53\n\nName:\tvault-1.vault.shop.svc.cluster.local\nAddress: 10.244.1.50\n\n\n"}},{"cli":{"exit_code":0,"stdout":"vault_addresses=2\n"}}]}

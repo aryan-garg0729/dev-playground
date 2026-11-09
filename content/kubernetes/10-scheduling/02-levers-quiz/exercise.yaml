@@ -1,0 +1,22 @@
+id: k8s.scheduling.levers-quiz
+type: mcq
+version: 1
+title: Pulling and Pushing Pods
+xp: 5
+difficulty: 3
+tags: [scheduling, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Label the GPU node and give the ML pods a nodeSelector for it" }
+    - { id: b, text: "Taint the GPU node, and give only the ML pods a toleration plus a nodeSelector (or node affinity) for it" }
+    - { id: c, text: "Give the ML pods a toleration for the GPU node" }
+    - { id: d, text: "Give every other pod podAntiAffinity against the ML pods" }
+  answer: [b]
+  explain: >
+    Two jobs, two levers. The taint keeps everyone else off the expensive node: the node
+    refuses pods that don't tolerate it. The nodeSelector or affinity pulls the ML pods onto
+    it. A selector alone (a) attracts the ML pods but doesn't stop other pods landing there.
+    A toleration alone (c) only permits; it doesn't attract, so ML pods could still land
+    anywhere. Anti-affinity on every other workload (d) is fragile and easy to forget.

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"serviceaccount/menu-reader\n"}},{"cli":{"exit_code":0,"stdout":"sa=default"}},{"cli":{"exit_code":0,"stdout":"storefront_sa=default\n"}},{"cli":{"exit_code":1,"stdout":""}}]}

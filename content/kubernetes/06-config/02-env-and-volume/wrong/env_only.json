@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"DB_PORT<-brewd-config/db-port "}},{"cli":{"exit_code":0,"stdout":"| "}},{"cli":{"exit_code":0,"stdout":"env=5432 file= greeting=\n"}}]}

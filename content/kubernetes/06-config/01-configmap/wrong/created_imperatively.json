@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"db-port=5432 greeting=Fresh potions daily v1."}},{"cli":{"exit_code":1,"stdout":"grep: manifests/brewd-config.yaml: No such file or directory\n"}}]}

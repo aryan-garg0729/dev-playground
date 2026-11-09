@@ -1,0 +1,28 @@
+id: k8s.ingress.two-shops
+type: project_cli
+version: 1
+title: Two Shops Behind One Door
+xp: 20
+difficulty: 2
+tags: [deployments, services]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: potions and scrolls each run 2 ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy potions scrolls -o jsonpath='{range .items[*]}{.metadata.name}={.status.readyReplicas} {end}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["potions=2", "scrolls=2"]
+    - description: Service potions answers with the potions page
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec storefront -- wget -qO- -T 5 http://potions
+        tests:
+          - stdout_contains_all: ["potions shop"]
+    - description: Service scrolls answers with the scrolls page
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec storefront -- wget -qO- -T 5 http://scrolls
+        tests:
+          - stdout_contains_all: ["scrolls shop"]
