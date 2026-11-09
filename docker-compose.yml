@@ -44,10 +44,11 @@ services:
       APP_URL: http://localhost:5173
       # Development sign-in without email (POST /auth/dev); refused when APP_ENV=production.
       DEV_AUTH: ${DEV_AUTH:-1}
-      # Without SMTP_ADDR, magic-link emails are written to this service's log.
-      SMTP_ADDR: ${SMTP_ADDR:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      # Google sign-in (optional locally; dev sign-in needs neither).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       REDIS_URL: redis://redis:6379/0
       # AI tutor (development only; the API refuses it with APP_ENV=production).
       # Uses Ollama on the host: `ollama serve` and `ollama pull qwen2.5-coder:3b`.

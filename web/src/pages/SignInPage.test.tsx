@@ -1,38 +1,38 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { RequireAuth } from '../components/RequireAuth';
-import { me } from '../test/fixtures';
 import { renderRoute, stubApi } from '../test/render';
 import { SignInPage, safeNext } from './SignInPage';
-import { VerifyPage } from './VerifyPage';
 
-const providers = (o: { github?: boolean; dev?: boolean } = {}) =>
-  [200, { magic_link: true, github: !!o.github, dev: !!o.dev }] as [number, unknown];
+const providers = (o: { github?: boolean; google?: boolean; dev?: boolean } = {}) =>
+  [200, { github: !!o.github, google: !!o.google, dev: !!o.dev }] as [number, unknown];
 
 describe('SignInPage', () => {
-  it('emails a link and keeps the page to return to', async () => {
-    const spy = stubApi({ 'GET /api/v1/auth/providers': providers(), 'POST /api/v1/auth/magic-link': [202, { status: 'sent' }] });
-    renderRoute('/sign-in?next=%2Flearn%2Fc%2Fx', '/sign-in', <SignInPage />);
-    await userEvent.type(screen.getByLabelText('Email'), 'ada@example.com');
-    await userEvent.click(screen.getByRole('button', { name: 'Email me a link' }));
-    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
-    const req = spy.mock.calls.map(([r]) => r as Request).find((r) => r.url.endsWith('/auth/magic-link'))!;
-    expect(await req.json()).toEqual({ email: 'ada@example.com', next: '/learn/c/x' });
-  });
+it('offers Google and GitHub with the return path and timezone, and dev sign-in only when enabled', async () => {
+  stubApi({ 'GET /api/v1/auth/providers': providers({ github: true, google: true }) });
+  renderRoute('/sign-in?next=%2Flearn%2Fc%2Fx', '/sign-in', <SignInPage />);
+  const google = new URL((await screen.findByRole('link', { name: 'Continue with Google' })).getAttribute('href')!, 'http://x');
+  expect(google.pathname).toBe('/api/v1/auth/google/start');
+  expect(google.searchParams.get('next')).toBe('/learn/c/x');
+  expect(google.searchParams.get('tz')).toBeTruthy();
+  const github = screen.getByRole('link', { name: 'Continue with GitHub' }).getAttribute('href')!;
+  expect(github.startsWith('/api/v1/auth/github/start?')).toBe(true);
+  expect(screen.queryByRole('button', { name: /Dev sign-in/ })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
+});
 
-  it('offers GitHub and dev sign-in only when enabled', async () => {
-    stubApi({ 'GET /api/v1/auth/providers': providers({ github: true }) });
-    renderRoute('/sign-in', '/sign-in', <SignInPage />);
-    expect(await screen.findByRole('link', { name: 'Continue with GitHub' })).toHaveAttribute('href', '/api/v1/auth/github/start?next=%2F');
-    expect(screen.queryByRole('button', { name: /Dev sign-in/ })).not.toBeInTheDocument();
-  });
+it('hides providers that are not configured', async () => {
+  stubApi({ 'GET /api/v1/auth/providers': providers({ github: true }) });
+  renderRoute('/sign-in', '/sign-in', <SignInPage />);
+  await screen.findByRole('link', { name: 'Continue with GitHub' });
+  expect(screen.queryByRole('link', { name: 'Continue with Google' })).not.toBeInTheDocument();
+});
 
-  it('shows a GitHub error', async () => {
+  it('shows a provider error', async () => {
     stubApi({ 'GET /api/v1/auth/providers': providers() });
-    renderRoute('/sign-in?error=github', '/sign-in', <SignInPage />);
-    expect(screen.getByRole('alert')).toHaveTextContent('GitHub sign-in did not complete');
+    renderRoute('/sign-in?error=google', '/sign-in', <SignInPage />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Google sign-in did not complete');
   });
 
   it('only follows same-site next paths', () => {
@@ -41,19 +41,6 @@ describe('SignInPage', () => {
     expect(safeNext('https://evil.example')).toBe('/');
     expect(safeNext('/\\evil.example')).toBe('/');
     expect(safeNext(null)).toBe('/');
-  });
-});
-
-describe('VerifyPage', () => {
-  it('redeems the token from the fragment after a click and removes it from the URL', async () => {
-    window.history.replaceState(null, '', '/sign-in/verify#token=abc123');
-    const spy = stubApi({ 'POST /api/v1/auth/magic-link/verify': [200, { user: me.user, next: '/' }] });
-    renderRoute('/sign-in/verify', '/sign-in/verify', <VerifyPage />);
-    expect(window.location.hash).toBe('');
-    expect(spy).not.toHaveBeenCalled(); // nothing is redeemed without the click
-    await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    const req = spy.mock.calls.map(([r]) => r as Request).find((r) => r.url.endsWith('/verify'))!;
-    expect(await req.json()).toMatchObject({ token: 'abc123' });
   });
 });
 

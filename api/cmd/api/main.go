@@ -74,13 +74,13 @@ func run(log *slog.Logger) error {
 		log.Warn("marked stale pending submissions as errors", "count", n)
 	}
 
-	var mailer auth.Mailer = auth.LogMailer{Log: log}
-	if cfg.SMTPAddr != "" {
-		mailer = auth.SMTPMailer{Addr: cfg.SMTPAddr, From: cfg.MailFrom, Username: cfg.SMTPUsername, Password: cfg.SMTPPassword}
-	}
 	var gh *auth.GitHub
 	if cfg.GitHubClientID != "" {
 		gh = &auth.GitHub{ClientID: cfg.GitHubClientID, ClientSecret: cfg.GitHubClientSecret, RedirectURL: cfg.AppURL + "/api/v1/auth/github/callback"}
+	}
+	var google *auth.Google
+	if cfg.GoogleClientID != "" {
+		google = &auth.Google{ClientID: cfg.GoogleClientID, ClientSecret: cfg.GoogleClientSecret, RedirectURL: cfg.AppURL + "/api/v1/auth/google/callback"}
 	}
 	if cfg.DevAuth {
 		log.Warn("DEV_AUTH=1: POST /auth/dev signs anyone in without email; development only")
@@ -101,19 +101,20 @@ func run(log *slog.Logger) error {
 	go econ.RunDaily(ctx, 10*time.Minute)
 	go cleanAuth(ctx, pool, log)
 
-	srv := &http.Server{
-		Addr: cfg.HTTPAddr,
-		Handler: httpapi.New(httpapi.Deps{
-			Pool: pool, Grader: grader, Log: log,
-			AllowedOrigins: cfg.AllowedOrigins,
-			Sessions:       &auth.Sessions{Pool: pool},
-			Links:          &auth.MagicLinks{Pool: pool, Mailer: mailer, AppURL: cfg.AppURL},
-			GitHub:         gh, DevAuth: cfg.DevAuth, SecureCookies: cfg.SecureCookies(), Board: board, Economy: econ,
-			Limiter: &ratelimit.Limiter{Redis: rdb},
-			Tutor:   tutorModel, TutorQuota: tutorQuota,
-		}),
-		ReadHeaderTimeout: 10 * time.Second,
+	handler := httpapi.New(httpapi.Deps{
+		Pool: pool, Grader: grader, Log: log,
+		AllowedOrigins: cfg.AllowedOrigins,
+		Sessions:       &auth.Sessions{Pool: pool},
+		GitHub:         gh, Google: google, DevAuth: cfg.DevAuth, SecureCookies: cfg.SecureCookies(), Board: board, Economy: econ,
+		Limiter: &ratelimit.Limiter{Redis: rdb},
+		Tutor:   tutorModel, TutorQuota: tutorQuota,
+	})
+	if cfg.WebDir != "" {
+		if handler, err = httpapi.WithWeb(handler, cfg.WebDir); err != nil {
+			return fmt.Errorf("WEB_DIR: %w", err)
+		}
 	}
+	srv := &http.Server{Addr: cfg.HTTPAddr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
 	errc := make(chan error, 1)
 	go func() {
 		log.Info("listening", "addr", cfg.HTTPAddr)
@@ -134,7 +135,7 @@ func run(log *slog.Logger) error {
 	return nil
 }
 
-// cleanAuth deletes expired sessions and old magic links every hour, and
+// cleanAuth deletes expired sessions and CLI codes every hour, and
 // analytics events and client errors older than 90 days.
 func cleanAuth(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) {
 	t := time.NewTicker(time.Hour)

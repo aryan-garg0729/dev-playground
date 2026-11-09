@@ -1,7 +1,6 @@
-import { type FormEvent, type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { ApiError } from '../api/client';
-import { sendMagicLink, useDevSignIn, useProviders } from '../api/queries';
+import { browserTimezone, useDevSignIn, useProviders } from '../api/queries';
 import { Button } from '../components/Button';
 import { CodeIcon } from '../components/icons';
 
@@ -26,72 +25,36 @@ export function AuthShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** Sign-in failures come back from the provider as ?error=github or ?error=google. */
+const errors: Record<string, string> = {
+  github: 'GitHub sign-in did not complete. Try again.',
+  google: 'Google sign-in did not complete. Try again.',
+};
+
 export function SignInPage() {
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
   const providers = useProviders();
   const dev = useDevSignIn();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [sentTo, setSentTo] = useState<string>();
-  const [error, setError] = useState<string | undefined>(
-    params.get('error') === 'github' ? 'GitHub sign-in did not complete. Try again.' : undefined,
-  );
-  const [sending, setSending] = useState(false);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(undefined);
-    setSending(true);
-    try {
-      await sendMagicLink(email, next);
-      setSentTo(email.trim());
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not send the link. Try again.');
-    } finally {
-      setSending(false);
-    }
-  }
-
-  if (sentTo) {
-    return (
-      <AuthShell>
-        <h1 className="text-page-title text-text">Check your email</h1>
-        <p className="text-body text-text-secondary">
-          We sent a sign-in link to <span className="font-semibold text-text">{sentTo}</span>. It works once and expires in 15 minutes.
-        </p>
-        <Button onClick={() => setSentTo(undefined)}>Use a different email</Button>
-      </AuthShell>
-    );
-  }
+  const error = errors[params.get('error') ?? ''];
+  const start = (p: string) =>
+    `/api/v1/auth/${p}/start?${new URLSearchParams({ next, tz: browserTimezone() }).toString()}`;
+  const none = providers.data && !providers.data.github && !providers.data.google && !providers.data.dev;
 
   return (
     <AuthShell>
       <div className="flex flex-col gap-2">
         <h1 className="text-page-title text-text">Sign in to CodeQuest</h1>
-        <p className="text-body text-text-secondary">We'll email you a link. No password needed.</p>
+        <p className="text-body text-text-secondary">Use your Google or GitHub account. No password needed.</p>
       </div>
-      <form onSubmit={onSubmit} className="flex flex-col gap-3">
-        <label className="text-small flex flex-col gap-1.5 text-text-secondary">
-          Email
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="text-body h-10 rounded-md border border-border bg-surface px-3 text-text outline-none focus:border-accent"
-          />
-        </label>
-        <Button variant="primary" type="submit" disabled={sending} className="h-10">
-          {sending ? 'Sending…' : 'Email me a link'}
-        </Button>
-      </form>
+      {providers.data?.google && (
+        <a href={start('google')} className="text-control flex h-10 items-center justify-center rounded-md bg-accent text-accent-ink">
+          Continue with Google
+        </a>
+      )}
       {providers.data?.github && (
-        <a
-          href={`/api/v1/auth/github/start?next=${encodeURIComponent(next)}`}
-          className="text-control flex h-10 items-center justify-center rounded-md bg-surface-raised text-text"
-        >
+        <a href={start('github')} className="text-control flex h-10 items-center justify-center rounded-md bg-surface-raised text-text">
           Continue with GitHub
         </a>
       )}
@@ -104,6 +67,7 @@ export function SignInPage() {
           Dev sign-in (development only)
         </Button>
       )}
+      {none && <p className="text-small text-text-muted">Sign-in is not set up on this server yet.</p>}
       {error && (
         <p role="alert" className="text-small text-danger">
           {error}

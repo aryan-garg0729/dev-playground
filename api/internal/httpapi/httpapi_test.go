@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -42,33 +41,8 @@ type env struct {
 	h      http.Handler
 	user   uuid.NullUUID
 	cookie string // session cookie value when signed in
-	mail   *captureMailer
 	rdb    *redis.Client
 	prefix string
-}
-
-// captureMailer records sent emails instead of sending them.
-type captureMailer struct {
-	mu   sync.Mutex
-	sent []sentMail
-}
-
-type sentMail struct{ to, subject, body string }
-
-func (m *captureMailer) Send(_ context.Context, to, subject, body string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.sent = append(m.sent, sentMail{to, subject, body})
-	return nil
-}
-
-func (m *captureMailer) last() sentMail {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if len(m.sent) == 0 {
-		return sentMail{}
-	}
-	return m.sent[len(m.sent)-1]
 }
 
 // opts tweak setup for one test.
@@ -78,6 +52,7 @@ type opts struct {
 	submitPerUser int
 	devAuth       bool
 	github        *auth.GitHub
+	google        *auth.Google
 	now           func() time.Time
 	rand          func(n int) int
 	tutor         tutor.Provider // nil: tutor off
@@ -118,7 +93,6 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	})
 	t.Cleanup(grader.Close)
 	sessions := &auth.Sessions{Pool: pool}
-	mail := &captureMailer{}
 	var quota *tutor.Quota
 	if o.tutor != nil {
 		if o.tutorLimit == 0 {
@@ -129,11 +103,11 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	h := httpapi.New(httpapi.Deps{
 		Tutor: o.tutor, TutorQuota: quota,
 		Log: slog.New(slog.DiscardHandler), Pool: pool, Grader: grader, AllowedOrigins: []string{origin},
-		Sessions: sessions, Links: &auth.MagicLinks{Pool: pool, Mailer: mail, AppURL: origin},
-		GitHub: o.github, DevAuth: o.devAuth, Board: board, Economy: econ, Now: o.now,
+		Sessions: sessions,
+		GitHub:   o.github, Google: o.google, DevAuth: o.devAuth, Board: board, Economy: econ, Now: o.now,
 		Limiter: &ratelimit.Limiter{Redis: rdb, Prefix: prefix}, SubmitPerUser: o.submitPerUser,
 	})
-	e := &env{t: t, pool: pool, h: h, mail: mail, rdb: rdb, prefix: prefix}
+	e := &env{t: t, pool: pool, h: h, rdb: rdb, prefix: prefix}
 	if withUser {
 		e.user, e.cookie = e.signIn("t@example.com", "T")
 	}

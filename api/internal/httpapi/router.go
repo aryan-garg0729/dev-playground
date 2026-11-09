@@ -34,10 +34,9 @@ type Deps struct {
 	// CLI issues login codes and resolves the CLI's bearer tokens
 	// (&auth.CLI{Pool: Pool} when nil).
 	CLI *auth.CLI
-	// Links sends and redeems magic links. Required.
-	Links *auth.MagicLinks
-	// GitHub is nil when GitHub sign-in is not configured.
+	// GitHub and Google are nil when that sign-in is not configured.
 	GitHub *auth.GitHub
+	Google *auth.Google
 	// DevAuth enables POST /auth/dev (sign in without email). Never in production.
 	DevAuth bool
 	// SecureCookies sets the Secure flag (when the app is served over https).
@@ -103,10 +102,8 @@ func New(d Deps) http.Handler {
 			r.Get("/leagues/current", a.currentLeague)
 
 			r.Get("/auth/providers", a.providers)
-			r.With(a.limitSignIns).Post("/auth/magic-link", a.sendMagicLink)
-			r.With(a.limitSignIns).Post("/auth/magic-link/verify", a.verifyMagicLink)
-			r.Get("/auth/github/start", a.githubStart)
-			r.Get("/auth/github/callback", a.githubCallback)
+			r.Get("/auth/{provider}/start", a.oauthStart)
+			r.With(a.limitSignIns).Get("/auth/{provider}/callback", a.oauthCallback)
 			r.Post("/auth/logout", a.logout)
 			r.Post("/cli/codes", a.createCLICode)
 			r.With(a.limitSignIns).Post("/cli/token", a.cliToken)

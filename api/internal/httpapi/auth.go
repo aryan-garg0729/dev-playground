@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
@@ -21,7 +22,6 @@ import (
 const (
 	sessionCookie = "cq_session"
 	oauthCookie   = "cq_oauth"
-	githubPath    = "/api/v1/auth/github"
 )
 
 func (a *api) setSession(w http.ResponseWriter, r *http.Request, user uuid.UUID) bool {
@@ -42,77 +42,18 @@ func (a *api) clearCookie(w http.ResponseWriter, name, path string) {
 }
 
 type providersResponse struct {
-	MagicLink bool `json:"magic_link"`
-	GitHub    bool `json:"github"`
-	Dev       bool `json:"dev"`
+	GitHub bool `json:"github"`
+	Google bool `json:"google"`
+	Dev    bool `json:"dev"`
 }
 
 func (a *api) providers(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, providersResponse{MagicLink: true, GitHub: a.GitHub != nil, Dev: a.DevAuth})
-}
-
-type magicLinkRequest struct {
-	Email string `json:"email"`
-	Next  string `json:"next"`
-}
-
-// sendMagicLink always answers the same way for a valid address, whether or
-// not an account exists (no account enumeration).
-func (a *api) sendMagicLink(w http.ResponseWriter, r *http.Request) {
-	var req magicLinkRequest
-	if err := decodeJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
-		return
-	}
-	email, err := auth.NormalizeEmail(req.Email)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
-		return
-	}
-	ok, retry, err := a.Limiter.Allow(r.Context(), ratelimit.Rule{Name: "magic-email", Limit: 5, Window: time.Hour}, email)
-	if err != nil {
-		a.Log.Error("rate limiter", "err", err)
-		writeError(w, http.StatusServiceUnavailable, "unavailable", "try again shortly")
-		return
-	}
-	if !ok {
-		w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
-		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many sign-in emails; try again later")
-		return
-	}
-	if err := a.Links.Send(r.Context(), email, req.Next); err != nil {
-		a.internal(w, r, err)
-		return
-	}
-	writeJSON(w, http.StatusAccepted, map[string]string{"status": "sent"})
-}
-
-type verifyRequest struct {
-	Token    string `json:"token"`
-	Timezone string `json:"timezone"`
+	writeJSON(w, http.StatusOK, providersResponse{GitHub: a.GitHub != nil, Google: a.Google != nil, Dev: a.DevAuth})
 }
 
 type signedInResponse struct {
 	User userDTO `json:"user"`
 	Next string  `json:"next"`
-}
-
-func (a *api) verifyMagicLink(w http.ResponseWriter, r *http.Request) {
-	var req verifyRequest
-	if err := decodeJSON(w, r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "bad_request", err.Error())
-		return
-	}
-	email, next, err := a.Links.Redeem(r.Context(), req.Token)
-	if errors.Is(err, auth.ErrInvalidLink) {
-		writeError(w, http.StatusBadRequest, "invalid_link", err.Error())
-		return
-	}
-	if err != nil {
-		a.internal(w, r, err)
-		return
-	}
-	a.finishSignIn(w, r, email, "", "", req.Timezone, next)
 }
 
 type devSignInRequest struct {
@@ -184,39 +125,64 @@ func (a *api) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// githubStart redirects to GitHub. The state is a random value kept in a
-// short-lived HttpOnly cookie (with the post-sign-in path) and checked on return.
-func (a *api) githubStart(w http.ResponseWriter, r *http.Request) {
-	if a.GitHub == nil {
-		writeError(w, http.StatusNotFound, "not_found", "GitHub sign-in is not configured")
+// oauthProvider is the configured provider named in the URL, or nil.
+func (a *api) oauthProvider(r *http.Request) auth.Provider {
+	switch chi.URLParam(r, "provider") {
+	case "github":
+		if a.GitHub != nil {
+			return a.GitHub
+		}
+	case "google":
+		if a.Google != nil {
+			return a.Google
+		}
+	}
+	return nil
+}
+
+func oauthPath(p auth.Provider) string { return "/api/v1/auth/" + p.Name() }
+
+// oauthStart redirects to the provider. The state is a random value kept in a
+// short-lived HttpOnly cookie (with the post-sign-in path and the browser's
+// timezone, saved on first sign-in) and checked on return.
+func (a *api) oauthStart(w http.ResponseWriter, r *http.Request) {
+	p := a.oauthProvider(r)
+	if p == nil {
+		writeError(w, http.StatusNotFound, "not_found", "this sign-in provider is not configured")
 		return
 	}
 	state, _ := auth.NewToken()
 	next := auth.SafeNext(r.URL.Query().Get("next"))
+	tz := r.URL.Query().Get("tz")
+	if !validTimezone(tz) {
+		tz = ""
+	}
 	http.SetCookie(w, &http.Cookie{
-		Name: oauthCookie, Value: state + "|" + url.QueryEscape(next), Path: githubPath, MaxAge: 600,
+		Name: oauthCookie, Value: state + "|" + url.QueryEscape(next) + "|" + url.QueryEscape(tz), Path: oauthPath(p), MaxAge: 600,
 		HttpOnly: true, Secure: a.SecureCookies, SameSite: http.SameSiteLaxMode,
 	})
-	http.Redirect(w, r, a.GitHub.AuthCodeURL(state), http.StatusFound)
+	http.Redirect(w, r, p.AuthCodeURL(state), http.StatusFound)
 }
 
-func (a *api) githubCallback(w http.ResponseWriter, r *http.Request) {
+func (a *api) oauthCallback(w http.ResponseWriter, r *http.Request) {
+	p := a.oauthProvider(r)
+	if p == nil {
+		writeError(w, http.StatusNotFound, "not_found", "this sign-in provider is not configured")
+		return
+	}
 	fail := func(reason string, err error) {
 		if err != nil {
-			a.Log.Warn("github sign-in failed", "reason", reason, "err", err)
+			a.Log.Warn("oauth sign-in failed", "provider", p.Name(), "reason", reason, "err", err)
 		}
-		a.clearCookie(w, oauthCookie, githubPath)
-		http.Redirect(w, r, "/sign-in?error=github", http.StatusFound)
-	}
-	if a.GitHub == nil {
-		writeError(w, http.StatusNotFound, "not_found", "GitHub sign-in is not configured")
-		return
+		a.clearCookie(w, oauthCookie, oauthPath(p))
+		http.Redirect(w, r, "/sign-in?error="+p.Name(), http.StatusFound)
 	}
 	var cookie string
 	if c, err := r.Cookie(oauthCookie); err == nil {
 		cookie = c.Value
 	}
-	state, nextEnc, _ := strings.Cut(cookie, "|")
+	state, rest, _ := strings.Cut(cookie, "|")
+	nextEnc, tzEnc, _ := strings.Cut(rest, "|")
 	q := r.URL.Query()
 	if state == "" || subtle.ConstantTimeCompare([]byte(q.Get("state")), []byte(state)) != 1 {
 		fail("state mismatch", nil)
@@ -226,22 +192,25 @@ func (a *api) githubCallback(w http.ResponseWriter, r *http.Request) {
 		fail("denied", nil)
 		return
 	}
-	token, err := a.GitHub.Exchange(r.Context(), q.Get("code"))
+	token, err := p.Exchange(r.Context(), q.Get("code"))
 	if err != nil {
 		fail("exchange", err)
 		return
 	}
-	p, err := a.GitHub.Profile(r.Context(), token)
+	prof, err := p.Profile(r.Context(), token)
 	if err != nil {
 		fail("profile", err)
 		return
 	}
-	user, err := a.githubUser(r, p)
+	user, err := a.oauthUser(r, p.Name(), prof)
+	if err == nil {
+		err = a.firstTimezone(r, user, tzEnc)
+	}
 	if err != nil {
 		a.internal(w, r, err)
 		return
 	}
-	a.clearCookie(w, oauthCookie, githubPath)
+	a.clearCookie(w, oauthCookie, oauthPath(p))
 	if !a.setSession(w, r, user) {
 		return
 	}
@@ -249,13 +218,27 @@ func (a *api) githubCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, auth.SafeNext(next), http.StatusFound)
 }
 
-// githubUser returns the account linked to this GitHub id, else the account
-// with the same verified email (linking it), else a new account.
-func (a *api) githubUser(r *http.Request, p auth.Profile) (uuid.UUID, error) {
+// firstTimezone records the browser's timezone for a user still on the default (UTC).
+func (a *api) firstTimezone(r *http.Request, user uuid.UUID, tzEnc string) error {
+	tz, _ := url.QueryUnescape(tzEnc)
+	if !validTimezone(tz) {
+		return nil
+	}
+	q := store.New(a.Pool)
+	u, err := q.GetUser(r.Context(), user)
+	if err != nil || u.Timezone != "UTC" {
+		return err
+	}
+	return q.SetUserTimezone(r.Context(), store.SetUserTimezoneParams{ID: user, Timezone: tz})
+}
+
+// oauthUser returns the account linked to this provider identity, else the
+// account with the same verified email (linking it), else a new account.
+func (a *api) oauthUser(r *http.Request, provider string, p auth.Profile) (uuid.UUID, error) {
 	var id uuid.UUID
 	err := pgx.BeginFunc(r.Context(), a.Pool, func(tx pgx.Tx) error {
 		q := store.New(tx)
-		linked, err := q.GetOAuthUser(r.Context(), store.GetOAuthUserParams{Provider: "github", ProviderUserID: p.ID})
+		linked, err := q.GetOAuthUser(r.Context(), store.GetOAuthUserParams{Provider: provider, ProviderUserID: p.ID})
 		if err == nil {
 			id = linked
 			return nil
@@ -272,7 +255,7 @@ func (a *api) githubUser(r *http.Request, p auth.Profile) (uuid.UUID, error) {
 			return err
 		}
 		id = u.ID
-		return q.LinkOAuth(r.Context(), store.LinkOAuthParams{Provider: "github", ProviderUserID: p.ID, UserID: u.ID})
+		return q.LinkOAuth(r.Context(), store.LinkOAuthParams{Provider: provider, ProviderUserID: p.ID, UserID: u.ID})
 	})
 	return id, err
 }

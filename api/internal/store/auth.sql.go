@@ -12,28 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-const createMagicLink = `-- name: CreateMagicLink :exec
-INSERT INTO magic_links (token_hash, email, next, expires_at)
-VALUES ($1, $2, $3, $4)
-`
-
-type CreateMagicLinkParams struct {
-	TokenHash string    `json:"token_hash"`
-	Email     string    `json:"email"`
-	Next      string    `json:"next"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
-
-func (q *Queries) CreateMagicLink(ctx context.Context, arg CreateMagicLinkParams) error {
-	_, err := q.db.Exec(ctx, createMagicLink,
-		arg.TokenHash,
-		arg.Email,
-		arg.Next,
-		arg.ExpiresAt,
-	)
-	return err
-}
-
 const createSession = `-- name: CreateSession :exec
 INSERT INTO sessions (id, user_id, expires_at) VALUES ($1, $2, $3)
 `
@@ -50,8 +28,7 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 }
 
 const deleteExpiredAuth = `-- name: DeleteExpiredAuth :exec
-WITH s AS (DELETE FROM sessions WHERE expires_at < now())
-DELETE FROM magic_links WHERE expires_at < now() - interval '1 day'
+DELETE FROM sessions WHERE expires_at < now()
 `
 
 func (q *Queries) DeleteExpiredAuth(ctx context.Context) error {
@@ -110,23 +87,4 @@ type LinkOAuthParams struct {
 func (q *Queries) LinkOAuth(ctx context.Context, arg LinkOAuthParams) error {
 	_, err := q.db.Exec(ctx, linkOAuth, arg.Provider, arg.ProviderUserID, arg.UserID)
 	return err
-}
-
-const useMagicLink = `-- name: UseMagicLink :one
-UPDATE magic_links SET used_at = now()
-WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()
-RETURNING email, next
-`
-
-type UseMagicLinkRow struct {
-	Email string `json:"email"`
-	Next  string `json:"next"`
-}
-
-// Single use: only the first call for an unexpired token returns a row.
-func (q *Queries) UseMagicLink(ctx context.Context, tokenHash string) (UseMagicLinkRow, error) {
-	row := q.db.QueryRow(ctx, useMagicLink, tokenHash)
-	var i UseMagicLinkRow
-	err := row.Scan(&i.Email, &i.Next)
-	return i, err
 }
