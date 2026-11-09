@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
+import { Link } from 'react-router';
 import { useExercise } from '../../api/queries';
 import { Button } from '../../components/Button';
 import { CheckList } from '../../components/CheckList';
+import { CopyCommand } from '../../components/CopyCommand';
 import { Markdown } from '../../components/Markdown';
 import { BossHP, BossResults, DefeatReward, useAttack } from '../shared/Boss';
 import type { ExerciseRendererProps } from '../types';
@@ -9,25 +11,6 @@ import { type CliPublicView, stepAction, stepTests } from './steps';
 
 /** The CLI posts the answer; the page never builds one. */
 type CliAnswer = unknown;
-
-function CopyCommand({ command }: { command: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-raised px-3 py-2">
-      <code className="text-code-sm min-w-0 font-mono text-text [overflow-wrap:anywhere]">{command}</code>
-      <Button
-        onClick={() => {
-          navigator.clipboard.writeText(command).then(
-            () => setCopied(true),
-            () => setCopied(false),
-          );
-        }}
-      >
-        {copied ? 'Copied' : 'Copy'}
-      </Button>
-    </div>
-  );
-}
 
 /**
  * A command-line lesson: the steps run on the learner's machine through the
@@ -70,7 +53,11 @@ export function CliExercise({ header, publicView, result, aside, boss }: Exercis
           <CopyCommand command={`codequest run ${id}`} />
           <CopyCommand command={`codequest submit ${id}`} />
           <p className="text-small text-text-muted">
-            New to the CLI? Install it, then run <code className="font-mono text-text">codequest login</code>.
+            New to the CLI?{' '}
+            <Link to="/cli/install" className="text-accent-text underline">
+              Install it
+            </Link>
+            , then run <code className="font-mono text-text">codequest login</code>.
             {baseURL && (
               <>
                 {' '}Requests go to <code className="font-mono text-text">{baseURL}</code> unless you set{' '}

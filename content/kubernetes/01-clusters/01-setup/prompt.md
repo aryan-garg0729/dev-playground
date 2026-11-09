@@ -17,11 +17,10 @@ Two habits for the whole course:
 
 ## Assignment
 
-1. Install Docker (Docker Desktop, OrbStack or Colima on macOS; Docker Engine on Linux) and give it at least **4 CPUs and 6 GB** of memory. Then install the tools:
+1. Install Docker (Docker Desktop, OrbStack or Colima on macOS; Docker Engine on Linux) and give it at least **4 CPUs and 6 GB** of memory. Then install the tools, and the CodeQuest CLI from the [install page](/cli/install) if you don't have it yet (the Docker course installs it):
 
    ```sh
    brew install kind kubectl     # Linux: see kind.sigs.k8s.io and kubernetes.io/docs/tasks/tools
-   go install github.com/aryangarg/codequest/api/cmd/codequest@latest
    codequest login
    ```
 

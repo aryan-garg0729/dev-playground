@@ -22,10 +22,9 @@ Two habits for the whole course:
    # git version 2.47.1
    ```
 
-2. Install the CodeQuest CLI and sign in. If you did the Docker course, you already have it.
+2. Install the CodeQuest CLI from the [install page](/cli/install) (one command on macOS and Linux), then sign in. If you did the Docker course, you already have it.
 
    ```sh
-   go install github.com/aryangarg/codequest/api/cmd/codequest@latest
    codequest login
    ```
 

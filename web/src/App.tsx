@@ -17,6 +17,7 @@ const LeaguePage = lazy(() => import('./pages/LeaguePage').then((m) => ({ defaul
 const ShopPage = lazy(() => import('./pages/ShopPage').then((m) => ({ default: m.ShopPage })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const SignInPage = lazy(() => import('./pages/SignInPage').then((m) => ({ default: m.SignInPage })));
+const CliInstallPage = lazy(() => import('./pages/CliInstallPage').then((m) => ({ default: m.CliInstallPage })));
 const CliLoginPage = lazy(() => import('./pages/CliLoginPage').then((m) => ({ default: m.CliLoginPage })));
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
 // Dev only: import.meta.env.DEV is false in production builds, so this branch
@@ -53,6 +54,7 @@ export function App() {
           <Route path="/" element={<Root />} />
           <Route path="/welcome" element={auth(<OnboardingPage />)} />
           <Route path="/cli/login" element={auth(<CliLoginPage />)} />
+          <Route path="/cli/install" element={<CliInstallPage />} />
           <Route path="/courses" element={auth(<CoursesPage />)} />
           <Route path="/courses/:courseId" element={auth(<CoursePage />)} />
           <Route path="/learn/:courseId/:exerciseId" element={auth(<ExercisePage />)} />

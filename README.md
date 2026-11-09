@@ -33,7 +33,7 @@ bin/codequest run cl.hello-script
 bin/codequest submit cl.hello-script
 ```
 
-A release build points at production with `make cli API_URL=https://… APP_URL=https://…`. See "Phase 8" in `docs/SPEC.md`.
+A release build points at production with `make cli API_URL=https://… APP_URL=https://…`. The deployed site also builds and serves the CLI for learners at `/cli/install` (see `docs/DEPLOY.md`). See "Phase 8" in `docs/SPEC.md`.
 
 ## Screens
 

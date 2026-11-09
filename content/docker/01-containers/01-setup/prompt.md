@@ -14,10 +14,9 @@ You work in your own terminal. The `codequest` CLI then runs a few read-only che
 ## Assignment
 
 1. Install Docker: Docker Desktop, OrbStack or Colima on macOS, or Docker Engine on Linux. Make sure `docker version` prints a **Server** section. If it only shows a Client, the Docker daemon (the background service that actually runs containers) isn't running.
-2. Install the CodeQuest CLI and sign in:
+2. Install the CodeQuest CLI from the [install page](/cli/install) (one command on macOS and Linux), then sign in:
 
    ```sh
-   go install github.com/aryangarg/codequest/api/cmd/codequest@latest
    codequest login
    ```
 

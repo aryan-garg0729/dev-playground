@@ -52,15 +52,19 @@ GitHub (github.com/settings/developers → New OAuth App):
 
 ## 4. Learner CLI
 
-CLI lessons need the `codequest` command pointed at the deployed app:
+The site serves the CLI itself, so the repository can stay private. Each deploy
+builds `codequest` for macOS, Linux and Windows (amd64 and arm64) with the
+site's address baked in, from `APP_URL` (Render passes service environment
+variables to Docker builds as build args; the build fails if it is missing or
+not https). The image serves:
 
-```sh
-make cli API_URL=https://codequest.onrender.com APP_URL=https://codequest.onrender.com
-```
+- `/cli/install`: the install page the setup lessons link to
+- `/install.sh`: `curl -fsSL https://<site>/install.sh | sh` installs into `~/.local/bin`
+- `/cli/codequest-<os>-<arch>[.exe]`: the binaries
 
-This writes `bin/codequest`. Share it (for example as a GitHub release asset),
-built per OS and architecture with `GOOS`/`GOARCH` if learners use different
-machines.
+After changing `APP_URL`, redeploy so the CLI is rebuilt for the new address.
+Learners who installed an older build can point it at the new one with
+`codequest config base_url https://<new-site>`.
 
 ## Free-plan limits
 

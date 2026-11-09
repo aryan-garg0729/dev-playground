@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { api, ApiError, unwrap } from '../api/client';
 import { Button } from '../components/Button';
 import { AuthShell } from './SignInPage';
@@ -111,7 +112,11 @@ export function CliLoginPage() {
       )}
 
       <p className="text-small text-text-muted">
-        Didn't start from the terminal? Install the CLI and run <code className="font-mono text-text">codequest login</code>. Never
+        Didn't start from the terminal?{' '}
+        <Link to="/cli/install" className="text-accent-text underline">
+          Install the CLI
+        </Link>{' '}
+        and run <code className="font-mono text-text">codequest login</code>. Never
         share this code: it signs the CLI in as you.
       </p>
     </AuthShell>
