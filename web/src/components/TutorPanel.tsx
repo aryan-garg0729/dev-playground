@@ -6,6 +6,7 @@ import { askTutor, type TutorMessage, tutorKey, useTutorThread } from '../api/tu
 import { track } from '../analytics';
 import { Button } from './Button';
 import { Markdown } from './Markdown';
+import { Spinner } from './Spinner';
 
 function Bubble({ m }: { m: Pick<TutorMessage, 'role' | 'content'> }) {
   if (m.role === 'user') {
@@ -81,7 +82,7 @@ function Conversation({ exerciseId, code, onClose }: { exerciseId: string; code:
           Close
         </button>
       </div>
-      {thread.isPending && <p className="text-caption text-text-muted">Loading…</p>}
+      {thread.isPending && <Spinner size="sm" label="Loading the tutor…" />}
       {thread.error && <p className="text-caption text-danger" role="alert">{thread.error.message}</p>}
       {data && data.messages.length === 0 && !busy && (
         <p className="text-caption text-text-muted">

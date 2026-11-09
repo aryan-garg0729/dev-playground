@@ -1,6 +1,7 @@
 import { type CSSProperties, lazy, type ReactNode, type RefObject, Suspense, useEffect, useRef, useState } from 'react';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
+import { Spinner } from '../../components/Spinner';
 import { Splitter } from '../../components/Splitter';
 import { PANE_LIMITS, usePanes } from '../../stores/panes';
 import type { BossInfo, GradeResult, RunOutput } from '../types';
@@ -157,7 +158,7 @@ export function Workspace(p: Props) {
             </Button>
           </div>
           <div className="min-h-0 flex-1">
-            <Suspense fallback={<p className="text-small p-4 text-text-muted">Loading editor…</p>}>
+            <Suspense fallback={<div className="flex h-full items-center justify-center p-4"><Spinner label="Loading editor…" /></div>}>
               <CodeEditor value={p.code} language={p.language} errorLine={errorLine} ariaLabel={`${p.file} editor`} onChange={p.onCode} />
             </Suspense>
           </div>

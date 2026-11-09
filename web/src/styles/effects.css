@@ -53,7 +53,14 @@
 }
 .cq-glow { animation: cq-glow var(--motion-slow) var(--ease-out) both; transform-box: fill-box; transform-origin: center; }
 
+/* Loading spinner: the one routine animation, because a still page reads as frozen. */
+@keyframes cq-spin {
+  to { transform: rotate(360deg); }
+}
+.cq-spin { animation: cq-spin 800ms linear infinite; }
+
 @media (prefers-reduced-motion: reduce) {
+  .cq-spin { animation: none !important; }
   .cq-pop, .cq-rise, .cq-hit, .cq-row-in, .cq-chest-wobble, .cq-glow { animation: none !important; }
   .cq-hit { background: var(--border); }
   .cq-lid { transition: none !important; }

@@ -1,11 +1,12 @@
 import { Link } from 'react-router';
 import { ApiError } from '../api/client';
+import { Spinner } from '../components/Spinner';
 
 export function Loading({ label }: { label: string }) {
   return (
-    <p className="text-small p-6 text-text-muted" role="status">
-      Loading {label}…
-    </p>
+    <div className="flex w-full justify-center p-12">
+      <Spinner label={`Loading ${label}…`} />
+    </div>
   );
 }
 

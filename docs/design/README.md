@@ -51,6 +51,7 @@ Panes wrap to a single column below about 900px; the rail stays collapsed on sma
 Game moments get motion and sound; the workspace does not. Effects are for rare, earned moments only: lesson clear, level up, boss fight and chests. A routine submit, run or fail never animates or makes a sound, because effects that fire every few seconds feel childish and nag.
 
 - Use the motion tokens: `motion-fast` (120ms), `motion-base` (240ms), `motion-slow` (600ms), `motion-celebrate` (1200ms), `ease-out`, `ease-spring` (a slight overshoot, for pops). Keyframes live in `web/src/styles/effects.css`.
+- Loading states are the one routine animation: the `Spinner` ring (`border-strong` track, `accent` arc) with a screen-reader label, never "Loading…" text. It stays still under reduced motion.
 - Under `prefers-reduced-motion` nothing moves, but every end state still shows (the opened chest, the final HP, the new level).
 - Sound is short (≤ 1 s) and quiet, and on by default. The header speaker toggle mutes it per device. A sound is never the only cue: each one has a visible counterpart.
 - One sound per moment: a level-up fanfare replaces the lesson-clear chime, and the boss fanfare replaces both.

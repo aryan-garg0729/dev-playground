@@ -4,6 +4,7 @@ import { track } from '../analytics';
 import { useCourses } from '../api/queries';
 import { CodeIcon } from '../components/icons';
 import { Pill } from '../components/Pill';
+import { Spinner } from '../components/Spinner';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { TryItCard } from './landing/TryItCard';
 
@@ -63,7 +64,11 @@ function Paths() {
       <h2 id="paths-title" className="text-[32px] font-bold leading-10 text-text">Pick a path</h2>
       <p className="text-body mt-1 text-text-muted">Each path is a sequence of courses with projects along the way.</p>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        {courses.isPending && <p className="text-small text-text-muted">Loading courses…</p>}
+        {courses.isPending && (
+          <div className="flex justify-center p-6 md:col-span-3">
+            <Spinner label="Loading courses…" />
+          </div>
+        )}
         {list.map((c, i) => (
           <article key={c.id} className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-6">
             <span className="w-fit">

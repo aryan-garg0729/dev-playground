@@ -7,6 +7,7 @@ import 'monaco-editor/languages/definitions/python/register';
 import 'monaco-editor/languages/definitions/sql/register';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import { useEffect, useRef } from 'react';
+import { Spinner } from '../../components/Spinner';
 import { useTheme } from '../../stores/theme';
 import { monacoLanguage } from './language';
 import { buildTheme } from './monacoTheme';
@@ -62,7 +63,7 @@ export default function CodeEditor({ value, onChange, language, errorLine, ariaL
       theme={`cq-${theme}`}
       onChange={(v) => onChange(v ?? '')}
       onMount={onMount}
-      loading={<p className="text-small p-4 text-text-muted">Loading editor…</p>}
+      loading={<div className="flex h-full items-center justify-center p-4"><Spinner label="Loading editor…" /></div>}
       options={{
         ariaLabel,
         fontFamily: 'JetBrains Mono, ui-monospace, monospace',
