@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=exited exit=137 oom=false\n"}}, {"cli": {"exit_code": 0, "stdout": "status=exited exit=137 init=true\n"}}]}

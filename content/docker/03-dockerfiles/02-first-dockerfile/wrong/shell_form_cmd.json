@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "cmd=[\"/bin/sh\",\"-c\",\"brewd\"] workdir=/src\n"}}, {"cli": {"exit_code": 0, "stdout": "/usr/local/bin/brewd\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}]}

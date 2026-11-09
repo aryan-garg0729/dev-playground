@@ -1,0 +1,21 @@
+id: gt.remotes.fetch-pull-quiz
+type: mcq
+version: 1
+title: Fetch Versus Pull
+xp: 5
+difficulty: 2
+tags: [remotes, fetch, pull]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "They're the same command with different names" }
+    - { id: b, text: "pull is fetch followed by merging (or rebasing) origin/main into your current branch" }
+    - { id: c, text: "fetch uploads, pull downloads" }
+    - { id: d, text: "fetch also updates your working tree" }
+  answer: [b]
+  explain: >
+    git pull runs git fetch, then integrates the upstream branch into the one you're on:
+    by merging, or by rebasing with --rebase. fetch alone only updates remote-tracking
+    branches like origin/main and never touches your branches or files, which makes it
+    always safe. Neither one uploads anything; that's push.

@@ -1,0 +1,21 @@
+id: gt.rebase.actions-quiz
+type: mcq
+version: 1
+title: Pick, Squash, Fixup
+xp: 5
+difficulty: 2
+tags: [rebase]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "squash on the typo commit, then delete the extra message" }
+    - { id: b, text: "fixup on the typo commit" }
+    - { id: c, text: "drop on the typo commit" }
+    - { id: d, text: "reword on the menu commit" }
+  answer: [b]
+  explain: >
+    fixup folds a commit into the one above it in the list and throws its message away,
+    which is exactly right for "fix typo". squash would also work but makes you edit the
+    combined message by hand. drop would delete the typo fix itself, so the typo comes
+    back. reword only changes a message; it doesn't combine anything.

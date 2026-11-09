@@ -1,0 +1,10 @@
+id: dk.cache
+title: The build cache
+exercises:
+  - 01-why-rebuild-quiz
+  - 02-deps-first
+  - 03-arg-env-quiz
+  - 04-version-stamp
+  - 05-cache-mount
+  - 06-stale-index-quiz
+  - 07-release-boss

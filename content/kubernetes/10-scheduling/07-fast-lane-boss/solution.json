@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"taints=. disk=ssd"}},{"cli":{"exit_code":0,"stdout":"phase=Running node=elixirbytes-worker2"}},{"cli":{"exit_code":0,"stdout":"disk In ssd ready=2"}},{"cli":{"exit_code":0,"stdout":"elixirbytes-worker2 elixirbytes-worker2 "}},{"cli":{"exit_code":0,"stdout":"key=kubernetes.io/hostname ready=2 nodes=2\n"}}]}

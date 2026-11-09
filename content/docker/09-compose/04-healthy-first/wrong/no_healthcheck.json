@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "api=running/\nfront=running/\n"}}, {"cli": {"exit_code": 1, "stdout": "service \"front\" depends on undefined healthcheck of service \"api\"\n"}}, {"http": {"status": 0, "headers": {}, "body": "", "error": "connection refused"}}]}

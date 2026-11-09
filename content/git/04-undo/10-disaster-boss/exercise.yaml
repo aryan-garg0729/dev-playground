@@ -1,0 +1,45 @@
+id: gt.undo.disaster-boss
+type: project_cli
+version: 1
+title: Friday Disaster Recovery
+xp: 60
+difficulty: 3
+tags: [reflog, reset, restore]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: main has F4, G4 and your fix I4 on top
+      cli_command:
+        command: "git --no-pager log --format=%s -n 3 main"
+        tests:
+          - stdout_contains_all: ["I4:", "G4:", "F4:"]
+    - description: Find F4
+      cli_command:
+        command: "git log -1 --format=%H ':/^F4:'"
+        captures: [{ name: f4, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Look up the front page as it was at F4
+      cli_command:
+        command: "git rev-parse ${f4}:index.md"
+        captures: [{ name: page, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: The front page on main is exactly the F4 version
+      cli_command:
+        command: "git rev-parse main:index.md"
+        tests:
+          - stdout_contains_all: ["${page}"]
+    - description: docs/suppliers is back at H4, and H4 is not on main
+      cli_command:
+        command: "git log -1 --format=%s docs/suppliers; echo on_main=$(git --no-pager log --format=%s main | grep -c '^H4:')"
+        tests:
+          - stdout_contains_all: ["H4:", "on_main=0\n"]
+    - description: The working tree is clean
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

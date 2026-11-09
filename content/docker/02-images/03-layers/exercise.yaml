@@ -1,0 +1,26 @@
+id: dk.images.layers
+type: project_cli
+version: 1
+title: Count the Layers
+xp: 20
+difficulty: 2
+tags: [images, layers]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: nginx:1.27-alpine is pulled
+      cli_command:
+        command: "docker image inspect -f 'layers={{len .RootFS.Layers}}' nginx:1.27-alpine"
+        captures: [{ name: layers, regex: "layers=(\\d+)" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["layers="]
+    - description: answers.txt records the real filesystem layer count
+      cli_command:
+        command: "grep -x 'nginx_layers=${layers}' answers.txt"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["nginx_layers=${layers}"]

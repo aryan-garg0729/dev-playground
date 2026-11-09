@@ -1,0 +1,28 @@
+id: gt.conflicts.committed-markers
+type: project_cli
+version: 1
+title: Markers in Production
+xp: 20
+difficulty: 2
+tags: [conflicts]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: No conflict markers anywhere on main
+      cli_command:
+        command: "git grep -n -e '^<<<<<<<' -e '^=======$' -e '^>>>>>>>' main; echo grep_exit=$?"
+        tests:
+          - stdout_contains_all: ["grep_exit=1"]
+    - description: The front page has the agreed opening hours
+      cli_command:
+        command: "git show main:index.md"
+        tests:
+          - stdout_contains_all: ["Opening hours: Monday to Saturday, 08:00-18:00.\n"]
+          - stdout_contains_none: ["every day"]
+    - description: Mo's commit is still in history, with your fix G6 on top
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 main"
+        tests:
+          - stdout_contains_all: ["G6:", "Mo's opening hours"]

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"completions=5 parallelism=2 backoff=3 policy=OnFailure"}},{"cli":{"exit_code":0,"stdout":"succeeded=5 complete=True"}},{"cli":{"exit_code":0,"stdout":"restocked shelf restock-2p8v6\nrestocked shelf restock-bf64p\nrestocked shelf restock-dj469\nrestocked shelf restock-dqfdp\nrestocked shelf restock-j4n8l\n"}}]}

@@ -1,0 +1,28 @@
+id: k8s.workloads.cronjob
+type: project_cli
+version: 1
+title: Every Two Minutes
+xp: 25
+difficulty: 3
+tags: [cronjobs, batch]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: CronJob nightly-ledger runs every 2 minutes, never overlapping, keeping 3 successes
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get cronjob nightly-ledger -o jsonpath='schedule={.spec.schedule} concurrency={.spec.concurrencyPolicy} keep={.spec.successfulJobsHistoryLimit}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["schedule=*/2 * * * *", "concurrency=Forbid", "keep=3"]
+    - description: The schedule has fired and a Job it made succeeded
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get jobs -o jsonpath='{range .items[?(@.metadata.ownerReferences[0].name=="nightly-ledger")]}{.metadata.name}={.status.succeeded} {end}'
+        tests:
+          - stdout_contains_all: ["nightly-ledger-", "=1 "]
+    - description: You triggered one run by hand, and it succeeded
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get job ledger-manual -o jsonpath='from={.metadata.annotations.cronjob\.kubernetes\.io/instantiate} succeeded={.status.succeeded}'
+        tests:
+          - stdout_contains_all: ["from=manual", "succeeded=1"]

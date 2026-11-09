@@ -1,0 +1,25 @@
+id: k8s.services.nodeport
+type: project_cli
+version: 1
+title: Letting the Outside In
+xp: 20
+difficulty: 2
+tags: [services, nodeport]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:30080
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd-np is a NodePort on 30080 for the brewd pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc brewd-np -o jsonpath='type={.spec.type} nodePort={.spec.ports[0].nodePort} selector={.spec.selector.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["type=NodePort", "nodePort=30080", "selector=brewd"]
+    - description: Your laptop reaches brewd on localhost:30080
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Welcome to nginx"

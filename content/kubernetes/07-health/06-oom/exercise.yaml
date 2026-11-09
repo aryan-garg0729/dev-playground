@@ -1,0 +1,30 @@
+id: k8s.health.oom
+type: project_cli
+version: 1
+title: Killed for Memory
+xp: 20
+difficulty: 2
+tags: [resources, oom, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: oom-canary has a 32Mi memory limit and no probes
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod oom-canary -o jsonpath='limit={.spec.containers[0].resources.limits.memory} probes={.spec.containers[0].livenessProbe}{.spec.containers[0].readinessProbe}.'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["limit=32Mi", "probes=."]
+    - description: Its container keeps getting killed
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod oom-canary -o jsonpath='restarts={.status.containerStatuses[0].restartCount} last={.status.containerStatuses[0].lastState.terminated.reason}/{.status.containerStatuses[0].lastState.terminated.exitCode} '
+        captures: [{ name: exit, regex: "/(\\d+) " }]
+        tests:
+          - stdout_contains_none: ["restarts=0 "]
+          - stdout_contains_all: ["/137 "]
+    - description: answers.txt records the exit code and the signal behind it
+      cli_command:
+        command: grep -x 'oom_exit=${exit}' answers.txt && grep -x "oom_signal=$(( ${exit} - 128 ))" answers.txt
+        tests:
+          - exit_code: 0

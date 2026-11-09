@@ -1,0 +1,22 @@
+id: k8s.storage.access-modes-quiz
+type: mcq
+version: 1
+title: Access Modes
+xp: 5
+difficulty: 3
+tags: [storage, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "All 3 pods share the disk, because the Deployment owns the claim" }
+    - { id: b, text: "Pods on the node that has the volume can mount it; pods scheduled to other nodes get stuck in ContainerCreating with a volume attach/mount error" }
+    - { id: c, text: "The API server rejects replicas: 3 for any Deployment with a PVC" }
+    - { id: d, text: "Each pod automatically gets its own copy of the claim" }
+  answer: [b]
+  explain: >
+    ReadWriteOnce means one node at a time. Pods on that node can share it (which surprises
+    people: it's per node, not per pod). A pod scheduled to another node can't attach the
+    volume and stays in ContainerCreating with an attach or mount error in its events. Nothing
+    rejects the Deployment up front. Per-pod storage is a different object altogether:
+    StatefulSets with volumeClaimTemplates, next lesson.

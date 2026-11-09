@@ -22,6 +22,10 @@ const (
 	RepairWindowDays  = 2  // a streak lost in the last 48 hours
 	RepairEveryDays   = 30 // once a month
 	MaxFreezes        = 2  // matches game.MaxFreezes and the user_stats check
+
+	// SkeletonKeyBosses: a Skeleton Key can be bought only after this many
+	// bosses (Boss Slayer silver). It is held one at a time, used once per course.
+	SkeletonKeyBosses = 5
 )
 
 // Power-up ids.
@@ -35,6 +39,7 @@ const (
 	SecondWind      = "second_wind"
 	LeagueShield    = "league_shield"
 	DoubleOrNothing = "double_or_nothing"
+	SkeletonKey     = "skeleton_key"
 )
 
 // PowerUp is a shop item.
@@ -50,13 +55,14 @@ type PowerUp struct {
 
 // PowerUps in shop order.
 var PowerUps = []PowerUp{
-	{ID: StreakFreeze, Name: "Streak Freeze", Description: "Covers one missed day so your streak survives.", Note: "Hold up to 2 · 1 free every 7-day streak", Cost: 200},
-	{ID: FocusBoost, Name: "Focus Boost", Description: "Double XP for the next 15 minutes of lessons.", Note: "1 per day", Cost: 150},
-	{ID: SecondWind, Name: "Second Wind", Description: "Keeps your first-try bonus after one failed submit.", Note: "1 per chapter", Cost: 250},
+	{ID: StreakFreeze, Name: "Streak Freeze", Description: "Covers one missed day so your streak survives.", Note: "Hold up to 2 · 1 free every 7-day streak", Cost: 300},
+	{ID: FocusBoost, Name: "Focus Boost", Description: "Double XP for the next 15 minutes of lessons.", Note: "1 per day", Cost: 200},
+	{ID: SecondWind, Name: "Second Wind", Description: "Keeps your first-try bonus after one failed submit.", Note: "1 per chapter", Cost: 350},
 	{ID: ExtraHint, Name: "Extra Hint", Description: "One more tutor hint after your daily limit.", Note: "Removes the no-hint bonus, like any hint", Cost: 100, Unavailable: "coming_soon"},
-	{ID: Peek, Name: "Peek", Description: "Shows the input of one hidden check you failed. Never the expected output.", Note: "Removes the first-try bonus", Cost: 120},
-	{ID: LeagueShield, Name: "League Shield", Description: "You won't be demoted at the end of this week.", Note: "Not two weeks in a row", Cost: 400},
-	{ID: StreakRepair, Name: "Streak Repair", Description: "Brings back a streak you lost in the last 48 hours.", Note: "Once a month", Cost: 1500},
+	{ID: Peek, Name: "Peek", Description: "Shows the input of one hidden check you failed. Never the expected output.", Note: "Removes the first-try bonus", Cost: 150},
+	{ID: LeagueShield, Name: "League Shield", Description: "You won't be demoted at the end of this week.", Note: "Not two weeks in a row", Cost: 700},
+	{ID: StreakRepair, Name: "Streak Repair", Description: "Brings back a streak you lost in the last 48 hours.", Note: "Once a month", Cost: 2000},
+	{ID: SkeletonKey, Name: "Skeleton Key", Description: "Opens the next locked chapter of a course without beating the boss before it. That boss stays undefeated and pays nothing.", Note: "Needs 5 bosses defeated · hold 1 · once per course", Cost: 6000},
 	{ID: HolidayMode, Name: "Holiday Mode", Description: "Pause your streak for up to 7 days while you travel.", Note: "Turn on at least 3 days ahead", Unavailable: "pro"},
 	{ID: DoubleOrNothing, Name: "Double or Nothing", Description: "Bet Bytes that you'll hit your daily goal 7 days in a row.", Note: "One bet at a time"},
 }
@@ -71,12 +77,14 @@ func PowerUpByID(id string) (PowerUp, bool) {
 	return PowerUp{}, false
 }
 
-// ChestOdds are the daily and boss chests' power-up odds (weights, shown to users).
+// ChestOdds are the daily and boss chests' power-up odds (weights out of 100,
+// shown to users). The empty PowerUp means no power-up: half of all chests.
+// Never the Skeleton Key.
 var ChestOdds = []struct {
 	PowerUp string `json:"powerup"`
 	Weight  int    `json:"weight"`
 }{
-	{FocusBoost, 40}, {Peek, 30}, {SecondWind, 20}, {LeagueShield, 10},
+	{FocusBoost, 20}, {Peek, 15}, {SecondWind, 10}, {LeagueShield, 5}, {"", 50},
 }
 
 // Tier is one level of a medal.
@@ -169,7 +177,7 @@ var (
 		{ID: "d.lessons2", Cadence: "daily", Name: "Pass 2 lessons", Event: "lessons", Target: 2},
 		{ID: "d.firsttry1", Cadence: "daily", Name: "Pass one lesson on the first try", Event: "first_try", Target: 1},
 		{ID: "d.xp50", Cadence: "daily", Name: "Earn 50 XP", Event: "xp", Target: 50},
-		{ID: "d.code1", Cadence: "daily", Name: "Pass a coding lesson", Event: "code", Target: 1},
+		{ID: "d.code1", Cadence: "daily", Name: "Pass a hands-on lesson", Event: "code", Target: 1}, // code, sql or project_cli
 		{ID: "d.quiz1", Cadence: "daily", Name: "Pass a quiz", Event: "quiz", Target: 1},
 	}
 	WeeklyPool = []Quest{

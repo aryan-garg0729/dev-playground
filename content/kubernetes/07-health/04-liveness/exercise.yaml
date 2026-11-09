@@ -1,0 +1,34 @@
+id: k8s.health.liveness
+type: project_cli
+version: 1
+title: Restarting a Wedged Container
+xp: 25
+difficulty: 3
+tags: [probes, liveness, restarts]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: zombie has an exec liveness probe that checks /tmp/healthy
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod zombie -o jsonpath='cmd={.spec.containers[0].livenessProbe.exec.command[*]} period={.spec.containers[0].livenessProbe.periodSeconds}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cmd=cat /tmp/healthy", "period=5"]
+    - description: The kubelet has restarted zombie
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod zombie -o jsonpath='restarts={.status.containerStatuses[0].restartCount} exit={.status.containerStatuses[0].lastState.terminated.exitCode} '
+        captures: [{ name: exit, regex: "exit=(\\d+)" }]
+        tests:
+          - stdout_contains_none: ["restarts=0 "]
+    - description: The events say why
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get events --field-selector involvedObject.name=zombie,reason=Unhealthy -o jsonpath='{range .items[*]}{.message}{"\n"}{end}'
+        tests:
+          - stdout_contains_all: ["Liveness probe failed"]
+    - description: answers.txt records the exit code of a liveness kill
+      cli_command:
+        command: grep -x 'zombie_exit=${exit}' answers.txt
+        tests:
+          - exit_code: 0

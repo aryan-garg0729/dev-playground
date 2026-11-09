@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"desired=3 ready=3 image=nginx:1.27-alpine app=brewd"}},{"cli":{"exit_code":0,"stdout":"type=RollingUpdate surge=1 unavailable=0"}},{"cli":{"exit_code":0,"stdout":"Deployment/brewd "}}]}

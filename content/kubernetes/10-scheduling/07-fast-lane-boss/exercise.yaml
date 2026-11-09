@@ -1,0 +1,40 @@
+id: k8s.scheduling.fast-lane-boss
+type: project_cli
+version: 1
+title: Fast-Lane Placement
+xp: 55
+difficulty: 4
+boss: true
+tags: [scheduling, affinity, taints]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Maintenance is over, worker2 has no maintenance taint, and it's labelled disk=ssd
+      cli_command:
+        command: kubectl --context kind-elixirbytes get node elixirbytes-worker2 -o jsonpath='taints={.spec.taints[*].key}. disk={.metadata.labels.disk}'
+        tests:
+          - stdout_contains_none: ["maintenance"]
+          - stdout_contains_all: ["disk=ssd"]
+    - description: stubborn finally got scheduled, on worker2
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod stubborn -o jsonpath='phase={.status.phase} node={.spec.nodeName}'
+        tests:
+          - stdout_contains_all: ["phase=Running", "node=elixirbytes-worker2"]
+    - description: vault-proxy requires disk In [ssd] through node affinity
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy vault-proxy -o jsonpath='{range .spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[*].matchExpressions[*]}{.key} {.operator} {.values[*]}{end} ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["disk In ssd", "ready=2"]
+    - description: Both vault-proxy pods run on the SSD node
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=vault-proxy -o jsonpath='{range .items[*]}{.spec.nodeName} {end}'
+        tests:
+          - stdout_contains_all: ["elixirbytes-worker2 elixirbytes-worker2 "]
+    - description: catalog's 2 ready pods are on different nodes, by a hard rule
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy catalog -o jsonpath='key={.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey} ready={.status.readyReplicas} '; echo "nodes=$(kubectl --context kind-elixirbytes -n shop get pods -l app=catalog -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')"
+        tests:
+          - stdout_contains_all: ["key=kubernetes.io/hostname", "ready=2", "nodes=2"]

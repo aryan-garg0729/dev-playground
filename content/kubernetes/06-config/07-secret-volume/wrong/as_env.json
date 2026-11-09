@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"creds:secret=brewd-db:mode=256 config:secret=:mode= | creds@/etc/creds:ro=true config@/etc/brewd:ro=true "}},{"cli":{"exit_code":0,"stdout":"from-secret=brewd-db."}},{"cli":{"exit_code":0,"stdout":"-r--------\npassword matches\n"}}]}

@@ -1,0 +1,29 @@
+id: dk.multistage.two-stages
+type: project_cli
+version: 1
+title: Build Here, Ship There
+xp: 25
+difficulty: 3
+tags: [multistage, dockerfile]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: elixirbytes/brewd:slim is under 20 MB
+      cli_command:
+        command: |-
+          docker image inspect -f '{{.Size}}' elixirbytes/brewd:slim | awk '{print ($1 < 20000000 ? "size=ok" : "size=too-big")}'
+        tests:
+          - stdout_contains_all: ["size=ok"]
+    - description: There is no Go toolchain in the final image
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:slim sh -c 'command -v go || echo no-go'
+        tests:
+          - stdout_contains_all: ["no-go"]
+    - description: brewd runs from the final image
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:slim brewd --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["brewd "]

@@ -1,0 +1,30 @@
+id: dk.cache.version-stamp
+type: project_cli
+version: 1
+title: Stamp the Version
+xp: 25
+difficulty: 2
+tags: [build-args, labels]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd inside elixirbytes/brewd:v4 reports version 1.4.0
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:v4 brewd --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["brewd 1.4.0"]
+    - description: The image is labelled with the same version
+      cli_command:
+        command: "docker image inspect -f 'version={{index .Config.Labels \"org.opencontainers.image.version\"}}' elixirbytes/brewd:v4"
+        tests:
+          - stdout_contains_all: ["version=1.4.0"]
+    - description: The build argument didn't leak into the runtime environment
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:v4 env
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["PATH="]
+          - stdout_contains_none: ["BUILD_VERSION"]

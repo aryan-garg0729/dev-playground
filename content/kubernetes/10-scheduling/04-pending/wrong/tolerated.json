@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"phase=Running node=elixirbytes-worker2. selector=elixirbytes-worker2"}},{"cli":{"exit_code":0,"stdout":""}},{"cli":{"exit_code":0,"stdout":"stubborn_tainted=2\nstubborn_mismatch=1\n"}}]}

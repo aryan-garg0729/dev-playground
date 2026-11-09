@@ -1,0 +1,22 @@
+id: k8s.pods.pod-share-quiz
+type: mcq
+version: 1
+title: What a Pod Shares
+xp: 5
+difficulty: 2
+tags: [pods, concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "http://cache:6379, using the container's name" }
+    - { id: b, text: "localhost:6379" }
+    - { id: c, text: "The pod's IP, which it has to look up first with kubectl" }
+    - { id: d, text: "It can't: containers in a pod are isolated from each other" }
+  answer: [b]
+  explain: >
+    Every container in a pod shares one network namespace: one IP address and one set of
+    ports. So the containers talk to each other on localhost, exactly as two processes on the
+    same machine would. Container names aren't DNS names (that's a Docker Compose habit), and
+    the flip side of sharing is that two containers in one pod can't both listen on port 6379.

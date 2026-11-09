@@ -1,0 +1,31 @@
+id: dk.dockerfile.publish-port
+type: project_cli
+version: 1
+title: Open the Shop Door
+xp: 20
+difficulty: 2
+tags: [ports, run]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18080
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-web runs elixirbytes/brewd:v1 and publishes container port 8080 on host port 18080
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' eb-web && docker port eb-web 8080/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=elixirbytes/brewd:v1", ":18080"]
+    - description: brewd answers its health check from your machine
+      http_request:
+        request: { method: GET, url: "${baseURL}/healthz" }
+        tests:
+          - status_code: 200
+          - body_contains: "ok"
+    - description: brewd reports its version
+      http_request:
+        request: { method: GET, url: "${baseURL}/version" }
+        tests:
+          - status_code: 200
+          - body_contains: "brewd dev"

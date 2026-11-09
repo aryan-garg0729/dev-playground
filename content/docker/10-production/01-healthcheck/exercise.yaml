@@ -1,0 +1,22 @@
+id: dk.production.healthcheck
+type: project_cli
+version: 1
+title: Is It Actually Up?
+xp: 25
+difficulty: 2
+tags: [healthchecks, dockerfile]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: elixirbytes/brewd:health has a built-in healthcheck
+      cli_command:
+        command: "docker image inspect -f 'test={{json .Config.Healthcheck.Test}} interval={{.Config.Healthcheck.Interval}}' elixirbytes/brewd:health"
+        tests:
+          - stdout_contains_all: ["wget", "/healthz", "interval=5s"]
+    - description: eb-health reports healthy
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} health={{.State.Health.Status}}' eb-health"
+        tests:
+          - stdout_contains_all: ["status=running", "health=healthy"]

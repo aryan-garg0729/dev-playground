@@ -1,0 +1,29 @@
+id: dk.networking.isolation
+type: project_cli
+version: 1
+title: Keep the Vault Apart
+xp: 25
+difficulty: 3
+tags: [networking, security]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-vault is only on eb-private
+      cli_command:
+        command: "docker inspect -f 'nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}}' eb-vault"
+        tests:
+          - stdout_contains_all: ["nets=eb-private,"]
+          - stdout_contains_none: ["eb-net", "bridge"]
+    - description: From eb-net, the vault doesn't even resolve
+      cli_command:
+        command: docker run --rm --network eb-net alpine:3.20 ping -c1 -W1 eb-vault
+        tests:
+          - stdout_contains_all: ["bad address"]
+    - description: From eb-private, the vault answers
+      cli_command:
+        command: docker run --rm --network eb-private alpine:3.20 ping -c1 -W1 eb-vault
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["1 packets received"]

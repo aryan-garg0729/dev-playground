@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"desired=3 ready=3 selector=brewd-rs"}},{"cli":{"exit_code":0,"stdout":"nginx:1.27-alpine nginx:1.27-alpine nginx:1.27-alpine "}}]}

@@ -1,0 +1,28 @@
+id: k8s.workloads.job
+type: project_cli
+version: 1
+title: Work That Ends
+xp: 20
+difficulty: 2
+tags: [jobs, batch]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Job restock runs 5 completions, 2 at a time, with 3 retries
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get job restock -o jsonpath='completions={.spec.completions} parallelism={.spec.parallelism} backoff={.spec.backoffLimit} policy={.spec.template.spec.restartPolicy}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["completions=5", "parallelism=2", "backoff=3", "policy=OnFailure"]
+    - description: All 5 completions succeeded
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get job restock -o jsonpath='succeeded={.status.succeeded} complete={.status.conditions[?(@.type=="Complete")].status}'
+        tests:
+          - stdout_contains_all: ["succeeded=5", "complete=True"]
+    - description: Each pod logged its restock
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop logs -l job-name=restock --prefix=false --tail=1
+        tests:
+          - stdout_contains_all: ["restocked shelf"]

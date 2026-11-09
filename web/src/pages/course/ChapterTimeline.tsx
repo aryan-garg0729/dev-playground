@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import type { CourseDetail, Schemas } from '../../api/client';
-import { CheckIcon, LockIcon, StarIcon } from '../../components/icons';
+import { useShop, useSkeletonKey } from '../../api/queries';
+import { Button } from '../../components/Button';
+import { CheckIcon, KeyIcon, LockIcon, StarIcon } from '../../components/icons';
 
 type Chapter = CourseDetail['chapters'][number];
 type Status = Schemas['ProgressStatus'];
@@ -67,9 +69,31 @@ function Lessons({ courseId, chapter, chapterNo }: { courseId: string; chapter: 
   );
 }
 
+/** On the first locked chapter: open it with a held Skeleton Key (the boss before it stays undefeated). */
+function KeyButton({ courseId, chapterId }: { courseId: string; chapterId: string }) {
+  const { data } = useShop();
+  const key = useSkeletonKey(courseId);
+  const [problem, setProblem] = useState<string>();
+  const held = data?.items.find((i) => i.id === 'skeleton_key')?.owned ?? 0;
+  if (held === 0) return null;
+  return (
+    <div className="mt-2 flex flex-col items-start gap-1">
+      <Button disabled={key.isPending} onClick={() => key.open(chapterId, (e) => setProblem(e.message))}>
+        <KeyIcon size={14} /> Use Skeleton Key
+      </Button>
+      {problem && (
+        <p role="alert" className="text-small text-danger">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Chapters as a vertical path: done ✓, current (open), then what is ahead. */
 export function ChapterTimeline({ course }: { course: CourseDetail }) {
   const current = currentChapter(course.chapters);
+  const firstLocked = course.chapters.findIndex((c) => c.locked);
   const [open, setOpen] = useState<Set<number>>(() => new Set([current]));
   const toggle = (i: number) =>
     setOpen((s) => {
@@ -121,6 +145,7 @@ export function ChapterTimeline({ course }: { course: CourseDetail }) {
                   <span className="text-game-sm text-text-muted">{xp} XP</span>
                 )}
               </button>
+              {i === firstLocked && <KeyButton courseId={course.id} chapterId={ch.id} />}
               {isOpen && (
                 <div className="mt-4">
                   <Lessons courseId={course.id} chapter={ch} chapterNo={i + 1} />

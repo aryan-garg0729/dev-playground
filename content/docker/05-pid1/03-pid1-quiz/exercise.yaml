@@ -1,0 +1,22 @@
+id: dk.pid1.pid1-quiz
+type: mcq
+version: 1
+title: Who Is PID 1?
+xp: 5
+difficulty: 3
+tags: [pid1, signals]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "SIGTERM went to brewd, but brewd ignored it" }
+    - { id: b, text: "SIGTERM went to sh (PID 1), which has no handler for it as PID 1 and doesn't pass it on, so Docker waited 10 s and sent SIGKILL" }
+    - { id: c, text: "docker stop sends SIGKILL first and SIGTERM later" }
+    - { id: d, text: "The banner echo was still running and blocked the signal" }
+  answer: [b]
+  explain: >
+    docker stop signals PID 1 only. Here that's the shell running entrypoint.sh. The kernel
+    protects PID 1: a signal it hasn't installed a handler for is simply dropped, instead of
+    killing it as it would any other process. sh installs no SIGTERM handler and doesn't
+    forward signals to its children, so brewd never hears anything. After the 10-second
+    timeout Docker sends SIGKILL, which can't be ignored, and everything dies with 137.

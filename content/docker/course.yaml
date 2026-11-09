@@ -1,0 +1,23 @@
+id: docker
+title: Docker
+description: >
+  Containerise brewd, the ElixirBytes potion-order API, from your first
+  docker run to a small, locked-down image running in a Compose stack.
+  Every lesson and boss is real Docker on your own machine.
+order: 4
+published: true
+chapters:
+  - 01-containers
+  - 02-images
+  - 03-dockerfiles
+  - 04-build-cache
+  - 05-pid1
+  - 06-multistage
+  - 07-storage
+  - 08-networking
+  - 09-compose
+  - 10-production
+icon: dk
+level: intermediate
+tags: [Docker, DevOps, CLI]
+topics: Images, Dockerfiles, volumes, networks, Compose

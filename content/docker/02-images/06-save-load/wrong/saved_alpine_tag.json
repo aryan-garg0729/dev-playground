@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "blobs/\nindex.json\nmanifest.json\noci-layout\n"}}, {"cli": {"exit_code": 0, "stdout": "[{\"Config\":\"blobs/sha256/ab3f\",\"RepoTags\":[\"alpine:3.20\"],\"Layers\":[]}]\n"}}, {"cli": {"exit_code": 1, "stdout": "Error: No such image: elixirbytes/base:mine\n"}}]}

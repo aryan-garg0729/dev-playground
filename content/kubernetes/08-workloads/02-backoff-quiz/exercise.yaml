@@ -1,0 +1,21 @@
+id: k8s.workloads.backoff-quiz
+type: mcq
+version: 1
+title: When a Job Gives Up
+xp: 5
+difficulty: 3
+tags: [jobs, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "1 pod, restarted forever" }
+    - { id: b, text: "3 pods, then the Job is marked Failed" }
+    - { id: c, text: "4 pods (the first try plus 3 retries), then the Job is marked Failed with reason BackoffLimitExceeded" }
+    - { id: d, text: "5 pods, one per completion, then the Job is marked Complete" }
+  answer: [c]
+  explain: >
+    With restartPolicy Never, every failure means a new pod, and backoffLimit counts retries,
+    not attempts: the first run plus 3 retries is 4 pods. Then the Job stops and gets a Failed
+    condition with reason BackoffLimitExceeded. Retries are spaced out with a growing delay
+    (10s, 20s, 40s...). It never reaches completions, because no pod ever succeeds.

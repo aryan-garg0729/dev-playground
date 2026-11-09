@@ -1,0 +1,35 @@
+id: gt.conflicts.merge-conflict
+type: project_cli
+version: 1
+title: Two People, One Line
+xp: 30
+difficulty: 3
+tags: [conflicts, merge]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find A6 (the branch side)
+      cli_command:
+        command: "git log -1 --format=%H ':/^A6:'"
+        captures: [{ name: a6, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Find B6 (the main side)
+      cli_command:
+        command: "git log -1 --format=%H ':/^B6:'"
+        captures: [{ name: b6, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: C6 is main's tip and merges B6 and A6
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["C6:", "${b6}", "${a6}"]
+    - description: The handover line combines both sides, and the checklist survived
+      cli_command:
+        command: "git show main:oncall.md"
+        tests:
+          - stdout_contains_all: ["Handover: Tuesdays, 09:30, in #ops\n", "## Handover checklist"]
+          - stdout_contains_none: ["<<<<<<<", "=======", ">>>>>>>", "Mondays", "10:00"]

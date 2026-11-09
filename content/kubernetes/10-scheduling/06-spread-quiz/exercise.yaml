@@ -1,0 +1,22 @@
+id: k8s.scheduling.spread-quiz
+type: mcq
+version: 1
+title: Hard Rules Have No Fallback
+xp: 5
+difficulty: 3
+tags: [scheduling, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "3 pods run, one per node, and 2 stay Pending" }
+    - { id: b, text: "5 pods run: the scheduler relaxes the rule when it has to" }
+    - { id: c, text: "The Deployment is rejected because 5 is more than the node count" }
+    - { id: d, text: "5 pods run, 2 per node where possible" }
+  answer: [a]
+  explain: >
+    required anti-affinity is a filter: a node that already has an app=search pod is ruled out
+    for the next one. After 3 pods, every node is ruled out, so pods 4 and 5 stay Pending
+    forever. Nothing validates replica counts against nodes up front. If you want "as even as
+    possible, but run them all", use preferred anti-affinity or a topologySpreadConstraint with
+    maxSkew: 1 and whenUnsatisfiable: ScheduleAnyway, which gives you 2/2/1.

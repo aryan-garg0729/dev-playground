@@ -1,0 +1,39 @@
+id: k8s.access.status-page-boss
+type: project_cli
+version: 1
+title: Least-Privilege Status Page
+xp: 55
+difficulty: 4
+boss: true
+tags: [rbac, serviceaccounts, networkpolicy]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Deployment status-page runs as the status-page ServiceAccount
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy status-page -o jsonpath='sa={.spec.template.spec.serviceAccountName} ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["sa=status-page", "ready=1"]
+    - description: It can read pods, Deployments and Services
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i list pods --as=system:serviceaccount:shop:status-page -n shop; kubectl --context kind-elixirbytes auth can-i list deployments.apps --as=system:serviceaccount:shop:status-page -n shop; kubectl --context kind-elixirbytes auth can-i get services --as=system:serviceaccount:shop:status-page -n shop
+        tests:
+          - stdout_contains_all: ["yes\nyes\nyes"]
+    - description: It can't change anything it can see
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i delete pods --as=system:serviceaccount:shop:status-page -n shop; kubectl --context kind-elixirbytes auth can-i patch deployments.apps --as=system:serviceaccount:shop:status-page -n shop; kubectl --context kind-elixirbytes auth can-i create services --as=system:serviceaccount:shop:status-page -n shop
+        tests:
+          - stdout_contains_all: ["no\nno\nno"]
+    - description: It can't read Secrets, or anything outside shop
+      cli_command:
+        command: kubectl --context kind-elixirbytes auth can-i get secrets --as=system:serviceaccount:shop:status-page -n shop; kubectl --context kind-elixirbytes auth can-i list pods --as=system:serviceaccount:shop:status-page -n kube-system
+        tests:
+          - stdout_contains_all: ["no\nno"]
+    - description: Only the ingress controller's namespace may reach status-page pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get networkpolicy status-page-ingress -o jsonpath='pods={.spec.podSelector.matchLabels.app} ns={.spec.ingress[0].from[0].namespaceSelector.matchLabels.kubernetes\.io/metadata\.name}'; echo; kubectl --context kind-elixirbytes -n shop exec storefront -- wget -qO- -T 3 http://$(kubectl --context kind-elixirbytes -n shop get pods -l app=status-page -o jsonpath='{.items[0].status.podIP}') >/dev/null 2>&1 && echo storefront=allowed || echo storefront=blocked
+        tests:
+          - stdout_contains_all: ["pods=status-page", "ns=ingress-nginx", "storefront=blocked"]

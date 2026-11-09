@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"endpoints=0\n"}},{"cli":{"exit_code":0,"stdout":"pods=status-board"}},{"cli":{"exit_code":1,"stdout":"wget: download timed out\ncommand terminated with exit code 1\n"}},{"cli":{"exit_code":0,"stdout":"board_cause=service selector app=statusboard matched no pod labels\n"}}]}

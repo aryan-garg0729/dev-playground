@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"desired=3 ready=3"}},{"cli":{"exit_code":0,"stdout":"quarantined=2\n"}},{"cli":{"exit_code":0,"stdout":"name=brewd-rs-g6n22 owners=."}}]}

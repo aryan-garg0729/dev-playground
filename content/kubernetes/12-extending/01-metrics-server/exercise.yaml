@@ -1,0 +1,35 @@
+id: k8s.extending.metrics-server
+type: project_cli
+version: 1
+title: Measuring the Cluster
+xp: 20
+difficulty: 2
+tags: [metrics, autoscaling]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: metrics-server is running
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n kube-system get deploy metrics-server -o jsonpath='ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ready=1"]
+    - description: kubectl top shows every node
+      cli_command:
+        command: kubectl --context kind-elixirbytes top nodes --no-headers
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["elixirbytes-control-plane", "elixirbytes-worker", "elixirbytes-worker2"]
+    - description: Find the pod in shop using the most memory
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop top pods --sort-by=memory --no-headers | head -1
+        captures: [{ name: top, regex: "^(\\S+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt names the hungriest pod
+      cli_command:
+        command: grep -x 'hungriest_pod=${top}' answers.txt
+        tests:
+          - exit_code: 0

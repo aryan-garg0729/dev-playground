@@ -1,0 +1,37 @@
+id: dk.storage.ledger-boss
+type: project_cli
+version: 1
+title: The Ledger Must Survive
+xp: 60
+difficulty: 3
+tags: [storage, volumes, mounts]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18097
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-ledger-shop has the right mounts
+      cli_command:
+        command: "docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Name}}:{{.Destination}}:rw={{.RW}} {{end}} tmpfs={{json .HostConfig.Tmpfs}}' eb-ledger-shop"
+        tests:
+          - stdout_contains_all: ["volume:eb-ledger:/data:rw=true"]
+          - stdout_contains_all: [":/config:rw=false"]
+          - stdout_contains_all: ["\"/tmp\""]
+    - description: The order is in the eb-ledger volume
+      cli_command:
+        command: docker run --rm -v eb-ledger:/data alpine:3.20 cat /data/orders.log
+        tests:
+          - stdout_contains_all: ["elixir-of-life"]
+    - description: eb-ledger-shop is a newer container than the order
+      cli_command:
+        command: |-
+          c=$(docker inspect -f '{{.Created}}' eb-ledger-shop | cut -c1-19 | tr -d 'T:-'); o=$(docker run --rm -v eb-ledger:/data alpine:3.20 date -u -r /data/orders.log +%Y%m%d%H%M%S); if [ "$c" -gt "$o" ]; then echo "recreated=yes"; else echo "recreated=no"; fi
+        tests:
+          - stdout_contains_all: ["recreated=yes"]
+    - description: The shop still serves the order
+      http_request:
+        request: { method: GET, url: "${baseURL}/orders" }
+        tests:
+          - body_contains: "elixir-of-life"

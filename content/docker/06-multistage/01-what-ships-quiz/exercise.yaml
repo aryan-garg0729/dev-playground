@@ -1,0 +1,23 @@
+id: dk.multistage.what-ships-quiz
+type: mcq
+version: 1
+title: What Are We Shipping?
+xp: 5
+difficulty: 2
+tags: [images, multistage]
+spec:
+  question: prompt.md
+  multiple: true
+  options:
+    - { id: a, text: "The brewd binary" }
+    - { id: b, text: "The Go compiler and standard library source" }
+    - { id: c, text: "brewd's source code, in /src" }
+    - { id: d, text: "Alpine's shell and package manager" }
+    - { id: e, text: "The build cache from the cache mount" }
+  answer: [a, b, c, d]
+  explain: >
+    All of it ships. The image is the build stage's final filesystem: Alpine (shell and apk
+    included), the whole Go toolchain, brewd's source in /src and, somewhere in there, the
+    one binary that actually runs. The one thing that doesn't ship is the build cache: a cache mount is never part of the image (you checked that in chapter 4). Everything except the binary is download time for every
+    deploy and attack surface for every attacker. A multi-stage build keeps the toolchain in
+    a stage that never ships.

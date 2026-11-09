@@ -1,0 +1,22 @@
+id: k8s.triage.symptoms-quiz
+type: mcq
+version: 1
+title: Endpoints Exist, Traffic Fails
+xp: 5
+difficulty: 4
+tags: [debugging, services, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The selector is wrong" }
+    - { id: b, text: "The pods aren't ready" }
+    - { id: c, text: "The Service's targetPort doesn't match the port the container listens on" }
+    - { id: d, text: "CoreDNS is down" }
+  answer: [c]
+  explain: >
+    The EndpointSlice lists two ready pod IPs, so the selector matches and the pods pass
+    readiness (a and b are out). DNS worked too: wget resolved the name and got as far as
+    connecting (d is out). "Connection refused" means the packet reached a pod on a port
+    nothing listens on. The endpoints show port 8080, so the Service forwards to 8080 while
+    nginx listens on 80: the targetPort is wrong.

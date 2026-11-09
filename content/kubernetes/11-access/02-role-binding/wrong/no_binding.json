@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"groups=. resources=pods pods/log verbs=get list watch; "}},{"cli":{"exit_code":1,"stdout":"Error from server (NotFound): rolebindings.rbac.authorization.k8s.io \"menu-reader-pods\" not found\n"}},{"cli":{"exit_code":1,"stdout":"no\nno\n"}},{"cli":{"exit_code":1,"stdout":"no\nno\n"}}]}

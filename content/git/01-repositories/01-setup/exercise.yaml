@@ -1,0 +1,25 @@
+id: gt.repos.setup
+type: project_cli
+version: 1
+title: The Handbook Problem
+xp: 15
+difficulty: 1
+tags: [setup]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Git is installed and new enough for this course
+      cli_command:
+        command: "git version | awk '{split($3, v, \".\"); print (v[1] > 2 || (v[1] == 2 && v[2] >= 28)) ? \"git=ok\" : \"git=too-old \" $3}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["git=ok"]
+    - description: You're running from the handbook folder
+      cli_command:
+        command: pwd
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/elixirbytes/handbook"]

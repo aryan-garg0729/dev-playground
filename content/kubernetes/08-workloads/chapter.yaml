@@ -1,0 +1,10 @@
+id: k8s.workloads
+title: Jobs, CronJobs and DaemonSets
+exercises:
+  - 01-job
+  - 02-backoff-quiz
+  - 03-failing-job
+  - 04-cronjob
+  - 05-concurrency-quiz
+  - 06-daemonset
+  - 07-night-shift-boss

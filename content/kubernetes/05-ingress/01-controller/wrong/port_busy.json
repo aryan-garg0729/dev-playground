@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ready=1"}},{"cli":{"exit_code":0,"stdout":"controller=k8s.io/ingress-nginx"}},{"http":{"status":200,"body":"<h1>my other local server</h1>\n"}}]}

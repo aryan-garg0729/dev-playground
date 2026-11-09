@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":1,"stdout":"Error from server (NotFound): customresourcedefinitions.apiextensions.k8s.io \"recipes.elixirbytes.io\" not found\n"}},{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":0,"stdout":""}}]}

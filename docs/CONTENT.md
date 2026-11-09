@@ -130,7 +130,7 @@ xp: 20                       # required, 0 or more; base XP for the first pass
 difficulty: 1                # 1-5, default 1 (1-2 shows as "Easy")
 tags: [strings]              # default []; shown on the course map
 free: true                   # default false; free lessons work without a subscription
-boss: false                  # default false; only code lessons can be bosses
+boss: false                  # default false; only code and project_cli lessons can be bosses
 spec:
   ...
 ```
@@ -414,9 +414,10 @@ spec:
 
 ## 10. Boss fights
 
-A boss is a `code` lesson with `boss: true`, normally the last lesson of a chapter.
+A boss is a `code` or `project_cli` lesson with `boss: true`, normally the last lesson of a chapter.
 
 - Each check row is one HP. Visible and hidden tests both count, so a boss with 3 visible and 4 hidden tests has 7 HP. Aim for 5-8.
+- A `project_cli` boss has one HP per step test (every test is visible). Use it for hands-on courses such as Docker, where the chapter's skill lives on the learner's machine. The learner attacks with `codequest submit`.
 - While a boss is undefeated, every later chapter of the course is locked.
 - Defeating it gives +100 XP, a boss chest and Boss Slayer progress, and it appears on the learner's profile as a shipped project. Give it a project-like title ("Tip Calculator CLI", not "Exercise 12").
 - It should combine the chapter's skills into one small program. Nothing new should be introduced in the boss itself.
@@ -499,7 +500,7 @@ These are hard rules. The build and an integration test enforce them; don't work
 | `folder is not listed in chapter.yaml exercises` | Add the folder to the list, or move it into a hidden folder like `.drafts/`. |
 | `"03-x" has no exercise.yaml` | A listed folder is missing or misnamed. |
 | `exercise id "…" is already used by …` | Ids are global across all courses. Pick another. |
-| `boss: only code exercises can be bosses` | Make it a `code` lesson, or remove `boss: true`. |
+| `boss: only code and project_cli exercises can be bosses` | Make it a `code` or `project_cli` lesson, or remove `boss: true`. |
 | `answer: has 2 ids but multiple is false` | Set `multiple: true`, or give one answer. |
 | `a check with its own setup must be hidden` | Add `visible: false` to the SQL check that has `setup:`. |
 | `run: "…" must be browser, server or off` | Fix `run:` (or delete it to use the default). |

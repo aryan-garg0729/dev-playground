@@ -1,0 +1,11 @@
+id: k8s.access
+title: Access control
+exercises:
+  - 01-service-account
+  - 02-role-binding
+  - 03-resource-names
+  - 04-rbac-quiz
+  - 05-api-from-a-pod
+  - 06-network-policy
+  - 07-netpol-quiz
+  - 08-status-page-boss

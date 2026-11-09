@@ -1,0 +1,36 @@
+id: k8s.extending.validation
+type: project_cli
+version: 1
+title: The Schema Says No
+xp: 20
+difficulty: 3
+tags: [crds, validation]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Recipes dragonbrew and moonmilk exist with the right fields
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get recipes dragonbrew moonmilk -o jsonpath='{range .items[*]}{.metadata.name}:{.spec.potion}/{.spec.difficulty}/{.spec.brewMinutes} {end}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["dragonbrew:Dragonbrew/legendary/90 ", "moonmilk:Moon Milk/easy/5 "]
+    - description: The API server rejects an unknown difficulty (dry run)
+      cli_command:
+        command: >-
+          printf 'apiVersion: elixirbytes.io/v1\nkind: Recipe\nmetadata:\n  name: probe\nspec:\n  potion: Probe\n  difficulty: maybe\n' | kubectl --context kind-elixirbytes -n shop create --dry-run=server -f - 2>&1
+        tests:
+          - stdout_contains_all: ["Unsupported value", "spec.difficulty"]
+    - description: The API server rejects a brew longer than 120 minutes (dry run)
+      cli_command:
+        command: >-
+          printf 'apiVersion: elixirbytes.io/v1\nkind: Recipe\nmetadata:\n  name: probe\nspec:\n  potion: Probe\n  difficulty: easy\n  brewMinutes: 500\n' | kubectl --context kind-elixirbytes -n shop create --dry-run=server -f - 2>&1
+        captures: [{ name: field, regex: "(spec\\.\\w+): Invalid value" }]
+        tests:
+          - stdout_contains_all: ["Invalid value"]
+    - description: answers.txt records the field the API server complained about
+      cli_command:
+        command: grep -x 'rejected_field=${field}' answers.txt
+        tests:
+          - exit_code: 0

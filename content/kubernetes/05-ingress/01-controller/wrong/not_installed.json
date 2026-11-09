@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":1,"stdout":"Error from server (NotFound): namespaces \"ingress-nginx\" not found\n"}},{"cli":{"exit_code":1,"stdout":"Error from server (NotFound): ingressclasses.networking.k8s.io \"nginx\" not found\n"}},{"http":{"status":0,"body":""}}]}

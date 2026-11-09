@@ -1,0 +1,40 @@
+id: k8s.deployments.release-boss
+type: project_cli
+version: 1
+title: Release Night for the Orders API
+xp: 55
+difficulty: 3
+boss: true
+tags: [deployments, rollouts, labels]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: orders runs 4 pods of nginx:1.28-alpine, all updated and ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy orders -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas} updated={.status.updatedReplicas} image={.spec.template.spec.containers[0].image} rev={.metadata.annotations.deployment\.kubernetes\.io/revision}'
+        captures: [{ name: rev, regex: "rev=(\\d+)" }]
+        tests:
+          - stdout_contains_all: ["desired=4", "ready=4", "updated=4", "image=nginx:1.28-alpine"]
+    - description: It got to 1.28 by a rollout, not by being created that way
+      cli_command:
+        command: test ${rev} -ge 2 && echo "revision ${rev}"
+        tests:
+          - exit_code: 0
+    - description: The rollout strategy allows 2 extra and 1 missing pod
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy orders -o jsonpath='surge={.spec.strategy.rollingUpdate.maxSurge} unavailable={.spec.strategy.rollingUpdate.maxUnavailable} history={.spec.revisionHistoryLimit}'
+        tests:
+          - stdout_contains_all: ["surge=2", "unavailable=1"]
+          - stdout_contains_all: ["history=5"]
+    - description: An old 1.27 ReplicaSet is kept at 0 for rollback
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get rs -l app=orders -o jsonpath='{range .items[*]}{.spec.template.spec.containers[0].image}={.spec.replicas} {end}'
+        tests:
+          - stdout_contains_all: ["nginx:1.27-alpine=0"]
+    - description: One 1.28 pod is quarantined, running and unowned
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pods -l app=orders-quarantine -o jsonpath='{range .items[*]}{.status.phase}:{.spec.containers[0].image}:owners={.metadata.ownerReferences[*].name}. {end}'
+        tests:
+          - stdout_contains_all: ["Running:nginx:1.28-alpine:owners=."]

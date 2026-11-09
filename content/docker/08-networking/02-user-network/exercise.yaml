@@ -1,0 +1,28 @@
+id: dk.networking.user-network
+type: project_cli
+version: 1
+title: A Network of Our Own
+xp: 25
+difficulty: 2
+tags: [networking, dns]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-net is a bridge network
+      cli_command:
+        command: "docker network inspect -f 'name={{.Name}} driver={{.Driver}}' eb-net"
+        tests:
+          - stdout_contains_all: ["name=eb-net", "driver=bridge"]
+    - description: eb-api is on eb-net and publishes no ports
+      cli_command:
+        command: "docker inspect -f 'nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}} ports={{json .HostConfig.PortBindings}} image={{.Config.Image}}' eb-api"
+        tests:
+          - stdout_contains_all: ["nets=eb-net,", "ports={}", "image=elixirbytes/brewd:1.6.0"]
+    - description: Another container on eb-net reaches eb-api by name
+      cli_command:
+        command: docker run --rm --network eb-net alpine:3.20 wget -qO- -T 3 http://eb-api:8080/healthz
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ok"]

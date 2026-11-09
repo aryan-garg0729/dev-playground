@@ -1,6 +1,0 @@
-id: fd.sql
-title: SQL basics
-exercises:
-  - 01-select-columns
-  - 02-filter-and-sort
-  - 03-totals-per-customer

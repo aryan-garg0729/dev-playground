@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"schedule=*/2 * * * * concurrency=Forbid keep=3"}},{"cli":{"exit_code":0,"stdout":""}},{"cli":{"exit_code":0,"stdout":"from=manual succeeded=1"}}]}

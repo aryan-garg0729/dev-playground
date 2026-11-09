@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"clusterIP=10.96.200.14 selector=vault"}},{"cli":{"exit_code":0,"stdout":"ready=2 service=vault\npod/vault-0\npod/vault-1\n"}},{"cli":{"exit_code":0,"stdout":"data-vault-0=Bound data-vault-1=Bound "}}]}

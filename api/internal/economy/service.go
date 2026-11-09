@@ -170,7 +170,7 @@ func bump(ctx context.Context, q *store.Queries, user uuid.UUID, key string, n i
 	return nil
 }
 
-// drop picks a chest's random power-up by ChestOdds.
+// drop picks a chest's random power-up by ChestOdds ("" for none).
 func (s *Service) drop() string {
 	total := 0
 	for _, o := range ChestOdds {
@@ -183,10 +183,10 @@ func (s *Service) drop() string {
 		}
 		r -= o.Weight
 	}
-	return ChestOdds[0].PowerUp
+	return ""
 }
 
-// openChest records a chest once and pays it out: Bytes plus one power-up.
+// openChest records a chest once and pays it out: Bytes plus, half the time, one power-up.
 func (s *Service) openChest(ctx context.Context, q *store.Queries, user uuid.UUID, kind, ref string, bytes int) (*game.ChestDrop, error) {
 	p := s.drop()
 	_, err := q.OpenChest(ctx, store.OpenChestParams{UserID: user, Kind: kind, RefID: ref, Bytes: int32(bytes), Powerup: p})
@@ -203,8 +203,10 @@ func (s *Service) openChest(ctx context.Context, q *store.Queries, user uuid.UUI
 	if _, err := credit(ctx, q, user, bytes, kind+"_chest", ref); err != nil {
 		return nil, err
 	}
-	if err := q.AddInventory(ctx, store.AddInventoryParams{UserID: user, Powerup: p, N: 1}); err != nil {
-		return nil, fmt.Errorf("chest power-up: %w", err)
+	if p != "" {
+		if err := q.AddInventory(ctx, store.AddInventoryParams{UserID: user, Powerup: p, N: 1}); err != nil {
+			return nil, fmt.Errorf("chest power-up: %w", err)
+		}
 	}
 	return &game.ChestDrop{Bytes: bytes, PowerUp: p}, nil
 }
@@ -213,7 +215,7 @@ func (s *Service) openChest(ctx context.Context, q *store.Queries, user uuid.UUI
 // level-gated UI and every power-up can be tried without grinding.
 const (
 	DevStarterXP    = 1000
-	DevStarterBytes = 5000 // one of every power-up plus a Streak Repair and a max bet
+	DevStarterBytes = 10000 // one of every power-up plus a Streak Repair and a max bet
 	devGrantReason  = "dev_grant"
 	devGrantRef     = "starter"
 )

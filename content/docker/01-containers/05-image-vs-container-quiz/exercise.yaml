@@ -1,0 +1,23 @@
+id: dk.containers.image-vs-container-quiz
+type: mcq
+version: 1
+title: Image vs Container
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "apprentice: the file is part of alpine:3.20 now" }
+    - { id: b, text: "It errors: /etc/eb-badge does not exist in the new container" }
+    - { id: c, text: "apprentice, but only while eb-hello is still running" }
+    - { id: d, text: "An empty line: the file exists but is empty" }
+  answer: [b]
+  explain: >
+    An image is read-only. Each container gets its own thin writable layer on top of it, and
+    your badge went into eb-hello's layer. A new container from alpine:3.20 starts with a fresh,
+    empty layer, so it has no /etc/eb-badge (cat exits 1). Whether eb-hello is running doesn't
+    matter: its layer is never shared. Removing eb-hello (docker rm) deletes its layer and the
+    file with it, a fact that will hurt in the storage chapter.

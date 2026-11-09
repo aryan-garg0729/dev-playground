@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"node/elixirbytes-worker2\n"}},{"cli":{"exit_code":0,"stdout":"selector=fast ready=2"}},{"cli":{"exit_code":0,"stdout":"elixirbytes-worker2 elixirbytes-worker2 "}}]}

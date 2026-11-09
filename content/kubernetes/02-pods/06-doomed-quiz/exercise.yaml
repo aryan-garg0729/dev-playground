@@ -1,0 +1,23 @@
+id: k8s.pods.doomed-quiz
+type: mcq
+version: 1
+title: A Deleted Pod Stays Deleted
+xp: 5
+difficulty: 2
+tags: [pods, concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The kubelet notices and recreates storefront within a few seconds, because its restartPolicy is Always" }
+    - { id: b, text: "Nothing. storefront is gone for good, along with the edit you made inside it" }
+    - { id: c, text: "The scheduler recreates it on a different node" }
+    - { id: d, text: "It comes back, but only after the node reboots" }
+  answer: [b]
+  explain: >
+    restartPolicy restarts a container *inside an existing pod*. Deleting the pod removes the
+    object itself, so there's nothing left to restart, and no controller was ever asked to
+    keep a pod called storefront alive. Even if you re-apply the manifest, you get a fresh pod
+    from the image: the index.html you edited by hand in lesson 2 is gone. That's why you
+    don't create bare pods for real work. A controller (next chapter) keeps the count for you.

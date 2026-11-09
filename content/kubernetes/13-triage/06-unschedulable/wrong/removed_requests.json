@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ready=1"}},{"cli":{"exit_code":0,"stdout":"cpu= memory=."}},{"cli":{"exit_code":0,"stdout":"report_cause=requested 64Gi memory and 16 cpu, more than any node, Insufficient\n"}}]}

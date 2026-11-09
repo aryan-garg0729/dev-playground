@@ -1,0 +1,22 @@
+id: k8s.config.base64-quiz
+type: mcq
+version: 1
+title: Base64 Is Not Encryption
+xp: 5
+difficulty: 2
+tags: [secrets, security]
+spec:
+  question: prompt.md
+  multiple: true
+  options:
+    - { id: a, text: "RBAC rules that let only the people and pods who need it read Secrets in that namespace" }
+    - { id: b, text: "The base64 encoding in .data" }
+    - { id: c, text: "Encryption at rest, so etcd (and its backups) hold ciphertext" }
+    - { id: d, text: "Marking the Secret type: Opaque" }
+  answer: [a, c]
+  explain: >
+    base64 is an encoding, so anyone who can read the object can decode it in one command, and
+    Opaque just means "arbitrary data". The real protection is who can read it: RBAC, so that
+    get/list on secrets is granted narrowly (anyone who can create pods in a namespace can also
+    mount its Secrets). Then encryption at rest, so a stolen etcd backup or disk doesn't leak
+    every password. Encryption at rest is a control-plane setting, often with a cloud KMS.

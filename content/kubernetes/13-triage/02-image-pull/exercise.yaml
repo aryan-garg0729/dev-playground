@@ -1,0 +1,23 @@
+id: k8s.triage.image-pull
+type: project_cli
+version: 1
+title: Pods That Never Start
+xp: 20
+difficulty: 2
+tags: [debugging, images]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: pager-api runs 2 ready pods on a real nginx image
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get deploy pager-api -o jsonpath='ready={.status.readyReplicas} image={.spec.template.spec.containers[0].image}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ready=2", "image=nginx:1.27-alpine"]
+    - description: incident.txt names the cause
+      cli_command:
+        command: grep -Ei '^pager_cause=.*(image|tag|typo|pull|repository)' incident.txt
+        tests:
+          - exit_code: 0

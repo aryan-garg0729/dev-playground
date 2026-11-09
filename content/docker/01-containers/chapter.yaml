@@ -1,0 +1,13 @@
+id: dk.containers
+title: Containers
+exercises:
+  - 01-setup
+  - 02-process-quiz
+  - 03-keep-running
+  - 04-exec
+  - 05-image-vs-container-quiz
+  - 06-exit-codes
+  - 07-kill-vs-stop
+  - 08-signals-quiz
+  - 09-logs
+  - 10-night-shift-boss

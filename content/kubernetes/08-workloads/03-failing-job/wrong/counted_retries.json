@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"backoff=2 policy=Never failed=BackoffLimitExceeded"}},{"cli":{"exit_code":0,"stdout":"pods=3\n"}},{"cli":{"exit_code":1,"stdout":""}},{"cli":{"exit_code":0,"stdout":"ERROR: supplier feed unreachable\nERROR: supplier feed unreachable\nERROR: supplier feed unreachable\n"}}]}

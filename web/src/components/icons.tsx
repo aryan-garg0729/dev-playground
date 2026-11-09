@@ -133,6 +133,12 @@ export const ShieldIcon = (p: IconProps) => (
     <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z" />
   </Icon>
 );
+export const KeyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="m10.8 12.2 9.2-9.2M17 6l3 3M14 9l2 2" />
+  </Icon>
+);
 export const FlameOffIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 3c.5 3 3.5 4.5 3.5 8.5a3.5 3.5 0 0 1-7 0c0-1.6.7-2.7 1.5-3.5M3 3l18 18" />

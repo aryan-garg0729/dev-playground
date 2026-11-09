@@ -1,0 +1,21 @@
+id: k8s.access.netpol-quiz
+type: mcq
+version: 1
+title: Policies Add Up
+xp: 5
+difficulty: 3
+tags: [networkpolicy, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Only role=vault-client pods: the newest policy replaces the old one" }
+    - { id: b, text: "Both role=vault-client pods and pods in namespace monitoring: allowed sources from all policies selecting a pod are combined" }
+    - { id: c, text: "Nobody: two policies on the same pods cancel each other out" }
+    - { id: d, text: "Everyone: adding a second policy turns the restriction off" }
+  answer: [b]
+  explain: >
+    NetworkPolicies are additive. Once any policy selects a pod, it accepts the union of
+    everything all its policies allow, so the second policy opens one more door without
+    closing the first. Nothing is ever replaced or cancelled. Like RBAC, you can't write a
+    policy that removes an allowance; you remove or narrow the policy that grants it.

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=exited image=alpine:3.20\n"}}, {"cli": {"exit_code": 0, "stdout": "tty=false attached=true\n"}}]}

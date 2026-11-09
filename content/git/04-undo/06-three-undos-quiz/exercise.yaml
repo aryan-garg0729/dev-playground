@@ -1,0 +1,22 @@
+id: gt.undo.three-undos-quiz
+type: mcq
+version: 1
+title: Restore, Reset or Revert?
+xp: 5
+difficulty: 2
+tags: [reset, restore, revert]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "git restore --source HEAD~1 on every file it touched" }
+    - { id: b, text: "git reset --hard HEAD~1, then push" }
+    - { id: c, text: "git revert <that commit>, then push" }
+    - { id: d, text: "Delete the branch and recreate it" }
+  answer: [c]
+  explain: >
+    The commit is already on the shared main, so history must only grow. git revert adds a
+    new commit that undoes the old one; anyone who pulled the bad commit just pulls the fix.
+    A hard reset rewrites history that others have (and a normal push will be rejected
+    anyway). restore could rebuild the files, but you'd be doing revert's job by hand, file
+    by file, with no record linking the fix to what it undoes.

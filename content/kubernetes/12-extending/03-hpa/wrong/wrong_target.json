@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"req=100m lim=200m svc=rush"}},{"cli":{"exit_code":0,"stdout":"target=Deployment/rush min=1 max=10 cpu=80"}},{"cli":{"exit_code":0,"stdout":"current=69."}},{"cli":{"exit_code":0,"stdout":"New size: 2; reason: cpu resource utilization (percentage of request) above target\n"}}]}

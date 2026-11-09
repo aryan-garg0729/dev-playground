@@ -1,0 +1,22 @@
+id: k8s.workloads.concurrency-quiz
+type: mcq
+version: 1
+title: When a Run Overruns
+xp: 5
+difficulty: 3
+tags: [cronjobs, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Allow: both run at the same time, and both write to the ledger" }
+    - { id: b, text: "Forbid: the 01:00 run is skipped because the 00:00 run is still going" }
+    - { id: c, text: "Replace: the 00:00 run is stopped and the 01:00 run starts" }
+    - { id: d, text: "Forbid: the 00:00 run is stopped so the 01:00 run can start on time" }
+  answer: [b]
+  explain: >
+    Forbid means "never overlap": if the previous Job is still running when the schedule fires,
+    that run is skipped. That's the safe choice for a job that must not run twice at once,
+    like totalling a ledger. Allow (the default) would start a second copy alongside the first,
+    and Replace would kill the running one and start fresh, which suits jobs where only the
+    latest data matters.

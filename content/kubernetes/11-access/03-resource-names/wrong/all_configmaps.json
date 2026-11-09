@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"yes\n"}},{"cli":{"exit_code":0,"stdout":"yes\n"}},{"cli":{"exit_code":0,"stdout":"yes\nno\n"}},{"cli":{"exit_code":1,"stdout":"yes\nno\n"}}]}

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "server=\nCannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?\n"}}, {"cli": {"exit_code": 125, "stdout": "docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?\n"}}]}

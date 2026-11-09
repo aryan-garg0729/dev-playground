@@ -1,0 +1,29 @@
+id: gt.rebase.reword
+type: project_cli
+version: 1
+title: Say What You Did
+xp: 20
+difficulty: 2
+tags: [rebase]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The last two commits on main are E3 on top of the reworded D3
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 main"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E3: link the refund policy\nD3: add the refund policy\n"]
+    - description: The old message is gone from every branch
+      cli_command:
+        command: "git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_none: ["D3: stuff"]
+    - description: The refund policy is still there
+      cli_command:
+        command: "git show main:refunds.md"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["refunded"]

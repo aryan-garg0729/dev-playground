@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"potions=2 scrolls=2 "}},{"cli":{"exit_code":0,"stdout":"potions shop\n"}},{"cli":{"exit_code":0,"stdout":"potions shop\n"}}]}

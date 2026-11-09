@@ -1,0 +1,22 @@
+id: gt.conflicts.markers-quiz
+type: mcq
+version: 1
+title: Reading Conflict Markers
+xp: 5
+difficulty: 2
+tags: [conflicts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The top part is from the branch being merged in; the bottom is yours" }
+    - { id: b, text: "The top part (after <<<<<<< HEAD) is the branch you're on; the bottom is the branch being merged in" }
+    - { id: c, text: "The top part is the old version from before either change" }
+    - { id: d, text: "Git has already picked the top part; the bottom is just for reference" }
+  answer: [b]
+  explain: >
+    During a merge, HEAD is the branch you're standing on, so the part between <<<<<<< HEAD
+    and ======= is "ours", and the part between ======= and >>>>>>> feat/handover is
+    "theirs", the branch you're merging in. Git hasn't picked anything: until you edit the
+    file and delete all three marker lines, it's unresolved. The common ancestor's version
+    isn't shown by default.

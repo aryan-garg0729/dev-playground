@@ -1,1 +1,0 @@
-const kinds = 3;

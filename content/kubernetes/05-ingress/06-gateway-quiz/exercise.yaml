@@ -1,0 +1,23 @@
+id: k8s.ingress.gateway-quiz
+type: mcq
+version: 1
+title: Ingress and the Gateway API
+xp: 5
+difficulty: 3
+tags: [ingress, gateway-api, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Ingress objects stop working on new clusters, so every Ingress must be rewritten today" }
+    - { id: b, text: "The Ingress API stays; what's retired is one controller. Existing Ingresses keep working, and new projects can choose the Gateway API, which moves controller-specific annotations into typed, portable fields" }
+    - { id: c, text: "The Gateway API is just Ingress renamed, with the same fields" }
+    - { id: d, text: "The Gateway API only works on cloud load balancers" }
+  answer: [b]
+  explain: >
+    Ingress (networking.k8s.io/v1) is a stable API and isn't being removed; ingress-nginx is one
+    controller that implements it, and it is now in retirement. The Gateway API is the newer,
+    richer standard: a Gateway (the listener, owned by the platform team) and HTTPRoutes (the
+    routing, owned by app teams), with features like header matching, traffic splitting and
+    path rewrites as real fields instead of per-controller annotations. It runs on laptops too,
+    with implementations such as Envoy Gateway, NGINX Gateway Fabric, Cilium and Istio.

@@ -1,0 +1,27 @@
+id: k8s.cluster.setup
+type: project_cli
+version: 1
+title: A Cluster on Your Laptop
+xp: 15
+difficulty: 1
+tags: [setup, kind]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The elixirbytes cluster has three nodes
+      cli_command:
+        command: kubectl --context kind-elixirbytes get nodes --no-headers
+        tests:
+          - exit_code: 0
+          - stdout_lines_gt: 2
+          - stdout_contains_all: ["elixirbytes-control-plane", "elixirbytes-worker", "elixirbytes-worker2"]
+          - stdout_contains_none: ["NotReady"]
+    - description: The API server says it is ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes get --raw /readyz
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ok"]

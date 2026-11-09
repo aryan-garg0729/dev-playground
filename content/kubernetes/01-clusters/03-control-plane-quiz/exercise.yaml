@@ -1,0 +1,24 @@
+id: k8s.cluster.control-plane-quiz
+type: mcq
+version: 1
+title: Who Does What in the Cluster
+xp: 5
+difficulty: 2
+tags: [architecture]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The kubelet on each worker reads etcd and starts any pod it finds" }
+    - { id: b, text: "The scheduler starts the containers on the chosen node" }
+    - { id: c, text: "The API server stores it in etcd, the scheduler picks a node, and that node's kubelet starts the containers" }
+    - { id: d, text: "kubectl connects to a worker node over SSH and runs the containers there" }
+  answer: [c]
+  explain: >
+    Everything goes through the API server: it checks who you are, validates the object and
+    writes it to etcd. The scheduler is watching for pods with no node; it only *chooses* one
+    and writes that choice back through the API server. The kubelet on that node is watching
+    for pods assigned to it, and it asks the container runtime (containerd) to start them.
+    Nothing but the API server touches etcd (so not option a), and the scheduler never runs
+    anything itself (so not option b).

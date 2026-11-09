@@ -1,0 +1,29 @@
+id: k8s.services.clusterip
+type: project_cli
+version: 1
+title: One Name for Many Pods
+xp: 20
+difficulty: 2
+tags: [services, clusterip]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Service brewd is a ClusterIP on port 80 selecting app=brewd
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc brewd -o jsonpath='type={.spec.type} port={.spec.ports[0].port} target={.spec.ports[0].targetPort} selector={.spec.selector.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["type=ClusterIP", "port=80", "target=80", "selector=brewd"]
+    - description: Count brewd's ready pods
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='ready={.status.readyReplicas}'
+        captures: [{ name: ready, regex: "ready=(\\d+)" }]
+        tests:
+          - stdout_contains_all: ["ready="]
+    - description: The Service has one endpoint per ready pod
+      cli_command:
+        command: echo "endpoints=$(kubectl --context kind-elixirbytes -n shop get endpointslices -l kubernetes.io/service-name=brewd -o jsonpath='{range .items[*].endpoints[?(@.conditions.ready==true)]}{.addresses[0]} {end}' | wc -w | tr -d ' ')"
+        tests:
+          - stdout_contains_all: ["endpoints=${ready}"]

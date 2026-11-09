@@ -1,0 +1,37 @@
+id: k8s.storage.storage-classes
+type: project_cli
+version: 1
+title: Where Data Can Live
+xp: 15
+difficulty: 2
+tags: [storage, storageclasses]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find the default StorageClass
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes get sc -o jsonpath='{range .items[?(@.metadata.annotations.storageclass\.kubernetes\.io/is-default-class=="true")]}default={.metadata.name} binding={.volumeBindingMode} reclaim={.reclaimPolicy}{end}'
+        captures:
+          - { name: sc, regex: "default=(\\S+)" }
+          - { name: binding, regex: "binding=(\\S+)" }
+          - { name: reclaim, regex: "reclaim=(\\S+)" }
+        tests:
+          - stdout_contains_all: ["default="]
+    - description: answers.txt names the default class
+      cli_command:
+        command: grep -x 'default_sc=${sc}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: answers.txt records when it binds volumes
+      cli_command:
+        command: grep -x 'sc_binding=${binding}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: answers.txt records what happens to data when the claim is deleted
+      cli_command:
+        command: grep -x 'sc_reclaim=${reclaim}' answers.txt
+        tests:
+          - exit_code: 0

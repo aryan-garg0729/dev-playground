@@ -1,0 +1,36 @@
+id: gt.branches.detached
+type: project_cli
+version: 1
+title: Detached HEAD
+xp: 20
+difficulty: 2
+tags: [head, switch]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find A1
+      cli_command:
+        command: "git log -1 --format=%H ':/^A1:'"
+        captures: [{ name: a1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: experiment/old-index holds E2, made on top of A1
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' experiment/old-index"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E2:", "parents=${a1}"]
+    - description: You're back on main, not detached
+      cli_command:
+        command: git symbolic-ref --short HEAD
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["main"]
+    - description: main doesn't contain E2
+      cli_command:
+        command: "git --no-pager log --format=%s main"
+        tests:
+          - stdout_contains_none: ["E2:"]

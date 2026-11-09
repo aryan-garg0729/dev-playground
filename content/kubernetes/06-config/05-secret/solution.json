@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"type=Opaque keys={\"password:***,\"username:***}"}},{"cli":{"exit_code":0,"stdout":"user=brewd pwlen=32\n"}},{"cli":{"exit_code":0,"stdout":"length ok\n"}},{"cli":{"exit_code":0,"stdout":"no secret manifests\n"}}]}

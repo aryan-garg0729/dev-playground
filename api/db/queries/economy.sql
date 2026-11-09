@@ -109,14 +109,37 @@ SELECT count(*)::int AS chapters,
 FROM chapters ch WHERE ch.course_id = @course_id AND ch.published;
 
 -- name: LockedChapters :many
--- Chapters behind an undefeated boss: every chapter after one whose boss the user has not passed.
+-- Chapters behind an undefeated boss: every chapter after one whose boss the user has not
+-- passed, unless a Skeleton Key waived that boss (chapter_keys.gate_chapter_id).
 SELECT ch.id FROM chapters ch
 WHERE ch.course_id = @course_id AND ch.published AND EXISTS (
     SELECT 1 FROM chapters prev
     JOIN exercises b ON b.chapter_id = prev.id AND b.boss AND b.published
     LEFT JOIN progress p ON p.exercise_id = b.id AND p.user_id = sqlc.narg('user_id')
     WHERE prev.course_id = ch.course_id AND prev.published AND prev.order_index < ch.order_index
-      AND COALESCE(p.status, '') <> 'passed');
+      AND COALESCE(p.status, '') <> 'passed'
+      AND NOT EXISTS (SELECT 1 FROM chapter_keys k WHERE k.user_id = sqlc.narg('user_id') AND k.gate_chapter_id = prev.id));
+
+-- name: ChapterGate :one
+-- The latest chapter before @chapter_id whose boss the user has not passed and no key waived:
+-- the boss that locks it.
+SELECT prev.id FROM chapters ch
+JOIN chapters prev ON prev.course_id = ch.course_id AND prev.published AND prev.order_index < ch.order_index
+JOIN exercises b ON b.chapter_id = prev.id AND b.boss AND b.published
+LEFT JOIN progress p ON p.exercise_id = b.id AND p.user_id = @user_id
+WHERE ch.id = @chapter_id AND COALESCE(p.status, '') <> 'passed'
+  AND NOT EXISTS (SELECT 1 FROM chapter_keys k WHERE k.user_id = @user_id AND k.gate_chapter_id = prev.id)
+ORDER BY prev.order_index DESC LIMIT 1;
+
+-- name: GetChapter :one
+SELECT id, course_id, order_index FROM chapters WHERE id = @id AND published;
+
+-- name: CourseKey :one
+SELECT chapter_id FROM chapter_keys WHERE user_id = @user_id AND course_id = @course_id;
+
+-- name: InsertChapterKey :exec
+INSERT INTO chapter_keys (user_id, course_id, gate_chapter_id, chapter_id)
+VALUES (@user_id, @course_id, @gate_chapter_id, @chapter_id);
 
 -- name: BumpCounter :one
 INSERT INTO counters (user_id, key, value) VALUES (@user_id, @key, @n::int)
@@ -237,3 +260,6 @@ WHERE user_id = @user_id AND powerup = 'peek_shown' AND split_part(ref_id, ':', 
 
 -- name: RecordPeek :exec
 INSERT INTO powerup_uses (user_id, powerup, ref_id) VALUES (@user_id, 'peek_shown', @submission_id::text || ':' || @check_index::text);
+
+-- name: GetCounter :one
+SELECT COALESCE((SELECT value FROM counters WHERE user_id = @user_id AND key = @key), 0)::int AS value;

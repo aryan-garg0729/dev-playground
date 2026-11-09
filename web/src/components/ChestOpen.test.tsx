@@ -30,6 +30,12 @@ describe('ChestOpen', () => {
     vi.useRealTimers();
   });
 
+  it('says so when the chest held no power-up', () => {
+    render(<ChestOpen title="Daily chest" loot={{ bytes: 52, powerup: '' }} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog')).toHaveTextContent('+52 Bytes');
+    expect(screen.getByRole('dialog')).toHaveTextContent('No power-up this time');
+  });
+
   it('shows an error instead of loot', () => {
     render(<ChestOpen title="Daily chest" loot={undefined} error="Chest not ready" onClose={vi.fn()} />);
     expect(screen.getByRole('alert')).toHaveTextContent('Chest not ready');

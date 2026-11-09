@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"A4: ask before renaming files\n\nCONTRIBUTING.md\n"}},{"cli":{"exit_code":0,"stdout":"secret_commits=0\n"}},{"cli":{"exit_code":0,"stdout":""}}]}

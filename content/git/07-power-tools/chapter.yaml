@@ -1,0 +1,11 @@
+id: gt.tools
+title: Power tools
+exercises:
+  - 01-stash
+  - 02-stash-quiz
+  - 03-cherry-pick
+  - 04-tags
+  - 05-describe
+  - 06-bisect
+  - 07-worktree-quiz
+  - 08-hotfix-boss

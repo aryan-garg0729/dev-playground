@@ -1,0 +1,38 @@
+id: gt.rebase.onto
+type: project_cli
+version: 1
+title: Main Moved Without You
+xp: 25
+difficulty: 2
+tags: [rebase]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find A3 (the fix on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^A3:'"
+        captures: [{ name: a3, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: B3 was replayed on top of A3
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^B3:'"
+        tests:
+          - stdout_contains_all: ["parents=${a3}"]
+    - description: main is at B3
+      cli_command:
+        command: "git log -1 --format=%s main"
+        tests:
+          - stdout_contains_all: ["B3:"]
+    - description: No merge commit since A3
+      cli_command:
+        command: "echo \"merges=$(git rev-list --merges --count ${a3}..main)\""
+        tests:
+          - stdout_contains_all: ["merges=0\n"]
+    - description: The rollback section is on main
+      cli_command:
+        command: "git show main:runbooks/deploy.md"
+        tests:
+          - stdout_contains_all: ["## Rollback"]

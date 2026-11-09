@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"class=nginx ->potions  "}},{"cli":{"exit_code":0,"stdout":"potions shop\n"}},{"cli":{"exit_code":0,"stdout":"<html>404 Not Found</html>\n"}}]}

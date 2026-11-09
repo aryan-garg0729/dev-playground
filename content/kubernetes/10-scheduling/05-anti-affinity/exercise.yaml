@@ -1,0 +1,28 @@
+id: k8s.scheduling.anti-affinity
+type: project_cli
+version: 1
+title: Never on the Same Node
+xp: 25
+difficulty: 4
+tags: [scheduling, affinity]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: spread requires its pods to avoid each other per hostname
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy spread -o jsonpath='key={.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey} match={.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchLabels.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["key=kubernetes.io/hostname", "match=spread"]
+    - description: Both spread pods are ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy spread -o jsonpath='desired={.spec.replicas} ready={.status.readyReplicas}'
+        tests:
+          - stdout_contains_all: ["desired=2", "ready=2"]
+    - description: They run on two different nodes
+      cli_command:
+        command: echo "nodes=$(kubectl --context kind-elixirbytes -n shop get pods -l app=spread -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')"
+        tests:
+          - stdout_contains_all: ["nodes=2"]

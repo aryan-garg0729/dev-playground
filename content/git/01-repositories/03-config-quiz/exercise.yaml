@@ -1,0 +1,23 @@
+id: gt.repos.config-quiz
+type: mcq
+version: 1
+title: Which Config Wins?
+xp: 5
+difficulty: 1
+tags: [config]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "you@personal.dev, because global settings apply to every repo" }
+    - { id: b, text: "you@elixirbytes.shop, because the most specific level wins" }
+    - { id: c, text: "Whichever was set most recently" }
+    - { id: d, text: "Git refuses to commit until the two agree" }
+  answer: [b]
+  explain: >
+    Git reads all three levels and the narrowest one wins: local (this repo's .git/config)
+    beats global (~/.gitconfig), which beats system (/etc/gitconfig). Global is a default,
+    not an order. That's exactly why you can keep your personal email everywhere and still
+    commit to one work repo with your work email. The order you ran the commands in doesn't
+    matter.

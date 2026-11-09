@@ -1,0 +1,30 @@
+id: dk.dockerfile.meet-brewd
+type: project_cli
+version: 1
+title: Meet brewd
+xp: 15
+difficulty: 1
+tags: [setup]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: app/go.mod declares the brewd module
+      cli_command:
+        command: cat app/go.mod
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["module elixirbytes/brewd", "go 1.23"]
+    - description: app/main.go is the brewd server
+      cli_command:
+        command: grep -E 'var version|ListenAndServe|SIGTERM' app/main.go
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["var version = \"dev\"", "ListenAndServe", "SIGTERM"]
+    - description: The test fixtures are in app/testdata
+      cli_command:
+        command: ls app/testdata
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["fixtures.bin"]

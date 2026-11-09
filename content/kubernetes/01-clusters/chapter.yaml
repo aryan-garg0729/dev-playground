@@ -1,0 +1,11 @@
+id: k8s.cluster
+title: Clusters and kubectl
+exercises:
+  - 01-setup
+  - 02-why-orchestrate-quiz
+  - 03-control-plane-quiz
+  - 04-read-the-nodes
+  - 05-namespace
+  - 06-api-map
+  - 07-apply-quiz
+  - 08-recon-boss

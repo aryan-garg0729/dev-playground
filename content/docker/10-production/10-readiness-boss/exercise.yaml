@@ -1,0 +1,38 @@
+id: dk.production.readiness-boss
+type: project_cli
+version: 1
+title: Production Readiness Review
+xp: 80
+difficulty: 5
+tags: [security, limits, healthchecks, registry]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18094
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-prod runs the release image from our registry, and it's healthy
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} health={{.State.Health.Status}}' eb-prod"
+        tests:
+          - stdout_contains_all: ["image=localhost:15000/elixirbytes/brewd:release"]
+          - stdout_contains_all: ["health=healthy"]
+    - description: brewd isn't root
+      cli_command:
+        command: docker exec eb-prod id -u
+        tests:
+          - stdout_contains_all: ["10001"]
+    - description: eb-prod is locked down, limited and self-healing
+      cli_command:
+        command: "docker inspect -f 'ro={{.HostConfig.ReadonlyRootfs}} caps={{json .HostConfig.CapDrop}} sec={{json .HostConfig.SecurityOpt}} mem={{.HostConfig.Memory}} swap={{.HostConfig.MemorySwap}} restart={{.HostConfig.RestartPolicy.Name}}' eb-prod"
+        tests:
+          - stdout_contains_all: ["ro=true"]
+          - stdout_contains_all: ["caps=[\"ALL\"]"]
+          - stdout_contains_all: ["no-new-privileges"]
+          - stdout_contains_all: ["mem=67108864", "swap=67108864", "restart=unless-stopped"]
+    - description: It takes orders
+      http_request:
+        request: { method: POST, url: "${baseURL}/orders?potion=philosophers-stone" }
+        tests:
+          - status_code: 201

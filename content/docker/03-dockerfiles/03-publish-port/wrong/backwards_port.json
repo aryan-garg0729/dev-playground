@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "status=running image=elixirbytes/brewd:v1\nno public port '8080/tcp' published for eb-web\n"}}, {"http": {"status": 0, "headers": {}, "body": "", "error": "Get \"http://localhost:18080/healthz\": EOF"}}, {"http": {"status": 0, "headers": {}, "body": "", "error": "Get \"http://localhost:18080/version\": EOF"}}]}

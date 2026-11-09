@@ -1,0 +1,23 @@
+id: dk.production.secrets-quiz
+type: mcq
+version: 1
+title: The Leaky Build Arg
+xp: 5
+difficulty: 3
+tags: [security, secrets, build-args]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nobody: build args disappear after the build" }
+    - { id: b, text: "Anyone who can pull the image, by running docker history" }
+    - { id: c, text: "Only people with access to the build server" }
+    - { id: d, text: "Nobody, because the RUN step ran in a separate shell" }
+  answer: [b]
+  explain: >
+    An ARG isn't in the running container's environment, but it is recorded in the image's
+    history: docker history --no-trunc prints "RUN |1 POTION_KEY=sk-live-... /bin/sh -c ..." in
+    plain text, and so does the ARG line. ENV is worse still: it ships in every container's
+    environment. Secrets belong in a BuildKit secret mount: RUN --mount=type=secret,id=potion_key
+    reads /run/secrets/potion_key during that one step only, and docker build --secret
+    id=potion_key,src=./potion_key.txt supplies it. It's never stored in any layer or history.

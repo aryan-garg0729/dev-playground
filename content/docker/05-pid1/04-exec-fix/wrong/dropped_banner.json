@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "exec brewd \"$@\"\n"}}, {"cli": {"exit_code": 0, "stdout": "status=exited exit=0 image=elixirbytes/brewd:ch5\n"}}, {"cli": {"exit_code": 0, "stdout": "2026/11/08 07:51:03 brewd dev listening on :8080\n2026/11/08 07:51:04 brewd: shutting down\n"}}]}

@@ -1,0 +1,55 @@
+id: k8s.cluster.recon-boss
+type: project_cli
+version: 1
+title: Day-One Recon Report
+xp: 50
+difficulty: 2
+tags: [nodes, namespaces, kubectl]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find the control-plane node and count the workers
+      cli_command:
+        command: kubectl --context kind-elixirbytes get nodes -l node-role.kubernetes.io/control-plane -o jsonpath='cp={.items[0].metadata.name} version={.items[0].status.nodeInfo.kubeletVersion}'; echo " workers=$(kubectl --context kind-elixirbytes get nodes --no-headers | grep -vc control-plane)"
+        captures:
+          - { name: cp, regex: "cp=(\\S+)" }
+          - { name: version, regex: "version=(\\S+)" }
+          - { name: workers, regex: "workers=(\\d+)" }
+        tests:
+          - exit_code: 0
+    - description: recon.txt names the control-plane node
+      cli_command:
+        command: grep -x 'control_plane=${cp}' recon.txt
+        tests:
+          - exit_code: 0
+    - description: recon.txt records the Kubernetes version
+      cli_command:
+        command: grep -x 'k8s_version=${version}' recon.txt
+        tests:
+          - exit_code: 0
+    - description: recon.txt records the worker count
+      cli_command:
+        command: grep -x 'workers=${workers}' recon.txt
+        tests:
+          - exit_code: 0
+    - description: Find where the cluster DNS runs
+      cli_command:
+        command: kubectl --context kind-elixirbytes get pods -A -l k8s-app=kube-dns -o jsonpath='ns={.items[0].metadata.namespace}'
+        captures: [{ name: dnsns, regex: "ns=(\\S+)" }]
+        tests:
+          - exit_code: 0
+    - description: recon.txt records the DNS namespace
+      cli_command:
+        command: grep -x 'dns_namespace=${dnsns}' recon.txt
+        tests:
+          - exit_code: 0
+    - description: Namespace shop-staging exists alongside shop
+      cli_command:
+        command: kubectl --context kind-elixirbytes get namespaces shop shop-staging -o jsonpath='{range .items[*]}{.metadata.name}={.status.phase} {end}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["shop=Active", "shop-staging=Active"]

@@ -1,0 +1,30 @@
+id: dk.cache.deps-first
+type: project_cli
+version: 1
+title: Dependencies First
+xp: 20
+difficulty: 2
+tags: [cache, dockerfile]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The Dockerfile copies go.mod on its own
+      cli_command:
+        command: grep -E '^(COPY|RUN)' Dockerfile
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["COPY app/go.mod", "go mod download"]
+    - description: In elixirbytes/brewd:cached, dependencies are downloaded before the source is copied
+      cli_command:
+        command: |-
+          docker history --no-trunc --format '{{.CreatedBy}}' elixirbytes/brewd:cached | awk '/go mod download/{d=NR} /COPY app\/ \./{c=NR} END{if (d > c && c > 0) print "order=deps-first"; else print "order=source-first"}'
+        tests:
+          - stdout_contains_all: ["order=deps-first"]
+    - description: brewd still runs
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:cached brewd --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["brewd dev"]

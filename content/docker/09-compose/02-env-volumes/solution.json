@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "/orders\n"}}, {"cli": {"exit_code": 0, "stdout": "volume:elixirbytes_ledger:/orders \n"}}, {"cli": {"exit_code": 0, "stdout": "starlight\n"}}]}

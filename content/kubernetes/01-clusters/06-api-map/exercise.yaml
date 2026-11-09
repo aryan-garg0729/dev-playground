@@ -1,0 +1,46 @@
+id: k8s.cluster.api-map
+type: project_cli
+version: 1
+title: Map of the API
+xp: 20
+difficulty: 2
+tags: [api-resources, explain]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Look up CronJob's short name
+      cli_command:
+        command: kubectl --context kind-elixirbytes api-resources --no-headers | grep -w CronJob
+        captures: [{ name: short, regex: "^cronjobs\\s+(\\S+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt records CronJob's short name
+      cli_command:
+        command: grep -x 'cronjob_short=${short}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: Look up whether Node is namespaced
+      cli_command:
+        command: kubectl --context kind-elixirbytes api-resources --no-headers | grep -E " Node$"
+        captures: [{ name: nodens, regex: "(true|false)\\s+Node" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt records whether Node is namespaced
+      cli_command:
+        command: grep -x "node_namespaced=${nodens}" answers.txt
+        tests:
+          - exit_code: 0
+    - description: Read the default restart policy from explain
+      cli_command:
+        command: kubectl --context kind-elixirbytes explain pod.spec.restartPolicy
+        captures: [{ name: restart, regex: "Defaults? to (\\w+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt records the default restart policy
+      cli_command:
+        command: grep -x "restart_default=${restart}" answers.txt
+        tests:
+          - exit_code: 0

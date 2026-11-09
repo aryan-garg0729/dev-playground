@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"path=/ ready=4 updated=4"}},{"cli":{"exit_code":0,"stdout":"/=4 =0 /healthz=0 =0 =0 =0 =0 "}},{"cli":{"exit_code":0,"stdout":"stuck_new_ready=0\nstuck_old_ready=4\n"}}]}

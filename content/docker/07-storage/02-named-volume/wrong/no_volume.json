@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "Error response from daemon: get eb-orders: no such volume\n"}}, {"cli": {"exit_code": 0, "stdout": "\n"}}, {"cli": {"exit_code": 1, "stdout": "cat: can't open '/data/orders.log': No such file or directory\n"}}, {"http": {"status": 200, "headers": {}, "body": "basilisk\n"}}]}

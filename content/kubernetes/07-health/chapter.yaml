@@ -1,0 +1,11 @@
+id: k8s.health
+title: Probes and resources
+exercises:
+  - 01-readiness
+  - 02-stuck-rollout
+  - 03-probes-quiz
+  - 04-liveness
+  - 05-requests-limits
+  - 06-oom
+  - 07-qos-quiz
+  - 08-checkout-boss

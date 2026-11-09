@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"groups=. resources=pods pods/log verbs=get list watch; "}},{"cli":{"exit_code":0,"stdout":"role=Role/pod-reader subjects=ServiceAccount/shop/menu-reader "}},{"cli":{"exit_code":0,"stdout":"yes\nyes\n"}},{"cli":{"exit_code":1,"stdout":"no\nno\n"}}]}

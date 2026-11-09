@@ -199,7 +199,7 @@ func (s *Service) questProgress(ctx context.Context, q *store.Queries, ev game.G
 		"lessons":   1,
 		"first_try": b2i(ev.FirstPass && ev.Outcome.FirstTry),
 		"xp":        ev.Outcome.XPAwarded,
-		"code":      b2i(typ == "code" || typ == "sql"),
+		"code":      b2i(typ == "code" || typ == "sql" || typ == "project_cli"), // hands-on lessons
 		"quiz":      b2i(typ == "mcq"),
 		"goal_day":  b2i(reachedGoal),
 	}

@@ -1,0 +1,33 @@
+id: dk.pid1.graceful-boss
+type: project_cli
+version: 1
+title: Zero-Downtime Deploys
+xp: 60
+difficulty: 3
+tags: [pid1, signals, entrypoint]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The entrypoint is the wrapper, in exec form
+      cli_command:
+        command: "docker image inspect -f 'entrypoint={{json .Config.Entrypoint}}' elixirbytes/brewd:graceful"
+        tests:
+          - stdout_contains_all: ["entrypoint.sh"]
+          - stdout_contains_none: ["/bin/sh\",\"-c"]
+    - description: A probe container is started, inspected and stopped
+      cli_command:
+        command: |-
+          docker rm -f eb-probe-stop >/dev/null 2>&1; docker run -d --name eb-probe-stop elixirbytes/brewd:graceful >/dev/null && sleep 1; echo "pid1=$(docker exec eb-probe-stop cat /proc/1/comm)"; s=$(date +%s); docker stop eb-probe-stop >/dev/null; e=$(date +%s); if [ $((e - s)) -lt 3 ]; then echo "stop=fast"; else echo "stop=slow"; fi; docker inspect -f 'exit={{.State.ExitCode}}' eb-probe-stop; docker logs eb-probe-stop 2>&1; docker rm eb-probe-stop >/dev/null
+        tests:
+          - stdout_contains_all: ["pid1=brewd"]
+          - stdout_contains_all: ["stop=fast"]
+          - stdout_contains_all: ["exit=0"]
+          - stdout_contains_all: ["brewd starting", "brewd: shutting down"]
+    - description: Arguments pass through to brewd, and the release version is stamped
+      cli_command:
+        command: docker run --rm elixirbytes/brewd:graceful --version
+        tests:
+          - stdout_contains_all: ["brewd starting", "brewd 1.5.1"]

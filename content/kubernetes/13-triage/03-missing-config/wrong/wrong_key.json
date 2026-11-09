@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ready="}},{"cli":{"exit_code":0,"stdout":"DIGEST_TARGET<-digest-config/target value=. "}},{"cli":{"exit_code":0,"stdout":"FATAL: DIGEST_TARGET is not set, refusing to start\n"}},{"cli":{"exit_code":0,"stdout":"digest_cause=DIGEST_TARGET env var missing, wired from digest-config\n"}}]}

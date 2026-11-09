@@ -1,0 +1,36 @@
+id: k8s.access.api-from-a-pod
+type: project_cli
+version: 1
+title: Calling the API From a Pod
+xp: 25
+difficulty: 4
+tags: [rbac, serviceaccounts, api]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: api-caller runs as menu-reader
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod api-caller -o jsonpath='sa={.spec.serviceAccountName} image={.spec.containers[0].image} phase={.status.phase}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["sa=menu-reader", "image=curlimages/curl:", "phase=Running"]
+    - description: From inside, its token can list pods
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop exec api-caller -- sh -c 'curl -sk -o /dev/null -w "list=%{http_code}" -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/api/v1/namespaces/shop/pods'
+        tests:
+          - stdout_contains_all: ["list=200"]
+    - description: The same token is refused a (dry-run) delete
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop exec api-caller -- sh -c 'curl -sk -w " delete=%{http_code}" -X DELETE -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" "https://kubernetes.default.svc/api/v1/namespaces/shop/pods/storefront?dryRun=All"' | tr -d '\\'
+        captures: [{ name: user, regex: "User \"([^\"]+)\" cannot" }]
+        tests:
+          - stdout_contains_all: ["delete=403"]
+    - description: answers.txt records the username in the 403 message
+      cli_command:
+        command: grep -x 'denied_user=${user}' answers.txt
+        tests:
+          - exit_code: 0

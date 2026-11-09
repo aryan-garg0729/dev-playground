@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "entrypoint=[\"/usr/local/bin/entrypoint.sh\"]\n"}}, {"cli": {"exit_code": 0, "stdout": "status=exited exit=0\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd starting on e8fb275dfc89\n2026/11/08 07:51:03 brewd dev listening on :8080\n2026/11/08 07:51:04 brewd: shutting down\n"}}]}

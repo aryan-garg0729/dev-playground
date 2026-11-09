@@ -1,0 +1,26 @@
+id: dk.containers.exec
+type: project_cli
+version: 1
+title: Step Inside
+xp: 20
+difficulty: 1
+tags: [exec]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: eb-hello is still the same running container
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} restarts={{.RestartCount}}' eb-hello"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "restarts=0"]
+    - description: The badge file exists inside eb-hello
+      cli_command:
+        command: docker exec eb-hello cat /etc/eb-badge
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["apprentice"]
+          - stdout_contains_none: ["No such file"]

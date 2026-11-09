@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"size=1Gi modes=ReadWriteOnce class=standard phase=Pending"}},{"cli":{"exit_code":0,"stdout":"orders_phase=Pending\n"}},{"cli":{"exit_code":0,"stdout":"WaitForFirstConsumer: waiting for first consumer to be created before binding\n"}}]}

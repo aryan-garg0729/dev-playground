@@ -1,0 +1,22 @@
+id: dk.networking.default-bridge-quiz
+type: mcq
+version: 1
+title: The Default Bridge
+xp: 5
+difficulty: 2
+tags: [networking, dns]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "eb-db isn't running yet" }
+    - { id: b, text: "On the default bridge network, containers can't look each other up by name" }
+    - { id: c, text: "Containers can never talk to each other without -p" }
+    - { id: d, text: "alpine's ping is broken" }
+  answer: [b]
+  explain: >
+    Containers started without --network join the default "bridge" network. They can reach
+    each other by IP address, but that network has no built-in DNS, so names don't resolve:
+    "bad address". Every user-defined network gets Docker's embedded DNS server, which answers
+    with container names. -p is only for reaching a container from outside Docker; containers
+    on a shared network talk to each other directly.

@@ -1,0 +1,36 @@
+id: k8s.cluster.read-the-nodes
+type: project_cli
+version: 1
+title: Read the Nodes
+xp: 20
+difficulty: 1
+tags: [nodes, kubectl]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Count the Ready nodes
+      cli_command:
+        command: echo "ready=$(kubectl --context kind-elixirbytes get nodes --no-headers | grep -cw Ready)"
+        captures: [{ name: ready, regex: "ready=(\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt records the Ready node count
+      cli_command:
+        command: grep -x 'nodes=${ready}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: Read the container runtime the nodes report
+      cli_command:
+        command: kubectl --context kind-elixirbytes get nodes -o jsonpath='runtime={.items[0].status.nodeInfo.containerRuntimeVersion}'
+        captures: [{ name: runtime, regex: "runtime=(\\S+)" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["runtime="]
+    - description: answers.txt records the exact runtime string
+      cli_command:
+        command: grep -x 'runtime=${runtime}' answers.txt
+        tests:
+          - exit_code: 0

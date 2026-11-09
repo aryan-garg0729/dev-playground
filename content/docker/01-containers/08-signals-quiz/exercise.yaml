@@ -1,0 +1,22 @@
+id: dk.containers.signals-quiz
+type: mcq
+version: 1
+title: Read the Exit Code
+xp: 5
+difficulty: 2
+tags: [signals, exit-codes]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It ran out of memory" }
+    - { id: b, text: "It exited on its own with an error it chose, code 130" }
+    - { id: c, text: "It was interrupted by SIGINT (signal 2), like pressing Ctrl-C" }
+    - { id: d, text: "Docker killed it after the 10-second stop timeout" }
+  answer: [c]
+  explain: >
+    130 is above 128, so a signal ended it: 130 - 128 = 2, which is SIGINT, the signal your
+    terminal sends on Ctrl-C. Codes 1-125 are ones a program picks itself, so "an error it chose"
+    doesn't fit. Running out of memory and the stop timeout both end with SIGKILL, which reports
+    137 (128 + 9), not 130.

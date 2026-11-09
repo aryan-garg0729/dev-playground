@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"type=ClusterIP nodePort= selector=brewd"}},{"http":{"status":0,"body":""}}]}

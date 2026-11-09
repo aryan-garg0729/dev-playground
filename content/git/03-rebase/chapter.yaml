@@ -1,0 +1,11 @@
+id: gt.rebase
+title: Rebase
+exercises:
+  - 01-new-hashes-quiz
+  - 02-onto
+  - 03-golden-rule-quiz
+  - 04-squash
+  - 05-actions-quiz
+  - 06-reword
+  - 07-merge-vs-rebase-quiz
+  - 08-friday-boss

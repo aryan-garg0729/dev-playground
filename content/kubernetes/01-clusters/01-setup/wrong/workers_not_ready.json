@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"elixirbytes-control-plane   Ready      control-plane   40s   v1.37.0\nelixirbytes-worker          NotReady   <none>          25s   v1.37.0\nelixirbytes-worker2         NotReady   <none>          25s   v1.37.0\n"}},{"cli":{"exit_code":0,"stdout":"ok"}}]}

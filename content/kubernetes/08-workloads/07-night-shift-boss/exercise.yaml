@@ -1,0 +1,41 @@
+id: k8s.workloads.night-shift-boss
+type: project_cli
+version: 1
+title: Night Shift Automation
+xp: 55
+difficulty: 3
+boss: true
+tags: [jobs, cronjobs, daemonsets]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Job inventory-count finished 6 completions, 3 at a time
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get job inventory-count -o jsonpath='completions={.spec.completions} parallelism={.spec.parallelism} succeeded={.status.succeeded}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["completions=6", "parallelism=3", "succeeded=6"]
+    - description: CronJob hourly-receipts runs on the hour and replaces overrunning runs
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get cronjob hourly-receipts -o jsonpath='schedule={.spec.schedule} concurrency={.spec.concurrencyPolicy} failedKeep={.spec.failedJobsHistoryLimit}'
+        tests:
+          - stdout_contains_all: ["schedule=0 * * * *", "concurrency=Replace", "failedKeep=1"]
+    - description: A manual run, receipts-now, came from that CronJob and succeeded
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get job receipts-now -o jsonpath='owner={.metadata.ownerReferences[0].name} succeeded={.status.succeeded}'; echo; kubectl --context kind-elixirbytes -n shop logs job/receipts-now
+        tests:
+          - stdout_contains_all: ["owner=hourly-receipts", "succeeded=1", "receipts sent"]
+    - description: Count the worker nodes
+      cli_command:
+        command: echo "workers=$(kubectl --context kind-elixirbytes get nodes --no-headers | grep -vc control-plane)"
+        captures: [{ name: workers, regex: "workers=(\\d+)" }]
+        tests:
+          - stdout_contains_all: ["workers="]
+    - description: DaemonSet log-shipper runs on every worker and not on the control plane
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get ds log-shipper -o jsonpath='desired={.status.desiredNumberScheduled} ready={.status.numberReady}.'; echo; kubectl --context kind-elixirbytes -n shop get pods -l app=log-shipper -o jsonpath='{range .items[*]}{.spec.nodeName} {end}'
+        tests:
+          - stdout_contains_all: ["desired=${workers} ", "ready=${workers}."]
+          - stdout_contains_none: ["control-plane"]

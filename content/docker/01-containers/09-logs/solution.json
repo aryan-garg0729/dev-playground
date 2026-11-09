@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=exited exit=0\n"}}, {"cli": {"exit_code": 0, "stdout": "potion 5 brewed\nall potions brewed\n"}}, {"cli": {"exit_code": 0, "stdout": "potion 1 brewed\npotion 2 brewed\npotion 3 brewed\npotion 4 brewed\npotion 5 brewed\nall potions brewed\n"}}]}

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"phase=Bound"}},{"cli":{"exit_code":0,"stdout":"data:claim=orders | data@/data "}},{"cli":{"exit_code":0,"stdout":"now=ledger-writer-867ccb584-rcbhn\nwritten by ledger-writer-867ccb584-2fgh6\n"}},{"cli":{"exit_code":1,"stdout":""}}]}

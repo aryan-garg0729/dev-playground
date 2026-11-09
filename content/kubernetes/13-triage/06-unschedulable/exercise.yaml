@@ -1,0 +1,28 @@
+id: k8s.triage.unschedulable
+type: project_cli
+version: 1
+title: The Pod Nobody Can Fit
+xp: 20
+difficulty: 3
+tags: [debugging, scheduling, resources]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: report-builder is running
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get deploy report-builder -o jsonpath='ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ready=1"]
+    - description: Its requests now fit a node, and it still declares some
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get deploy report-builder -o jsonpath='cpu={.spec.template.spec.containers[0].resources.requests.cpu} memory={.spec.template.spec.containers[0].resources.requests.memory}.'
+        tests:
+          - stdout_contains_none: ["cpu= ", "memory=.", "64Gi", "cpu=16 "]
+    - description: incident.txt names the cause
+      cli_command:
+        command: grep -Ei '^report_cause=.*(resource|memory|cpu|request|insufficient|schedul)' incident.txt
+        tests:
+          - exit_code: 0

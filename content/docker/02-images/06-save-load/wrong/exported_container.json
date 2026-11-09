@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "bin/\netc/\nlib/\nusr/\n"}}, {"cli": {"exit_code": 1, "stdout": "tar: manifest.json: Not found in archive\n"}}, {"cli": {"exit_code": 0, "stdout": "tags=[\"elixirbytes/base:mine\"]\n"}}]}

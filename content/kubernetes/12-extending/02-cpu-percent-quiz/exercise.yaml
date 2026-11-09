@@ -1,0 +1,21 @@
+id: k8s.extending.cpu-percent-quiz
+type: mcq
+version: 1
+title: Percent of What?
+xp: 5
+difficulty: 3
+tags: [autoscaling, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Pods have no CPU request, so there's nothing to compute a percentage of, and the HPA can't act" }
+    - { id: b, text: "metrics-server needs 10 minutes of history first" }
+    - { id: c, text: "HPAs only work on Deployments with more than one replica" }
+    - { id: d, text: "50% is too low a target; HPAs need at least 70%" }
+  answer: [a]
+  explain: >
+    CPU utilisation for an HPA is usage divided by the pod's CPU request. With no request
+    there's no denominator, so TARGETS shows <unknown> and the HPA's events say it's missing a
+    request for cpu. Set resources.requests.cpu on the container and it starts working within
+    a minute. metrics-server keeps no history at all, and an HPA happily scales from 1.

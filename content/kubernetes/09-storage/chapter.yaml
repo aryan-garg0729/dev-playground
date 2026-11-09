@@ -1,0 +1,11 @@
+id: k8s.storage
+title: Volumes and StatefulSets
+exercises:
+  - 01-storage-classes
+  - 02-claim
+  - 03-outlives-the-pod
+  - 04-access-modes-quiz
+  - 05-statefulset
+  - 06-stable-identity
+  - 07-statefulset-quiz
+  - 08-ledger-boss

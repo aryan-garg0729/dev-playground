@@ -5,7 +5,7 @@ import { ApiError } from '../../api/client';
 import { useOpenChest, useQuests } from '../../api/queries';
 import { Button } from '../../components/Button';
 import { ChestOpen } from '../../components/ChestOpen';
-import { powerupName } from '../../components/powerups';
+import { lootText, powerupName } from '../../components/powerups';
 import { CheckIcon, ChestIcon } from '../../components/icons';
 import { timeLeft, tierAbove, tierBelow, tierTitle } from './format';
 
@@ -100,10 +100,10 @@ export function QuestsCard() {
           <span className="text-section text-text">Daily chest</span>
           <span className="text-small text-text-secondary">
             {chest.opened
-              ? `Opened: +${chest.opened.bytes} Bytes and ${powerupName(chest.opened.powerup)}`
+              ? `Opened: ${lootText(chest.opened)}`
               : chest.ready
                 ? 'Ready to open'
-                : `${3 - done} quest${3 - done === 1 ? '' : 's'} left · Bytes and a random power-up`}
+                : `${3 - done} quest${3 - done === 1 ? '' : 's'} left · Bytes and a chance at a power-up`}
           </span>
         </div>
         {chest.ready && !chest.opened ? (
@@ -122,7 +122,7 @@ export function QuestsCard() {
         )}
       </div>
       <p className="text-caption text-text-muted">
-        Chest odds: {chest.odds.map((o) => `${powerupName(o.powerup)} ${o.weight}%`).join(' · ')}
+        Chest odds: {chest.odds.map((o) => `${o.powerup ? powerupName(o.powerup) : 'No power-up'} ${o.weight}%`).join(' · ')}
       </p>
       {opening && (
         <ChestOpen

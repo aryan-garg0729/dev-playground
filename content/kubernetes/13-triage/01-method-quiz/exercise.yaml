@@ -1,0 +1,21 @@
+id: k8s.triage.method-quiz
+type: mcq
+version: 1
+title: Describe First
+xp: 5
+difficulty: 2
+tags: [debugging, concepts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "kubectl logs on the pod" }
+    - { id: b, text: "kubectl describe pod, and read the Events at the bottom" }
+    - { id: c, text: "kubectl delete pod, so the Deployment makes a fresh one" }
+    - { id: d, text: "kubectl exec into the pod and look around" }
+  answer: [b]
+  explain: >
+    A pod stuck in Pending or ContainerCreating has never run, so there are no logs to read and
+    no container to exec into. The reason lives in the Events: the scheduler's FailedScheduling
+    message, a failed image pull, a volume that can't mount. Deleting it just makes a new pod
+    that gets stuck the same way, and throws away the events you needed.

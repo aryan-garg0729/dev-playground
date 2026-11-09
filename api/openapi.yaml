@@ -105,6 +105,7 @@ paths:
               properties:
                 request_id: { type: string }
                 exercise_id: { type: string, description: second_wind and peek }
+                chapter_id: { type: string, description: "skeleton_key: the locked chapter to open (the first locked one of its course)" }
                 stake: { type: integer, description: "double_or_nothing: 100-500" }
       responses:
         "200": { description: Used, content: { application/json: { schema: { $ref: "#/components/schemas/UseResult" } } } }
@@ -653,7 +654,7 @@ components:
       required: [bytes, powerup]
       properties:
         bytes: { type: integer }
-        powerup: { type: string }
+        powerup: { type: string, description: 'The power-up won, or "" when the chest held none (half of all chests)' }
     RequestID:
       type: object
       required: [request_id]
@@ -671,8 +672,8 @@ components:
         cost: { type: integer }
         unavailable: { type: string }
         owned: { type: integer }
-        state: { type: string, enum: [buy, max_held, streak_safe, repair, pro, coming_soon, bet_open, place_bet] }
-        use: { type: string, enum: [auto, now, lessons, ""] }
+        state: { type: string, enum: [buy, max_held, needs_bosses, streak_safe, repair, pro, coming_soon, bet_open, place_bet] }
+        use: { type: string, enum: [auto, now, lessons, chapter, ""] }
         usable_now: { type: boolean }
     Bet:
       type: object
@@ -723,6 +724,7 @@ components:
             input: { type: string }
         bet: { $ref: "#/components/schemas/Bet" }
         streak: { type: integer }
+        unlocked_chapter: { type: string, description: The chapter a Skeleton Key opened }
         balance: { type: integer }
     Quest:
       type: object
@@ -754,6 +756,7 @@ components:
                 - $ref: "#/components/schemas/ChestDrop"
             odds:
               type: array
+              description: 'Weights out of 100; powerup "" is no power-up'
               items: { type: object, required: [powerup, weight], properties: { powerup: { type: string }, weight: { type: integer } } }
             bytes: { type: array, items: { type: integer }, minItems: 2, maxItems: 2 }
     MedalTier:

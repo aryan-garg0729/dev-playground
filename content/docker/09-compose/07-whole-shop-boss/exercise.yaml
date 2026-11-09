@@ -1,0 +1,47 @@
+id: dk.compose.whole-shop-boss
+type: project_cli
+version: 1
+title: The Whole Shop
+xp: 70
+difficulty: 4
+tags: [compose, healthchecks, volumes]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:18092
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: api is healthy and front is up
+      cli_command:
+        command: "docker compose ps --format '{{.Service}}={{.State}}/{{.Health}}'"
+        tests:
+          - stdout_contains_all: ["api=running/healthy"]
+          - stdout_contains_all: ["front=running/"]
+    - description: api is private and restarts on its own
+      cli_command:
+        command: "docker inspect -f 'ports={{json .HostConfig.PortBindings}} restart={{.HostConfig.RestartPolicy.Name}}' $(docker compose ps -q api)"
+        tests:
+          - stdout_contains_all: ["ports={}"]
+          - stdout_contains_all: ["restart=unless-stopped"]
+    - description: front waits for a healthy api
+      cli_command:
+        command: docker compose config
+        tests:
+          - stdout_contains_all: ["condition: service_healthy"]
+    - description: The moonlight-mead order is still in the ledger
+      cli_command:
+        command: docker compose exec -T api cat /orders/orders.log
+        tests:
+          - stdout_contains_all: ["moonlight-mead"]
+    - description: The api container is newer than the order (it survived a down and up)
+      cli_command:
+        command: |-
+          c=$(docker inspect -f '{{.Created}}' $(docker compose ps -q api) | cut -c1-19 | tr -d 'T:-'); o=$(docker compose exec -T api date -u -r /orders/orders.log +%Y%m%d%H%M%S); if [ "$c" -gt "$o" ]; then echo "recreated=yes"; else echo "recreated=no"; fi
+        tests:
+          - stdout_contains_all: ["recreated=yes"]
+    - description: Customers can see orders through the front door
+      http_request:
+        request: { method: GET, url: "${baseURL}/orders" }
+        tests:
+          - body_contains: "moonlight-mead"

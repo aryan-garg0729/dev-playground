@@ -1,0 +1,22 @@
+id: dk.multistage.bases-quiz
+type: mcq
+version: 1
+title: Choosing the Final Base
+xp: 5
+difficulty: 3
+tags: [images, multistage]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "scratch: smallest is always best" }
+    - { id: b, text: "alpine:3.20: it has the busybox wget a healthcheck can call" }
+    - { id: c, text: "golang:1.23-alpine: it's what we build with" }
+    - { id: d, text: "distroless static: it has wget but no shell" }
+  answer: [b]
+  explain: >
+    A healthcheck command runs inside the container, so the image needs something that can
+    make an HTTP request. alpine has busybox wget for about 8 MB. scratch and distroless static
+    have no wget and no shell at all, which is great for attack surface but means the
+    healthcheck has to be built into the program (a "brewd --healthcheck" flag) instead.
+    golang:1.23-alpine would bring back the whole toolchain we just removed.

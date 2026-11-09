@@ -1,0 +1,31 @@
+id: k8s.cluster.namespace
+type: project_cli
+version: 1
+title: A Room of Our Own
+xp: 20
+difficulty: 1
+tags: [namespaces, contexts]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Namespace shop exists
+      cli_command:
+        command: kubectl --context kind-elixirbytes get namespace shop -o jsonpath='phase={.status.phase}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["phase=Active"]
+    - description: kind-elixirbytes defaults to the shop namespace
+      cli_command:
+        command: >-
+          echo "ns=$(kubectl config view -o jsonpath='{.contexts[?(@.name=="kind-elixirbytes")].context.namespace}')"
+        tests:
+          - stdout_contains_all: ["ns=shop"]
+    - description: kind-elixirbytes is the current context
+      cli_command:
+        command: kubectl config current-context
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["kind-elixirbytes"]

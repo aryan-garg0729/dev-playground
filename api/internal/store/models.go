@@ -67,6 +67,14 @@ type Chapter struct {
 	Published  bool   `json:"published"`
 }
 
+type ChapterKey struct {
+	UserID        uuid.UUID `json:"user_id"`
+	CourseID      string    `json:"course_id"`
+	GateChapterID string    `json:"gate_chapter_id"`
+	ChapterID     string    `json:"chapter_id"`
+	UsedAt        time.Time `json:"used_at"`
+}
+
 type Chest struct {
 	UserID   uuid.UUID `json:"user_id"`
 	Kind     string    `json:"kind"`

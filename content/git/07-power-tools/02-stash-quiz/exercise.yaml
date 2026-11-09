@@ -1,0 +1,21 @@
+id: gt.tools.stash-quiz
+type: mcq
+version: 1
+title: What Stash Leaves Behind
+xp: 5
+difficulty: 2
+tags: [stash]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Both changes are shelved; the working tree is clean" }
+    - { id: b, text: "The oncall.md edit is shelved; notes.md stays in your working tree, untracked" }
+    - { id: c, text: "notes.md is shelved; the oncall.md edit stays" }
+    - { id: d, text: "Nothing is shelved, because there's an untracked file" }
+  answer: [b]
+  explain: >
+    Plain git stash saves changes to tracked files (staged and unstaged) and leaves
+    untracked files where they are. oncall.md is tracked, so its edit is shelved; notes.md
+    is new, so it stays and comes with you when you switch branches. git stash -u (or
+    --include-untracked) takes untracked files too.

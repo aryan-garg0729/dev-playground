@@ -1,0 +1,12 @@
+id: k8s.deployments
+title: ReplicaSets and Deployments
+exercises:
+  - 01-replicaset
+  - 02-selector-quiz
+  - 03-quarantine
+  - 04-deployment
+  - 05-hash-quiz
+  - 06-scale
+  - 07-rollout-undo
+  - 08-revision-quiz
+  - 09-release-boss

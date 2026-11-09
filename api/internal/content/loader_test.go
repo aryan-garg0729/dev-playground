@@ -118,7 +118,7 @@ func TestLoadProblems(t *testing.T) {
 			m["c/ch1/a/exercise.yaml"] = strings.Replace(ex("c.one.a"), "type: mcq", "type: essay", 1)
 		}, "c/ch1/a/exercise.yaml", `type "essay" is not registered`},
 		{"mcq boss", func(m map[string]string) { m["c/ch1/a/exercise.yaml"] = ex("c.one.a") + "boss: true\n" },
-			"c/ch1/a/exercise.yaml", "only code exercises can be bosses"},
+			"c/ch1/a/exercise.yaml", "only code and project_cli exercises can be bosses"},
 		{"spec error", func(m map[string]string) {
 			m["c/ch1/a/exercise.yaml"] = strings.Replace(ex("c.one.a"), "answer: [a]", "answer: [q]", 1)
 		}, "c/ch1/a/exercise.yaml", `spec: answer: "q" is not an option id`},

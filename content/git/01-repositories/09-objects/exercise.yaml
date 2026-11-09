@@ -1,0 +1,30 @@
+id: gt.repos.objects
+type: project_cli
+version: 1
+title: Commit, Tree, Blob
+xp: 25
+difficulty: 2
+tags: [internals]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find commit A1
+      cli_command:
+        command: "git log -1 --format=%H ':/^A1:'"
+        captures: [{ name: a1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Look up the blob for index.md at A1
+      cli_command:
+        command: "git rev-parse ${a1}:index.md"
+        captures: [{ name: blob, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt records that blob's full hash
+      cli_command:
+        command: "grep -x 'a1_blob=${blob}' answers.txt"
+        tests:
+          - exit_code: 0

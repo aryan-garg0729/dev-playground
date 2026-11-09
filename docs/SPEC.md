@@ -192,7 +192,7 @@ exercises: [01-message-roles, 02-runnable-methods] # folder names, in order
 
 - Career paths (decided 2026-11-06, `screens/courses.png`): an optional `paths.yaml` at the root of a folder of courses lists paths in order: `paths: [{id (slug), title, description, goal, courses: [{course, note}]}]`. `goal` is an onboarding goal (`zero`, `backend`, `interviews`, `ai`), at most one path per goal; it makes the path "Your path" for learners who picked that goal. Every course must exist in the tree and be published; `note` (≤ 60 characters) is the line under the course on the path card. `cq build` upserts `career_paths` and unpublishes paths no longer listed. The catalog holds only real courses; "coming soon" stubs, course prerequisites and estimated hours from the design are not built.
 - Every folder must be listed, and every listed folder must exist with its manifest; both are errors otherwise. Hidden folders (`.x`) are ignored; folders inside an exercise (e.g. `wrong/`) belong to that exercise.
-- Exercise header: `id`, `type`, `version` (≥ 1), `title` and `xp` (≥ 0) are required; `difficulty` defaults to 1 (1–2 shows as Easy), `tags` to `[]`, `free` and `boss` to false. Only `code` exercises can be bosses.
+- Exercise header: `id`, `type`, `version` (≥ 1), `title` and `xp` (≥ 0) are required; `difficulty` defaults to 1 (1–2 shows as Easy), `tags` to `[]`, `free` and `boss` to false. Only `code` and `project_cli` exercises can be bosses.
 - `cq validate <dir>` and `cq build <dir>` print every problem as `path: reason` and exit 1. `<dir>` is a folder of courses or a single course folder.
 - `cq build` writes everything in one transaction, upserting by id. Courses, chapters and exercises no longer in the content are **unpublished, never deleted**, so progress and submissions keyed on old ids survive.
 - mcq: `question` names a markdown file; options may carry `image: assets/<file>` (Phase 9; the option's `text` is still required and is its alt text); `answer` and `explain` live only in `private_spec`. `explain` is returned after every submit (pass or fail) as the `Feedback` of the implicit `exact_choice` check.
@@ -494,7 +494,7 @@ CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (
 - **GitHub.** Hand-rolled OAuth web flow (no new dependency): a random `state` in a 10-minute `HttpOnly` cookie, compared in constant time; scopes `read:user user:email`; the primary verified email is required. A GitHub identity links to the account with that email, or creates one. Enabled when `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set.
 - **Post-sign-in redirect** (`next`) is accepted only as a same-site path (`/…`, not `//`, no backslashes, not under `/api/`).
 - **CLI tokens** (Phase 8, paste-code flow like boot.dev's, without its localhost listener). `codequest login` opens `APP_URL/cli/login`; the signed-in page calls `POST /cli/codes` and shows a 10-character code (`XXXXX-XXXXX`, no ambiguous letters, single use, 10 minutes, stored hashed); the learner pastes it and the CLI gets a random 32-byte token from `POST /cli/token`, kept in `<user config dir>/codequest/config.json` (mode 0600). The API accepts `Authorization: Bearer <token>` in place of the cookie on every endpoint; a request with both is `400`, a bad or expired token `401`. `codequest logout` revokes it (`POST /cli/logout`) and always deletes it locally. Expired codes and tokens are deleted hourly.
-- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. The default dev user (no email given) starts with 1,000 XP and 5,000 Bytes (decision 2026-11-05), granted once through the XP and Byte ledgers (`dev_grant`/`starter`) so every power-up can be tried; dev sign-ins with an email start from zero. The `feature-tour` course has one lesson of every type (mcq single and multiple, browser and server Python, SQL, a boss, CLI command and HTTP) for manual testing. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
+- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. The default dev user (no email given) starts with 1,000 XP and 10,000 Bytes (decision 2026-11-05; raised from 5,000 on 2026-11-09), granted once through the XP and Byte ledgers (`dev_grant`/`starter`) so every power-up can be tried (the Skeleton Key still needs 5 bosses defeated); dev sign-ins with an email start from zero. The `feature-tour` course has one lesson of every type (mcq single and multiple, browser and server Python, SQL, a boss, CLI command and HTTP) for manual testing. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
 
 ## Gamification engine
 
@@ -533,15 +533,18 @@ Designed screens: `screens/home.png` (daily quests), `screens/boss-fight.png`, `
 
 | Power-up | Effect | Limits | Cost (Bytes) |
 | --- | --- | --- | --- |
-| Streak Freeze | Covers one missed day, used automatically | Hold max 2; 1 free per 7-day streak | 200 |
-| Streak Repair | Restores a streak lost in the last 48 h | Once a month | 1,500 |
+| Streak Freeze | Covers one missed day, used automatically | Hold max 2; 1 free per 7-day streak | 300 |
+| Streak Repair | Restores a streak lost in the last 48 h | Once a month | 2,000 |
 | Holiday Mode | Pauses the streak up to 7 days | Pro only; scheduled 3+ days ahead | Free (Pro) |
-| Focus Boost | 2× XP for 15 minutes | 1 per day | 150 |
+| Focus Boost | 2× XP for 15 minutes | 1 per day | 200 |
 | Extra Hint | One tutor hint past the daily limit | Sets `used_hint` | 100 |
-| Peek | Shows the input of one failed hidden check, never the expected output | Removes the first-try bonus | 120 |
-| Second Wind | Keeps the first-try bonus after one failed submit | 1 per chapter | 250 |
-| League Shield | No demotion this week | Not two weeks in a row | 400 |
+| Peek | Shows the input of one failed hidden check, never the expected output | Removes the first-try bonus | 150 |
+| Second Wind | Keeps the first-try bonus after one failed submit | 1 per chapter | 350 |
+| League Shield | No demotion this week | Not two weeks in a row | 700 |
+| Skeleton Key | Opens the next locked chapter of a course without passing the boss before it | Needs 5 bosses defeated; hold max 1; once per course; never in chests | 6,000 |
 | Double or Nothing | Bet that the daily goal is hit 7 days running; win 2× | One active bet; 100–500 | Stake |
+
+> Decision 2026-11-09, at the author's request: prices were raised to about 1–2 days of typical earning for small items and about two weeks for Streak Repair (a learner on the default goal earns roughly 120–150 Bytes a day), the Skeleton Key was added as a deliberately rare item (about 40 days of typical earning), and chests drop a power-up only half the time.
 
 - Tables: `inventory(user_id, powerup, count)`, `powerup_uses(id, user_id, powerup, ref_id, created_at)`, `active_effects(user_id, effect, ref_id, expires_at)`, `bets(id, user_id, stake, goal, starts_on, status)`, `idempotency(user_id, request_id, action, response json)`. Held Streak Freezes stay in `user_stats.streak_freezes` (`CHECK` 0–2).
 - Endpoints: `GET /shop`, `POST /shop/{powerup}/buy`, `POST /powerups/{powerup}/use`, `GET /inventory` (same body as `/shop`). Buying and using are server-side, in one transaction with the Byte ledger, idempotent by request id: the first response is stored (as `json`, byte-for-byte) and replayed; a failed request stores nothing; reusing an id for another action is `409 request_reused`. The client sends a new UUID per click.
@@ -552,6 +555,7 @@ Designed screens: `screens/home.png` (daily quests), `screens/boss-fight.png`, `
   - **Second Wind** is armed on an exercise right after exactly one failed submit (one per chapter); the next submit keeps the first-try bonus. **Peek** sets `progress.peeked`, which removes the first-try bonus even with Second Wind. Peek with no failed hidden check that declares an input is refused and costs nothing.
   - **League Shield** is used for the current week (not if the previous week was shielded); at the close a demotion becomes a stay.
   - **Double or Nothing**: stake 100–500, uses the daily goal at the time of the bet, starts today; settled at a pass, the rollover or a shop visit: lost once a finished day misses the goal, won (2× the stake back) when all 7 days meet it.
+  - **Skeleton Key** is bought only with the `bosses` counter at 5 or more, and only while none is held. It is used on a chapter (`chapter_id`): the first locked chapter of its course, locked only by the undefeated boss of an earlier chapter. That boss is waived for the chapters after it (`chapter_keys(user_id, course_id, gate_chapter_id, chapter_id)`, one row per user and course) but stays unpassed: no XP, Bytes, boss chest or Boss Slayer progress, and its own chapter does not count as complete. A refused use costs nothing.
   - **Holiday Mode** (Pro, Phase 5) and **Extra Hint** (tutor, Phase 6) show in the shop as unavailable ("Pro", "Coming soon") until those phases ship.
   - Daily rollover job (API, every 10 minutes): users whose local date moved on and who were active in 14 days or hold an open bet; spends freezes, settles bets, evaluates medals; once per local date (`user_stats.rolled_over_on`).
 
@@ -567,15 +571,16 @@ Designed screens: `screens/home.png` (daily quests), `screens/boss-fight.png`, `
 ### Quests and chests
 
 - Three daily quests drawn from a pool (pass 2 lessons, one first-try pass, finish a review…) plus one weekly quest. `quests(id, cadence, rule jsonb, reward jsonb)`, `user_quests(user_id, quest_id, period, progress, done_at)`.
-- Completing all three opens the daily chest: Bytes plus a random power-up. Odds live in config and are shown to users.
-- As built: daily pool of five (pass 2 lessons, a first-try pass, earn 50 XP, pass a coding lesson, pass a quiz; "finish a review" waits for reviews), three per user per local day chosen by a hash of user and date (stable all day, nothing stored until progress); weekly pool of three (10 lessons, goal on 5 days, 300 XP), 150 Bytes on completion. Progress counts a lesson once per day (re-solving the same one does not add). The chest is opened with `POST /quests/chest/open` (once per local day, `chests` key): 40–80 Bytes and one power-up drawn from Focus Boost 40, Peek 30, Second Wind 20, League Shield 10 (weights, shown on Home). Randomness is server-side (`crypto/rand`).
+- Completing all three opens the daily chest: Bytes plus, half the time, a random power-up. Odds live in config and are shown to users.
+- As built: daily pool of five (pass 2 lessons, a first-try pass, earn 50 XP, pass a hands-on lesson (`code`, `sql` or `project_cli`, so CLI-only courses can finish it), pass a quiz; "finish a review" waits for reviews), three per user per local day chosen by a hash of user and date (stable all day, nothing stored until progress); weekly pool of three (10 lessons, goal on 5 days, 300 XP), 150 Bytes on completion. Progress counts a lesson once per day (re-solving the same one does not add). The chest is opened with `POST /quests/chest/open` (once per local day, `chests` key): 40–80 Bytes and a draw from Focus Boost 20, Peek 15, Second Wind 10, League Shield 5, no power-up 50 (weights out of 100, shown on Home; the API's `odds` lists "no power-up" as `powerup: ""`, and an empty chest's `powerup` is `""`). Randomness is server-side (`crypto/rand`).
 
 ### Boss fights
 
-- A boss is a `code` exercise with `boss: true`. Its checks are its HP; each passing check removes one HP. Same grader and `Result`; only the UI and rewards differ.
+- A boss is a `code` or `project_cli` exercise with `boss: true`. Its checks are its HP; each passing check removes one HP. Same grader and `Result`; only the UI and rewards differ.
+- Decision 2026-11-08, at the author's request: `project_cli` exercises can be bosses, so a hands-on course (Docker, Git) ends each chapter on its own tooling instead of a Python program. HP is the number of step tests (each is one result row). Its result is forgeable like any `project_cli` lesson (see the Phase 8 exception), so its boss rewards are too; this is accepted with the same reasoning. On the page, the HP bar and defeat reward sit under the prompt, a submit from the terminal is the attack, and a result that arrives after the page loaded (via "Check attack result") plays as a fresh attack.
 - Defeat reward: +100 XP, boss chest, Boss Slayer progress, unlocks the next chapter.
 - Primary button reads "Attack"; results show HIT / BLOCK rows. HP bar uses the `boss-hp` token.
-- As built: a code exercise's public view carries `check_counts {visible, hidden}` (rows grading will produce; `cq test` fails if they differ), so the HP bar is right before the first attack. A chapter is locked while any earlier chapter of the course has a boss the user has not passed: its lessons answer `403 chapter_locked` (GET, Run, Submit, power-ups) and the course map shows it locked. The first defeat opens the boss chest (300 Bytes and a power-up) once.
+- As built: a code exercise's public view carries `check_counts {visible, hidden}` (rows grading will produce; `cq test` fails if they differ), so the HP bar is right before the first attack. A chapter is locked while any earlier chapter of the course has a boss the user has not passed: its lessons answer `403 chapter_locked` (GET, Run, Submit, power-ups) and the course map shows it locked, unless a Skeleton Key waived that boss (see Power-ups). The first defeat opens the boss chest (300 Bytes and, with the same odds as the daily chest, a power-up) once.
 
 ## AI tutor
 

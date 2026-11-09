@@ -1,0 +1,22 @@
+id: gt.branches.head-quiz
+type: mcq
+version: 1
+title: What Is HEAD?
+xp: 5
+difficulty: 1
+tags: [head]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The newest commit in the whole repo" }
+    - { id: b, text: "A pointer to the branch you're on, which in turn points to a commit" }
+    - { id: c, text: "Another name for main" }
+    - { id: d, text: "The first commit of the repo" }
+  answer: [b]
+  explain: >
+    HEAD says where you are. Normally it names a branch (ref: refs/heads/add-menu), and
+    that branch names a commit. When you commit, Git moves the branch HEAD names, and HEAD
+    comes along. It isn't "the newest commit": main and add-menu can each have commits the
+    other doesn't, and HEAD is wherever you switched to last.

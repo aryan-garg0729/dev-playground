@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "api\nfront\n"}}, {"cli": {"exit_code": 0, "stdout": "api\nfront\ntoolbox\n"}}, {"cli": {"exit_code": 0, "stdout": "ok\n"}}]}

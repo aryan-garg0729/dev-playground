@@ -1,0 +1,37 @@
+id: k8s.storage.outlives-the-pod
+type: project_cli
+version: 1
+title: Data That Outlives the Pod
+xp: 25
+difficulty: 3
+tags: [storage, pvc, volumes]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: PVC orders is Bound
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pvc orders -o jsonpath='phase={.status.phase}'
+        tests:
+          - stdout_contains_all: ["phase=Bound"]
+    - description: ledger-writer mounts the orders claim at /data
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy ledger-writer -o jsonpath='{range .spec.template.spec.volumes[*]}{.name}:claim={.persistentVolumeClaim.claimName} {end}| {range .spec.template.spec.containers[0].volumeMounts[*]}{.name}@{.mountPath} {end}'
+        captures: [{ name: vol, regex: "(\\S+):claim=orders" }]
+        tests:
+          - stdout_contains_all: [":claim=orders "]
+          - stdout_contains_all: ["${vol}@/data "]
+    - description: The file was written by a pod that no longer exists
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop exec deploy/ledger-writer -- sh -c 'echo "now=$(hostname)"; cat /data/orders.log'
+        captures:
+          - { name: writer, regex: "written by (\\S+)" }
+          - { name: now, regex: "now=(\\S+)" }
+        tests:
+          - stdout_contains_all: ["written by ledger-writer-"]
+    - description: The writer and the current pod are different pods
+      cli_command:
+        command: test '${writer}' != '${now}' && echo "${writer} is gone, ${now} has its data"
+        tests:
+          - exit_code: 0

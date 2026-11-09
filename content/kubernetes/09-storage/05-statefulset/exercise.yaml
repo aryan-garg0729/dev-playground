@@ -1,0 +1,28 @@
+id: k8s.storage.statefulset
+type: project_cli
+version: 1
+title: Pods With Names and Their Own Disks
+xp: 25
+difficulty: 3
+tags: [statefulsets, storage, headless]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Service vault is headless
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc vault -o jsonpath='clusterIP={.spec.clusterIP} selector={.spec.selector.app}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["clusterIP=None", "selector=vault"]
+    - description: StatefulSet vault runs vault-0 and vault-1, both ready, governed by that Service
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get sts vault -o jsonpath='ready={.status.readyReplicas} service={.spec.serviceName}'; echo; kubectl --context kind-elixirbytes -n shop get pods -l app=vault -o name
+        tests:
+          - stdout_contains_all: ["ready=2", "service=vault", "pod/vault-0", "pod/vault-1"]
+    - description: Each pod has its own bound claim
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pvc data-vault-0 data-vault-1 -o jsonpath='{range .items[*]}{.metadata.name}={.status.phase} {end}'
+        tests:
+          - stdout_contains_all: ["data-vault-0=Bound", "data-vault-1=Bound"]

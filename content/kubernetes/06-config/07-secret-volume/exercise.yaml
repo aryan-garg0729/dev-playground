@@ -1,0 +1,31 @@
+id: k8s.config.secret-volume
+type: project_cli
+version: 1
+title: Secrets as Read-Only Files
+xp: 25
+difficulty: 3
+tags: [secrets, volumes, security]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd mounts brewd-db read-only at /etc/creds with mode 0400
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='{range .spec.template.spec.volumes[*]}{.name}:secret={.secret.secretName}:mode={.secret.defaultMode} {end}| {range .spec.template.spec.containers[0].volumeMounts[*]}{.name}@{.mountPath}:ro={.readOnly} {end}'
+        captures: [{ name: vol, regex: "(\\S+):secret=brewd-db" }]
+        tests:
+          - stdout_contains_all: [":secret=brewd-db:mode=256 "]
+          - stdout_contains_all: ["${vol}@/etc/creds:ro=true "]
+    - description: No environment variable comes from a Secret
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='from-secret={.spec.template.spec.containers[0].env[*].valueFrom.secretKeyRef.name}{.spec.template.spec.containers[0].envFrom[*].secretRef.name}.'
+        tests:
+          - stdout_contains_all: ["from-secret=."]
+    - description: The file in the pod matches the Secret, and only its owner can read it
+      cli_command:
+        command: >-
+          kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- ls -lL /etc/creds/password | cut -c1-10;
+          [ "$(kubectl --context kind-elixirbytes -n shop exec deploy/brewd -- sh -c 'cksum < /etc/creds/password')" = "$(kubectl --context kind-elixirbytes -n shop get secret brewd-db -o jsonpath='{.data.password}' | base64 -d | cksum)" ] && echo "password matches"
+        tests:
+          - stdout_contains_all: ["-r--------", "password matches"]

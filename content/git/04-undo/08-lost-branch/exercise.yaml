@@ -1,0 +1,28 @@
+id: gt.undo.lost-branch
+type: project_cli
+version: 1
+title: Rescue a Deleted Branch
+xp: 25
+difficulty: 3
+tags: [reflog, branches]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: recovered/spike points at E4
+      cli_command:
+        command: "git log -1 --format=%s recovered/spike"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E4:"]
+    - description: spike/table-format is still deleted
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - stdout_contains_none: ["spike/table-format"]
+    - description: E4 didn't end up on main
+      cli_command:
+        command: "git --no-pager log --format=%s main"
+        tests:
+          - stdout_contains_none: ["E4:"]

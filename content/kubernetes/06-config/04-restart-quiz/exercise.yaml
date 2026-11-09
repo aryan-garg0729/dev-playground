@@ -1,0 +1,23 @@
+id: k8s.config.restart-quiz
+type: mcq
+version: 1
+title: Picking Up a Changed Variable
+xp: 5
+difficulty: 2
+tags: [configmaps, rollouts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "kubectl apply -f manifests/brewd-config.yaml again" }
+    - { id: b, text: "kubectl rollout restart deploy/brewd" }
+    - { id: c, text: "kubectl delete pods -l app=brewd --all at once" }
+    - { id: d, text: "kubectl exec into each pod and export DB_PORT=6432" }
+  answer: [b]
+  explain: >
+    rollout restart stamps a restartedAt annotation on the pod template. That's a template
+    change, so the Deployment does a normal rolling update with your maxSurge/maxUnavailable
+    settings, and every new pod reads the current ConfigMap at startup. Re-applying an
+    unchanged ConfigMap changes nothing. Deleting every pod at once also gets new values, but
+    takes the whole service down until replacements are ready. export inside exec only
+    affects that one shell, not the running app.

@@ -1,0 +1,23 @@
+id: k8s.cluster.apply-quiz
+type: mcq
+version: 1
+title: Apply, Create or Replace
+xp: 5
+difficulty: 2
+tags: [kubectl, declarative]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "kubectl create -f brewd.yaml" }
+    - { id: b, text: "kubectl replace -f brewd.yaml" }
+    - { id: c, text: "kubectl apply -f brewd.yaml" }
+    - { id: d, text: "kubectl delete -f brewd.yaml, then kubectl create -f brewd.yaml" }
+  answer: [c]
+  explain: >
+    apply is declarative: it creates the object if it's missing and updates it if it exists,
+    so it is safe to run on every deploy. It also remembers what you last applied, so it can
+    tell "I removed this field" from "I never set it". create fails the second time
+    ("AlreadyExists"), replace fails the first time and drops fields you left out, and
+    delete-then-create takes the service down in between.

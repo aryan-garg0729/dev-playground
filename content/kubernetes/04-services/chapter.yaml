@@ -1,0 +1,11 @@
+id: k8s.services
+title: Services and DNS
+exercises:
+  - 01-clusterip
+  - 02-empty-endpoints
+  - 03-dns
+  - 04-kube-proxy-quiz
+  - 05-nodeport
+  - 06-loadbalancer
+  - 07-types-quiz
+  - 08-menu-api-boss

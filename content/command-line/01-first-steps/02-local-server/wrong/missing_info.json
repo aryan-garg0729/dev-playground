@@ -1,4 +1,0 @@
-{"steps": [
-  {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello from my server\n"}},
-  {"http": {"status": 404, "headers": {"Content-Type": "text/html;charset=utf-8"}, "body": "<h1>File not found</h1>"}}
-]}

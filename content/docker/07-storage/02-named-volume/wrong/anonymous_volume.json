@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "name=eb-orders driver=local\n"}}, {"cli": {"exit_code": 0, "stdout": "volume:3f9c1d0a7b2e4f6a8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b:/data \n"}}, {"cli": {"exit_code": 1, "stdout": "cat: can't open '/data/orders.log': No such file or directory\n"}}, {"http": {"status": 200, "headers": {}, "body": "basilisk\n"}}]}

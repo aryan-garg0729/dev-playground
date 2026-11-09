@@ -1,0 +1,28 @@
+id: gt.remotes.fetch
+type: project_cli
+version: 1
+title: Look Before You Pull
+xp: 20
+difficulty: 2
+tags: [remotes, fetch]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: origin/main knows about Dex's A5
+      cli_command:
+        command: "git log -1 --format=%s origin/main"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["A5:"]
+    - description: Your main hasn't moved yet
+      cli_command:
+        command: "git log -1 --format=%s main"
+        tests:
+          - stdout_contains_none: ["A5:"]
+    - description: Git says you're one commit behind
+      cli_command:
+        command: git status -sb
+        tests:
+          - stdout_contains_all: ["## main...origin/main [behind 1]"]

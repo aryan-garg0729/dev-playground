@@ -1,0 +1,30 @@
+id: k8s.ingress.controller
+type: project_cli
+version: 1
+title: Install an Ingress Controller
+xp: 20
+difficulty: 2
+tags: [ingress, controllers]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The ingress-nginx controller is running
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n ingress-nginx get deploy ingress-nginx-controller -o jsonpath='ready={.status.readyReplicas}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ready=1"]
+    - description: The cluster has an IngressClass called nginx
+      cli_command:
+        command: kubectl --context kind-elixirbytes get ingressclass nginx -o jsonpath='controller={.spec.controller}'
+        tests:
+          - stdout_contains_all: ["controller=k8s.io/ingress-nginx"]
+    - description: localhost:80 reaches the controller (404 means no rules yet)
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 404
+          - body_contains: "nginx"

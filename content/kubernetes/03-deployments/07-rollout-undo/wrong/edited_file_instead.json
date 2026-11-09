@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"image=nginx:1.27-alpine ready=4 updated=4 rev=3"}},{"cli":{"exit_code":0,"stdout":"revision 3\n"}},{"cli":{"exit_code":0,"stdout":"nginx:1.27-alpine=4 "}}]}

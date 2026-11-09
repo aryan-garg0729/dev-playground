@@ -1,0 +1,43 @@
+id: k8s.pods.crashloop
+type: project_cli
+version: 1
+title: The Pod That Won't Stay Up
+xp: 20
+difficulty: 2
+tags: [pods, restarts, debugging]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cauldron has restarted at least once
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod cauldron -o jsonpath='policy={.spec.restartPolicy} restarts={.status.containerStatuses[0].restartCount} exit={.status.containerStatuses[0].lastState.terminated.exitCode} '
+        captures:
+          - { name: exit, regex: "exit=(\\d+)" }
+          - { name: policy, regex: "policy=(\\w+)" }
+        tests:
+          - exit_code: 0
+          - stdout_contains_none: ["restarts=0 "]
+    - description: answers.txt records cauldron's exit code
+      cli_command:
+        command: grep -x 'cauldron_exit=${exit}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: answers.txt records the restart policy the pod actually got
+      cli_command:
+        command: grep -x 'cauldron_policy=${policy}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: Read what cauldron printed before its last crash
+      cli_command:
+        command: "{ kubectl --context kind-elixirbytes -n shop logs cauldron --previous; kubectl --context kind-elixirbytes -n shop logs cauldron; } 2>&1 | grep -m1 \"cauldron cracked\""
+        captures: [{ name: said, regex: "cauldron cracked at batch \\d+" }]
+        tests:
+          - stdout_contains_all: ["cauldron cracked at batch"]
+    - description: answers.txt records cauldron's last words
+      cli_command:
+        command: grep -x "cauldron_said=${said}" answers.txt
+        tests:
+          - exit_code: 0

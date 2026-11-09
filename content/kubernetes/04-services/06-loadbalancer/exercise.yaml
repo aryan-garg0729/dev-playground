@@ -1,0 +1,35 @@
+id: k8s.services.loadbalancer
+type: project_cli
+version: 1
+title: The LoadBalancer That Never Comes
+xp: 20
+difficulty: 2
+tags: [services, loadbalancer, cloud]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd-lb is a LoadBalancer Service for brewd
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc brewd-lb -o jsonpath='type={.spec.type} selector={.spec.selector.app} nodePort={.spec.ports[0].nodePort}'
+        captures: [{ name: np, regex: "nodePort=(\\d+)" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["type=LoadBalancer", "selector=brewd"]
+    - description: Read the EXTERNAL-IP column
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get svc brewd-lb --no-headers | awk '{print "external=" $4}'
+        captures: [{ name: ext, regex: "external=(\\S+)" }]
+        tests:
+          - stdout_contains_all: ["external="]
+    - description: answers.txt records what EXTERNAL-IP says
+      cli_command:
+        command: grep -x 'lb_external=${ext}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: answers.txt records the NodePort it got anyway
+      cli_command:
+        command: grep -x 'lb_nodeport=${np}' answers.txt
+        tests:
+          - exit_code: 0

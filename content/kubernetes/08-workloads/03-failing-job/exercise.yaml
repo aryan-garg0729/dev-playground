@@ -1,0 +1,34 @@
+id: k8s.workloads.failing-job
+type: project_cli
+version: 1
+title: A Job That Fails Properly
+xp: 20
+difficulty: 2
+tags: [jobs, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Job bad-batch never retries in place and gives up after 2 retries
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get job bad-batch -o jsonpath='backoff={.spec.backoffLimit} policy={.spec.template.spec.restartPolicy} failed={.status.conditions[?(@.type=="Failed")].reason}'
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["backoff=2", "policy=Never", "failed=BackoffLimitExceeded"]
+    - description: Count the pods it left behind
+      cli_command:
+        command: echo "pods=$(kubectl --context kind-elixirbytes -n shop get pods -l job-name=bad-batch -o name | wc -l | tr -d ' ')"
+        captures: [{ name: pods, regex: "pods=(\\d+)" }]
+        tests:
+          - stdout_contains_none: ["pods=0"]
+    - description: answers.txt records how many pods bad-batch created
+      cli_command:
+        command: grep -x 'bad_batch_pods=${pods}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: The failed pods' logs say what went wrong
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop logs -l job-name=bad-batch --tail=1
+        tests:
+          - stdout_contains_all: ["supplier feed unreachable"]

@@ -1,0 +1,34 @@
+id: k8s.access.service-account
+type: project_cli
+version: 1
+title: Who Is This Pod?
+xp: 15
+difficulty: 2
+tags: [rbac, serviceaccounts]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: ServiceAccount menu-reader exists in shop
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get serviceaccount menu-reader -o name
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["serviceaccount/menu-reader"]
+    - description: Find out who storefront runs as
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get pod storefront -o jsonpath='sa={.spec.serviceAccountName}'
+        captures: [{ name: sa, regex: "sa=(\\S+)" }]
+        tests:
+          - stdout_contains_all: ["sa="]
+    - description: answers.txt records storefront's ServiceAccount
+      cli_command:
+        command: grep -x 'storefront_sa=${sa}' answers.txt
+        tests:
+          - exit_code: 0
+    - description: answers.txt records menu-reader's full username
+      cli_command:
+        command: grep -x 'menu_reader_user=system:serviceaccount:shop:menu-reader' answers.txt
+        tests:
+          - exit_code: 0

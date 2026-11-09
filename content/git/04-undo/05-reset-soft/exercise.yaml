@@ -1,0 +1,38 @@
+id: gt.undo.reset-soft
+type: project_cli
+version: 1
+title: Two Commits Into One
+xp: 20
+difficulty: 2
+tags: [reset]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find C4
+      cli_command:
+        command: "git log -1 --format=%H ':/^C4:'"
+        captures: [{ name: c4, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: D4 sits directly on C4 at the tip of main
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["D4:", "parents=${c4}"]
+    - description: The two etiquette commits are gone from every branch
+      cli_command:
+        command: "git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_none: ["etiquette 1", "etiquette 2"]
+    - description: You used reset to get there
+      cli_command:
+        command: "git reflog --format=%gs"
+        tests:
+          - stdout_contains_all: ["reset: moving to"]
+    - description: D4 has both lines
+      cli_command:
+        command: "git show main:etiquette.md"
+        tests:
+          - stdout_contains_all: ["Answer within 5 minutes", "Hand over in writing"]

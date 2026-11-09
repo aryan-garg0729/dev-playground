@@ -1,0 +1,22 @@
+id: k8s.health.readiness
+type: project_cli
+version: 1
+title: Running Is Not Ready
+xp: 25
+difficulty: 3
+tags: [probes, readiness]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: brewd has an HTTP readiness probe on / port 80 every 5 seconds
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='path={.spec.template.spec.containers[0].readinessProbe.httpGet.path} port={.spec.template.spec.containers[0].readinessProbe.httpGet.port} period={.spec.template.spec.containers[0].readinessProbe.periodSeconds}'
+        tests:
+          - stdout_contains_all: ["path=/ ", "port=80 ", "period=5"]
+    - description: All 4 pods are rolled out and ready
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n shop get deploy brewd -o jsonpath='ready={.status.readyReplicas} updated={.status.updatedReplicas}'
+        tests:
+          - stdout_contains_all: ["ready=4", "updated=4"]

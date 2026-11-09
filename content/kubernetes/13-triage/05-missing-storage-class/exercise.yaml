@@ -1,0 +1,35 @@
+id: k8s.triage.missing-storage-class
+type: project_cli
+version: 1
+title: Stuck Before It Ever Runs
+xp: 25
+difficulty: 4
+tags: [debugging, storage]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: PVC archive-data is Bound, on a class that exists
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get pvc archive-data -o jsonpath='phase={.status.phase} class={.spec.storageClassName} size={.spec.resources.requests.storage}'
+        captures: [{ name: sc, regex: "class=(\\S+)" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["phase=Bound", "size=1Gi"]
+          - stdout_contains_none: ["fast-ssd"]
+    - description: That StorageClass is real
+      cli_command:
+        command: kubectl --context kind-elixirbytes get storageclass ${sc} -o name
+        tests:
+          - exit_code: 0
+    - description: archive is running with its volume mounted
+      cli_command:
+        command: kubectl --context kind-elixirbytes -n triage get deploy archive -o jsonpath='ready={.status.readyReplicas}'; echo; kubectl --context kind-elixirbytes -n triage logs deploy/archive
+        tests:
+          - stdout_contains_all: ["ready=1", "archive up"]
+    - description: incident.txt names the cause
+      cli_command:
+        command: grep -Ei '^archive_cause=.*(storage|class|sc|pvc|volume|claim)' incident.txt
+        tests:
+          - exit_code: 0

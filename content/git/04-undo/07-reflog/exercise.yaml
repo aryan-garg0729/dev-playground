@@ -1,0 +1,28 @@
+id: gt.undo.reflog
+type: project_cli
+version: 1
+title: The Undo Trail
+xp: 25
+difficulty: 3
+tags: [reflog, reset]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: You really did run the hard reset
+      cli_command:
+        command: "git reflog --format=%gs"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["reset: moving to HEAD~3"]
+    - description: main is back at D4, with B4 and C4 below it
+      cli_command:
+        command: "git --no-pager log --format=%s -n 3 main"
+        tests:
+          - stdout_contains_all: ["D4:", "C4:", "B4:"]
+    - description: The working tree is clean
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0
