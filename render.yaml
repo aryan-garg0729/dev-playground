@@ -8,7 +8,7 @@ services:
     name: codequest
     runtime: docker
     plan: free
-    region: oregon
+    region: singapore
     dockerfilePath: ./deploy/Dockerfile
     dockerContext: .
     healthCheckPath: /api/v1/healthz
@@ -41,6 +41,6 @@ services:
   - type: keyvalue
     name: codequest-redis
     plan: free
-    region: oregon
+    region: singapore
     maxmemoryPolicy: noeviction
     ipAllowList: [] # reachable only from services in this Render account

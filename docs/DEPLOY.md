@@ -13,7 +13,8 @@ services, which free plans cannot host (the Python worker needs a Docker daemon)
 ## 1. Database (Neon)
 
 1. Create a project at neon.tech (free plan). Pick a region close to Render's
-   `oregon` (for example AWS us-west-2).
+   `singapore` (for example AWS ap-southeast-1). Supabase works too: use its
+   Session pooler string (port 5432, IPv4) with `?sslmode=require`.
 2. Copy the connection string. It looks like
    `postgresql://user:pass@ep-xxx.us-west-2.aws.neon.tech/neondb?sslmode=require`.
    Use the direct one, not the `-pooler` host.
