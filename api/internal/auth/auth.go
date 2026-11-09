@@ -1,5 +1,5 @@
-// Package auth handles sign-in: sessions, magic links and GitHub OAuth.
-// Secrets (session ids, link tokens) are random 32-byte values; only their
+// Package auth handles sign-in: sessions and OAuth (GitHub, Google).
+// Secrets (session ids, CLI tokens) are random 32-byte values; only their
 // SHA-256 is stored, so a database leak does not leak live credentials.
 package auth
 

@@ -141,22 +141,6 @@ export function browserTimezone(): string {
   }
 }
 
-export function sendMagicLink(email: string, next: string) {
-  return unwrap(api.POST('/auth/magic-link', { body: { email, next } }));
-}
-
-/** Redeems a magic-link token; on success the session cookie is set. */
-export function useVerifyMagicLink() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (token: string) => unwrap(api.POST('/auth/magic-link/verify', { body: { token, timezone: browserTimezone() } })),
-    onSuccess: () => {
-      track('sign_in', { method: 'magic_link' });
-      return qc.invalidateQueries();
-    },
-  });
-}
-
 /** Development sign-in (DEV_AUTH=1 only). */
 export function useDevSignIn() {
   const qc = useQueryClient();

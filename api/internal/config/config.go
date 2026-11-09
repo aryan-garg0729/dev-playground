@@ -18,14 +18,18 @@ type Config struct {
 
 	// Production (APP_ENV=production) refuses unsafe settings at startup.
 	Production bool
-	// AppURL is the web app's public URL (links in emails, OAuth redirect).
+	// AppURL is the web app's public URL (OAuth redirects).
 	AppURL string
+	// WebDir (WEB_DIR) is a built web app (web/dist) the API serves next to
+	// /api, on one origin. Empty: the API serves only /api (local dev uses Vite).
+	WebDir string
 	// DevAuth enables POST /auth/dev, which signs in without email. For local
 	// development and browser tests only; refused in production.
 	DevAuth bool
 
-	SMTPAddr, SMTPUsername, SMTPPassword, MailFrom string
-	GitHubClientID, GitHubClientSecret             string
+	// Sign-in is OAuth only; production needs at least one provider.
+	GitHubClientID, GitHubClientSecret string
+	GoogleClientID, GoogleClientSecret string
 
 	// Tutor is the AI tutor's provider: "" (off) or "ollama". Development
 	// only for now: production refuses to start with it set.
@@ -74,12 +78,11 @@ func Load() (Config, error) {
 		Production:         os.Getenv("APP_ENV") == "production",
 		AppURL:             strings.TrimRight(getenv("APP_URL", "http://localhost:5173"), "/"),
 		DevAuth:            os.Getenv("DEV_AUTH") == "1",
-		SMTPAddr:           os.Getenv("SMTP_ADDR"),
-		SMTPUsername:       os.Getenv("SMTP_USERNAME"),
-		SMTPPassword:       os.Getenv("SMTP_PASSWORD"),
-		MailFrom:           getenv("MAIL_FROM", "CodeQuest <no-reply@codequest.local>"),
+		WebDir:             os.Getenv("WEB_DIR"),
 		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		Tutor:              os.Getenv("TUTOR_PROVIDER"),
 		OllamaURL:          getenv("OLLAMA_URL", "http://localhost:11434"),
 		TutorModel:         getenv("TUTOR_MODEL", "qwen2.5-coder:3b"),
@@ -98,12 +101,15 @@ func Load() (Config, error) {
 	if (c.GitHubClientID == "") != (c.GitHubClientSecret == "") {
 		return Config{}, errors.New("set both GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET, or neither")
 	}
+	if (c.GoogleClientID == "") != (c.GoogleClientSecret == "") {
+		return Config{}, errors.New("set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither")
+	}
 	if c.Production {
 		switch {
 		case c.DevAuth:
 			return Config{}, errors.New("DEV_AUTH must not be set in production")
-		case c.SMTPAddr == "":
-			return Config{}, errors.New("SMTP_ADDR is required in production (magic links)")
+		case c.GitHubClientID == "" && c.GoogleClientID == "":
+			return Config{}, errors.New("production needs a sign-in provider: set GITHUB_CLIENT_ID/SECRET or GOOGLE_CLIENT_ID/SECRET")
 		case !strings.HasPrefix(c.AppURL, "https://"):
 			return Config{}, errors.New("APP_URL must be https in production")
 		case c.Tutor != "":

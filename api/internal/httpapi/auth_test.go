@@ -38,110 +38,6 @@ func sessionFrom(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
 	return nil
 }
 
-func tokenFromMail(t *testing.T, body string) string {
-	t.Helper()
-	_, after, ok := strings.Cut(body, "/sign-in/verify#token=")
-	if !ok {
-		t.Fatalf("no link in email: %q", body)
-	}
-	return strings.Fields(after)[0]
-}
-
-func TestMagicLinkSignIn(t *testing.T) {
-	e := setup(t, false)
-	code, body := e.do(http.MethodPost, "/api/v1/auth/magic-link", `{"email":" New@Example.com ","next":"/learn/foundations/fd.py.sum-list"}`, nil)
-	if code != http.StatusAccepted {
-		t.Fatalf("send = %d: %s", code, body)
-	}
-	m := e.mail.last()
-	if m.to != "new@example.com" || !strings.HasPrefix(m.body, "Sign in to CodeQuest:\n\n"+origin+"/sign-in/verify#token=") {
-		t.Fatalf("email = %+v", m)
-	}
-	token := tokenFromMail(t, m.body)
-
-	rec := e.doRaw(jsonReq(http.MethodPost, "/api/v1/auth/magic-link/verify", `{"token":"`+token+`","timezone":"Asia/Kolkata"}`))
-	if rec.Code != http.StatusOK {
-		t.Fatalf("verify = %d: %s", rec.Code, rec.Body)
-	}
-	c := sessionFrom(t, rec)
-	if !c.HttpOnly || c.SameSite != http.SameSiteLaxMode || c.Path != "/" {
-		t.Fatalf("cookie flags: %+v", c)
-	}
-	var signed struct {
-		User struct{ Email, Timezone string }
-		Next string
-	}
-	_ = json.Unmarshal(rec.Body.Bytes(), &signed)
-	if signed.User.Email != "new@example.com" || signed.User.Timezone != "Asia/Kolkata" || signed.Next != "/learn/foundations/fd.py.sum-list" {
-		t.Fatalf("verify body = %s", rec.Body)
-	}
-
-	// The session works; the database holds only a hash of it.
-	e.cookie = c.Value
-	var me struct{ User struct{ Email string } }
-	e.getJSON("/api/v1/me", &me)
-	if me.User.Email != "new@example.com" {
-		t.Fatalf("me = %+v", me)
-	}
-	var stored int
-	_ = e.pool.QueryRow(t.Context(), `SELECT count(*) FROM sessions WHERE id = $1`, c.Value).Scan(&stored)
-	if stored != 0 {
-		t.Fatal("raw session id stored in the database")
-	}
-
-	// A link works once.
-	code, body = e.do(http.MethodPost, "/api/v1/auth/magic-link/verify", `{"token":"`+token+`"}`, nil)
-	if code != http.StatusBadRequest || !strings.Contains(string(body), "invalid_link") {
-		t.Fatalf("reuse = %d: %s", code, body)
-	}
-
-	// Sign out ends the session server-side.
-	if code, _ := e.do(http.MethodPost, "/api/v1/auth/logout", `{}`, nil); code != http.StatusNoContent {
-		t.Fatalf("logout = %d", code)
-	}
-	if code, _ := e.do(http.MethodGet, "/api/v1/me", "", nil); code != http.StatusUnauthorized {
-		t.Fatalf("me after logout = %d", code)
-	}
-}
-
-func TestMagicLinkRules(t *testing.T) {
-	e := setup(t, false)
-	// Existing and unknown addresses get the same answer.
-	e.signIn("known@example.com", "K")
-	c1, b1 := e.do(http.MethodPost, "/api/v1/auth/magic-link", `{"email":"known@example.com"}`, nil)
-	c2, b2 := e.do(http.MethodPost, "/api/v1/auth/magic-link", `{"email":"unknown@example.com"}`, nil)
-	if c1 != c2 || string(b1) != string(b2) {
-		t.Fatalf("responses differ: %d %s / %d %s", c1, b1, c2, b2)
-	}
-	for _, bad := range []string{`{"email":"nope"}`, `{"email":"a@b"}`, `{"email":"Name <a@example.com>"}`, `{"email":"a@example.com","extra":1}`} {
-		if code, _ := e.do(http.MethodPost, "/api/v1/auth/magic-link", bad, nil); code != http.StatusBadRequest {
-			t.Errorf("%s = %d, want 400", bad, code)
-		}
-	}
-	// Off-site next paths are dropped.
-	e.do(http.MethodPost, "/api/v1/auth/magic-link", `{"email":"x@example.com","next":"//evil.example/x"}`, nil)
-	code, body := e.do(http.MethodPost, "/api/v1/auth/magic-link/verify", `{"token":"`+tokenFromMail(t, e.mail.last().body)+`"}`, nil)
-	if code != http.StatusOK || !strings.Contains(string(body), `"next":"/"`) {
-		t.Fatalf("verify with off-site next = %d: %s", code, body)
-	}
-	// Expired links fail.
-	e.do(http.MethodPost, "/api/v1/auth/magic-link", `{"email":"y@example.com"}`, nil)
-	tok := tokenFromMail(t, e.mail.last().body)
-	if _, err := e.pool.Exec(t.Context(), `UPDATE magic_links SET expires_at = now() - interval '1 second'`); err != nil {
-		t.Fatal(err)
-	}
-	if code, _ := e.do(http.MethodPost, "/api/v1/auth/magic-link/verify", `{"token":"`+tok+`"}`, nil); code != http.StatusBadRequest {
-		t.Fatalf("expired link = %d", code)
-	}
-	// Five emails per address per hour.
-	for i := range 6 {
-		code, _ := e.do(http.MethodPost, "/api/v1/auth/magic-link", `{"email":"flood@example.com"}`, nil)
-		if want := map[bool]int{true: 202, false: 429}[i < 5]; code != want {
-			t.Fatalf("email %d = %d, want %d", i+1, code, want)
-		}
-	}
-}
-
 func TestDevAuth(t *testing.T) {
 	off := setup(t, false)
 	if code, _ := off.do(http.MethodPost, "/api/v1/auth/dev", `{}`, nil); code != http.StatusNotFound {
@@ -241,7 +137,7 @@ func fakeGitHub(t *testing.T, email string) *auth.GitHub {
 
 func TestGitHubSignIn(t *testing.T) {
 	e := setupWith(t, false, opts{github: fakeGitHub(t, "Octo@Example.com")})
-	// An existing magic-link account with the same verified email gets linked.
+	// An existing account with the same verified email gets linked.
 	existing, _ := e.signIn("octo@example.com", "")
 
 	rec := e.doRaw(httptest.NewRequest(http.MethodGet, "/api/v1/auth/github/start?next=/courses/foundations", nil))
@@ -289,9 +185,97 @@ func TestGitHubSignIn(t *testing.T) {
 	}
 }
 
-func TestGitHubNotConfigured(t *testing.T) {
+func TestOAuthNotConfigured(t *testing.T) {
 	e := setup(t, false)
-	if code, _ := e.do(http.MethodGet, "/api/v1/auth/github/start", "", nil); code != http.StatusNotFound {
-		t.Fatalf("start = %d", code)
+	for _, p := range []string{"github", "google", "nope"} {
+		if code, _ := e.do(http.MethodGet, "/api/v1/auth/"+p+"/start", "", nil); code != http.StatusNotFound {
+			t.Errorf("%s start = %d", p, code)
+		}
+	}
+	var prov map[string]bool
+	e.getJSON("/api/v1/auth/providers", &prov)
+	if prov["github"] || prov["google"] || len(prov) != 3 {
+		t.Fatalf("providers = %v", prov)
+	}
+}
+
+// fakeGoogle serves Google's token and userinfo endpoints.
+func fakeGoogle(t *testing.T, email string, verified bool) *auth.Google {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /token", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		if r.Form.Get("code") != "good-code" || r.Form.Get("client_secret") != "gsecret" || r.Form.Get("grant_type") != "authorization_code" {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"error":"invalid_grant"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"access_token":"gtok","token_type":"Bearer"}`))
+	})
+	mux.HandleFunc("GET /userinfo", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer gtok" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		b, _ := json.Marshal(map[string]any{"sub": "1098", "email": email, "email_verified": verified, "name": "Goo Gle", "picture": "https://pics.example/1098"})
+		_, _ = w.Write(b)
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return &auth.Google{
+		ClientID: "gid", ClientSecret: "gsecret", RedirectURL: origin + "/api/v1/auth/google/callback",
+		AuthorizeURL: srv.URL + "/auth", TokenURL: srv.URL + "/token", UserinfoURL: srv.URL + "/userinfo",
+	}
+}
+
+// googleSignIn runs start + callback and returns the callback response.
+func googleSignIn(t *testing.T, e *env, code string) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := e.doRaw(httptest.NewRequest(http.MethodGet, "/api/v1/auth/google/start?next=/courses/git&tz=Asia%2FKolkata", nil))
+	loc, _ := url.Parse(rec.Header().Get("Location"))
+	if rec.Code != http.StatusFound || loc.Query().Get("client_id") != "gid" || loc.Query().Get("scope") != "openid email profile" {
+		t.Fatalf("start = %d %s", rec.Code, loc)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/google/callback?code="+code+"&state="+loc.Query().Get("state"), nil)
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == "cq_oauth" {
+			if c.Path != "/api/v1/auth/google" || !c.HttpOnly {
+				t.Fatalf("state cookie = %+v", c)
+			}
+			req.AddCookie(c)
+		}
+	}
+	return e.doRaw(req)
+}
+
+// Google sign-in links to the account with the same verified email, and
+// refuses an unverified one.
+func TestGoogleSignIn(t *testing.T) {
+	e := setupWith(t, false, opts{google: fakeGoogle(t, "Goo@Example.com", true)})
+	existing, _ := e.signIn("goo@example.com", "")
+	var prov map[string]bool
+	e.getJSON("/api/v1/auth/providers", &prov)
+	if !prov["google"] || prov["github"] {
+		t.Fatalf("providers = %v", prov)
+	}
+	if rec := googleSignIn(t, e, "bad-code"); rec.Header().Get("Location") != "/sign-in?error=google" {
+		t.Fatalf("bad code: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	rec := googleSignIn(t, e, "good-code")
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/courses/git" {
+		t.Fatalf("callback = %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	e.cookie = sessionFrom(t, rec).Value
+	var me struct {
+		User struct{ ID, Name, Avatar, Timezone string }
+	}
+	e.getJSON("/api/v1/me", &me)
+	if me.User.ID != existing.UUID.String() || me.User.Name != "Goo Gle" || me.User.Avatar == "" || me.User.Timezone != "Asia/Kolkata" {
+		t.Fatalf("me = %+v, want the linked existing account", me)
+	}
+
+	unverified := setupWith(t, false, opts{google: fakeGoogle(t, "new@example.com", false)})
+	if rec := googleSignIn(t, unverified, "good-code"); rec.Header().Get("Location") != "/sign-in?error=google" {
+		t.Fatalf("unverified email: %d %s", rec.Code, rec.Header().Get("Location"))
 	}
 }

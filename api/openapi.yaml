@@ -141,50 +141,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [magic_link, github, dev]
+                required: [github, google, dev]
                 properties:
-                  magic_link: { type: boolean }
                   github: { type: boolean }
+                  google: { type: boolean }
                   dev: { type: boolean, description: DEV_AUTH (development only) }
-  /auth/magic-link:
-    post:
-      operationId: sendMagicLink
-      description: Emails a single-use sign-in link (15 minutes). Same answer whether or not the account exists.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email]
-              additionalProperties: false
-              properties:
-                email: { type: string }
-                next: { type: string, description: Same-site path to open after sign-in }
-      responses:
-        "202": { description: Sent, content: { application/json: { schema: { type: object, required: [status], properties: { status: { type: string } } } } } }
-        "400": { $ref: "#/components/responses/Error" }
-        "429": { $ref: "#/components/responses/Error" }
-  /auth/magic-link/verify:
-    post:
-      operationId: verifyMagicLink
-      description: Redeems the token from the link's URL fragment and sets the session cookie.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [token]
-              additionalProperties: false
-              properties:
-                token: { type: string }
-                timezone: { type: string, description: The browser's IANA zone, saved on first sign-in }
-      responses:
-        "200":
-          description: Signed in
-          content: { application/json: { schema: { $ref: "#/components/schemas/SignedIn" } } }
-        "400": { $ref: "#/components/responses/Error" }
   /auth/dev:
     post:
       operationId: devSignIn
@@ -290,19 +251,23 @@ paths:
                   lesson_no: { type: integer, description: 1-based }
         "401": { $ref: "#/components/responses/Error" }
         "404": { $ref: "#/components/responses/Error" }
-  /auth/github/start:
+  /auth/{provider}/start:
     get:
-      operationId: githubStart
-      description: Redirects to GitHub (browser navigation, not fetch).
-      parameters: [{ name: next, in: query, schema: { type: string } }]
+      operationId: oauthStart
+      description: Redirects to the provider (github or google; browser navigation, not fetch). 404 when that provider is not configured.
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [github, google] } }
+        - { name: next, in: query, schema: { type: string } }
       responses:
-        "302": { description: Redirect to GitHub }
+        "302": { description: Redirect to the provider }
         "404": { $ref: "#/components/responses/Error" }
-  /auth/github/callback:
+  /auth/{provider}/callback:
     get:
-      operationId: githubCallback
+      operationId: oauthCallback
+      parameters:
+        - { name: provider, in: path, required: true, schema: { type: string, enum: [github, google] } }
       responses:
-        "302": { description: Redirect into the app (or /sign-in?error=github) }
+        "302": { description: "Redirect into the app (or /sign-in?error=<provider>)" }
   /courses:
     get:
       operationId: listCourses

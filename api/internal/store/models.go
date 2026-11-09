@@ -192,15 +192,6 @@ type LeagueWeek struct {
 	ClosedAt time.Time `json:"closed_at"`
 }
 
-type MagicLink struct {
-	TokenHash string     `json:"token_hash"`
-	Email     string     `json:"email"`
-	Next      string     `json:"next"`
-	ExpiresAt time.Time  `json:"expires_at"`
-	UsedAt    *time.Time `json:"used_at"`
-	CreatedAt time.Time  `json:"created_at"`
-}
-
 type Medal struct {
 	ID     string          `json:"id"`
 	Family string          `json:"family"`

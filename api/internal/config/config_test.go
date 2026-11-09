@@ -6,7 +6,7 @@ import (
 )
 
 func TestLoadTutor(t *testing.T) {
-	prod := map[string]string{"APP_ENV": "production", "SMTP_ADDR": "smtp:25", "APP_URL": "https://app.example"}
+	prod := map[string]string{"APP_ENV": "production", "GOOGLE_CLIENT_ID": "g", "GOOGLE_CLIENT_SECRET": "s", "APP_URL": "https://app.example"}
 	tests := []struct {
 		name    string
 		env     map[string]string
@@ -23,11 +23,14 @@ func TestLoadTutor(t *testing.T) {
 		{name: "unknown provider", env: map[string]string{"TUTOR_PROVIDER": "openai"}, wantErr: "TUTOR_PROVIDER"},
 		{name: "bad limit", env: map[string]string{"TUTOR_DAILY_LIMIT": "0"}, wantErr: "TUTOR_DAILY_LIMIT"},
 		{name: "production without tutor", env: prod, check: func(c Config) bool { return c.Production && c.Tutor == "" }},
+		{name: "production needs a sign-in provider", env: merge(prod, map[string]string{"GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": ""}), wantErr: "sign-in provider"},
+		{name: "production with GitHub only", env: merge(prod, map[string]string{"GOOGLE_CLIENT_ID": "", "GOOGLE_CLIENT_SECRET": "", "GITHUB_CLIENT_ID": "a", "GITHUB_CLIENT_SECRET": "b"}), check: func(c Config) bool { return c.GitHubClientID == "a" }},
+		{name: "half a Google pair", env: map[string]string{"GOOGLE_CLIENT_ID": "g"}, wantErr: "GOOGLE_CLIENT_SECRET"},
 		{name: "production refuses the tutor", env: merge(prod, map[string]string{"TUTOR_PROVIDER": "ollama"}), wantErr: "development-only"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, k := range []string{"APP_ENV", "SMTP_ADDR", "APP_URL", "DEV_AUTH", "TUTOR_PROVIDER", "OLLAMA_URL", "TUTOR_MODEL", "TUTOR_DAILY_LIMIT", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"} {
+			for _, k := range []string{"APP_ENV", "APP_URL", "DEV_AUTH", "TUTOR_PROVIDER", "OLLAMA_URL", "TUTOR_MODEL", "TUTOR_DAILY_LIMIT", "GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "WEB_DIR"} {
 				t.Setenv(k, "")
 			}
 			t.Setenv("DATABASE_URL", "postgres://x")

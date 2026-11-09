@@ -28,7 +28,7 @@ Use a single monorepo with a Go API, a React SPA, a separate sandbox runner page
 | DB | PostgreSQL 16 | Migrations with `golang-migrate`; queries with `sqlc` |
 | Cache / leaderboards | Redis 7 | Sorted sets for leagues; rate limiting |
 | Server-side execution | Docker containers (later gVisor) for Python; WASI modules under wazero for Go and JS (Phase 10) | Worker pools behind Redis job queues |
-| Auth | Email magic link + GitHub OAuth | Session cookie, `HttpOnly`, `SameSite=Lax` |
+| Auth | Google and GitHub OAuth (decision 2026-11-09: email magic links removed, no SMTP) | Session cookie, `HttpOnly`, `SameSite=Lax` |
 | Payments | Stripe (global), Razorpay (India) | Behind one `billing` interface |
 | AI tutor | LLM API via a Go `tutor` package | Provider behind an interface |
 | Local dev | Docker Compose | Postgres, Redis, API, web, runner |
@@ -413,7 +413,7 @@ Server-side rules:
 - Rate-limit submissions per user (30/min) and per IP (120/min) in Redis, fixed one-minute windows; over the limit is `429 rate_limited` with `Retry-After`. If Redis is down, submits are refused (503), never let through unlimited.
 - Docker runner hardening as listed under Grading. The worker host runs no other services and has no credentials to the database beyond writing results.
 - **Wasm worker (decision 2026-11-06, Phase 10).** Wasm jobs run inside the worker process, so the wasm worker is never the Docker worker (which holds the root-equivalent Docker socket). It runs in its own container: non-root, read-only root, `cap_drop: ALL`, `no-new-privileges`, memory and pids limits, tmpfs `/tmp` only, and on an internal network that reaches only Redis. Learner code is contained by WASI first (only its own file, no network, no environment) and by that container second. This replaces "one container per submission" for Go and JS lessons only; Python lessons keep the Docker runner.
-- Store passwords nowhere (magic link + OAuth only). CSRF protection on all state-changing endpoints. Validate all request bodies.
+- Store passwords nowhere (OAuth only). CSRF protection on all state-changing endpoints. Validate all request bodies.
 
 ## Data model and API
 
@@ -425,7 +425,6 @@ Postgres holds users, compiled content, submissions, progress and game state. Re
 | --- | --- |
 | `users` | id (uuid), email, name, avatar, country, timezone, goal (onboarding: zero, backend, interviews, ai), onboarded_at, created_at |
 | `sessions` | id (SHA-256 of the cookie value, never the value), user_id, expires_at, created_at |
-| `magic_links` | token_hash, email, next, expires_at, used_at (single use, 15 minutes) |
 | `oauth_identities` | provider, provider_user_id, user_id |
 | `courses` | id (slug), title, description, order_index, published, icon, level, tags (text[]), topics |
 | `career_paths` | id, title, description, goal, order_index, steps (jsonb `[{course, note}]`), published |
@@ -452,10 +451,8 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/auth/providers` | Enabled sign-in methods (`magic_link`, `github`, `dev`) |
-| POST | `/auth/magic-link` | Email a sign-in link (same answer whether or not the account exists) |
-| POST | `/auth/magic-link/verify` | Redeem the link's token, set the session cookie |
-| GET | `/auth/github/start`, `/auth/github/callback` | GitHub OAuth web flow, sets the session cookie |
+| GET | `/auth/providers` | Enabled sign-in methods (`github`, `google`, `dev`) |
+| GET | `/auth/{github,google}/start`, `/auth/{github,google}/callback` | OAuth web flow, sets the session cookie (404 for a provider that is not configured) |
 | POST | `/auth/dev` | Sign in without email; only when `DEV_AUTH=1` (404 otherwise) |
 | POST | `/auth/logout` | End the session |
 | POST | `/cli/codes` | A one-time code for `codequest login` (session cookie only, not a CLI token) |
@@ -483,18 +480,19 @@ Game economy tables (medals, Bytes, inventory, quests) are listed under Game eco
 | POST | `/billing/checkout` | Start Stripe or Razorpay checkout |
 | POST | `/billing/webhook/{provider}` | Provider webhooks |
 
-Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_link` (400, a magic link that is unknown, used or expired), `invalid_code` (400, a CLI login code that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `tutor_unavailable` (404, the tutor is off), `limit_reached` (also 429 when today's tutor hints are used), `tutor_failed` (an SSE `error` event; the hint is refunded), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
+Errors always use `{ "error": { "code": "locked", "message": "..." } }`, including 402. Codes in use: `not_found`, `bad_request`, `invalid_answer` (400, answer doesn't fit the type's shape; not stored), `unauthorized`, `forbidden_origin`, `unsupported_media_type`, `stale_version` (409, the submitted `version` is not the current one), `run_unavailable` (400, the exercise does not run on the server), `invalid_code` (400, a CLI login code that is unknown, used or expired), `chapter_locked` (403, a lesson behind an earlier chapter's undefeated boss: GET, Run, Submit and power-ups), `insufficient_bytes`, `limit_reached`, `not_owned`, `nothing_to_peek`, `request_reused` (409, economy actions; state unchanged), `tutor_unavailable` (404, the tutor is off), `limit_reached` (also 429 when today's tutor hints are used), `tutor_failed` (an SSE `error` event; the hint is refunded), `rate_limited` (429), `grader_unavailable` (503), `unavailable` (503), `internal`. Request bodies are capped at 128 KB (a 50 KB code file can double when JSON-escaped). Generate TypeScript types from `api/openapi.yaml` with `openapi-typescript` (`make api-types`) and call the API with `openapi-fetch`.
 
 CSRF: every non-GET request must carry an `Origin` header in `ALLOWED_ORIGINS` (browsers always send one on these methods; a missing one is refused) and `Content-Type: application/json` (a cross-site form cannot send it without a CORS preflight). The session cookie is also `SameSite=Lax`. Two exceptions skip the Origin check, never the content type (Phase 8): requests with an `Authorization` header (the CLI; a page cannot attach one cross-site without a preflight, which the API never answers) and `POST /cli/token` (sets no cookie; needs a code shown only to the signed-in user).
 
 ### Accounts and sessions
 
-- **Sessions.** A random 32-byte value in the `cq_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when `APP_URL` is https, 30 days). Postgres stores only its SHA-256. Sign-out deletes the row. Expired sessions and links are deleted hourly.
-- **Magic links.** `POST /auth/magic-link` emails `APP_URL/sign-in/verify#token=…`. The token is in the URL fragment, so it never reaches a server or proxy log, and the page redeems it with `POST /auth/magic-link/verify` only after a click, so mail scanners that open links cannot use it up. Tokens are single use, expire after 15 minutes and are stored hashed. Limits: 5 emails per address per hour, 20 sign-in attempts per IP per hour. Without `SMTP_ADDR` (development) the email is written to the API log; production requires SMTP. The first sign-in saves the browser's timezone (streak days follow it).
+- **Sessions.** A random 32-byte value in the `cq_session` cookie (`HttpOnly`, `SameSite=Lax`, `Secure` when `APP_URL` is https, 30 days). Postgres stores only its SHA-256. Sign-out deletes the row. Expired sessions are deleted hourly.
+- **OAuth only** (decision 2026-11-09, at the author's request: no SMTP server to run). Email magic links were removed (migration `0009` drops `magic_links`). The sign-in page passes the browser's timezone as `tz` to `/start`; it rides in the state cookie and is saved on the first sign-in (streak days follow it). Callbacks are limited to 20 per IP per hour. With `APP_ENV=production` the API refuses to start unless GitHub or Google is configured.
 - **GitHub.** Hand-rolled OAuth web flow (no new dependency): a random `state` in a 10-minute `HttpOnly` cookie, compared in constant time; scopes `read:user user:email`; the primary verified email is required. A GitHub identity links to the account with that email, or creates one. Enabled when `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set.
+- **Google.** The same hand-rolled flow against Google's OpenID Connect endpoints: scopes `openid email profile`, `prompt=select_account`, profile from the userinfo endpoint; `email_verified` must be true. A Google identity (`sub`) links to the account with that email, or creates one, so one person signing in with both providers with the same email gets one account. Enabled when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set; the redirect URI is `APP_URL/api/v1/auth/google/callback`.
 - **Post-sign-in redirect** (`next`) is accepted only as a same-site path (`/…`, not `//`, no backslashes, not under `/api/`).
 - **CLI tokens** (Phase 8, paste-code flow like boot.dev's, without its localhost listener). `codequest login` opens `APP_URL/cli/login`; the signed-in page calls `POST /cli/codes` and shows a 10-character code (`XXXXX-XXXXX`, no ambiguous letters, single use, 10 minutes, stored hashed); the learner pastes it and the CLI gets a random 32-byte token from `POST /cli/token`, kept in `<user config dir>/codequest/config.json` (mode 0600). The API accepts `Authorization: Bearer <token>` in place of the cookie on every endpoint; a request with both is `400`, a bad or expired token `401`. `codequest logout` revokes it (`POST /cli/logout`) and always deletes it locally. Expired codes and tokens are deleted hourly.
-- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. The default dev user (no email given) starts with 1,000 XP and 10,000 Bytes (decision 2026-11-05; raised from 5,000 on 2026-11-09), granted once through the XP and Byte ledgers (`dev_grant`/`starter`) so every power-up can be tried (the Skeleton Key still needs 5 bosses defeated); dev sign-ins with an email start from zero. The `feature-tour` course has one lesson of every type (mcq single and multiple, browser and server Python, SQL, a boss, CLI command and HTTP) for manual testing. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, `SMTP_ADDR` is missing or `APP_URL` is not https.
+- **Dev sign-in** replaces Phase 1's `DEV_USER_EMAIL` (decision 2026-11-03): `DEV_AUTH=1` (on in Compose) enables `POST /auth/dev`, which creates a real session for `dev@codequest.local` (or a given email) without email. Browser tests use it. The default dev user (no email given) starts with 1,000 XP and 10,000 Bytes (decision 2026-11-05; raised from 5,000 on 2026-11-09), granted once through the XP and Byte ledgers (`dev_grant`/`starter`) so every power-up can be tried (the Skeleton Key still needs 5 bosses defeated); dev sign-ins with an email start from zero. The `feature-tour` course has one lesson of every type (mcq single and multiple, browser and server Python, SQL, a boss, CLI command and HTTP) for manual testing. With `APP_ENV=production` the API refuses to start if `DEV_AUTH` is set, no OAuth provider is configured or `APP_URL` is not https.
 
 ## Gamification engine
 
@@ -833,6 +831,7 @@ Known limits:
 - ~~LangChain `code` exercises (Phase 2).~~ Resolved: `codequest/python:3.12` ships the pinned LangChain packages and `cq.fakes`; the sample LangChain code exercises use `runner: docker-python` and fakes only.
 - sql manifest (Phase 3): `prompt`, `setup` (public data, shown to the learner), `solution` (stored in `private_spec` because hidden checks compare against it), optional `starter`, `run`, `limits.timeout_ms` (default 2000). Hidden datasets are server-only.
 - Phase 2 interim UI: Run became available in Phase 3; the tutor button is disabled until Phase 6; unsent answers are kept in `localStorage` (`cq-draft:<id>:v<version>`) until `PUT /exercises/{id}/draft` exists; the header's GameStats arrived in Phase 4.
+- Hosting (decision 2026-11-09, at the author's request): free plans for now, as in `docs/DEPLOY.md` and `render.yaml`. One Render web service runs the API with the built web app on the same origin (`WEB_DIR`, so the session cookie stays first-party), plus Render Key Value for Redis and Neon for Postgres; every start runs `cq migrate up && cq build`. No grading workers or sandbox: only quiz and CLI lessons are gradable there, which is all the current courses use.
 - Dev Compose mounts the host Docker socket into the worker (root-equivalent). Production runs the worker on a dedicated host (later gVisor).
 - LangChain in the browser (Phase 3): Pyodide would need self-hosted `langchain-core` and `pydantic` wheels (CSP forbids fetching from PyPI). Decide whether these exercises are submit-only, graded on the server.
 - ~~More languages (proposed 2026-11-06).~~ Resolved: Phase 10 accepted and built; Go and JS run on the `wasm` runner. Still open: Run in the browser for wasm lessons (modules are 12 MB for Go and 21 MB for JS, so it waits on a size and load-time decision), unit tests in Go/JS, and moving plain Python to WASI CPython.

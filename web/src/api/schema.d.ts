@@ -215,40 +215,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/magic-link": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Emails a single-use sign-in link (15 minutes). Same answer whether or not the account exists. */
-        post: operations["sendMagicLink"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/magic-link/verify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Redeems the token from the link's URL fragment and sets the session cookie. */
-        post: operations["verifyMagicLink"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/dev": {
         parameters: {
             query?: never;
@@ -350,15 +316,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/github/start": {
+    "/auth/{provider}/start": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** @description Redirects to GitHub (browser navigation, not fetch). */
-        get: operations["githubStart"];
+        /** @description Redirects to the provider (github or google; browser navigation, not fetch). 404 when that provider is not configured. */
+        get: operations["oauthStart"];
         put?: never;
         post?: never;
         delete?: never;
@@ -367,14 +333,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/github/callback": {
+    "/auth/{provider}/callback": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["githubCallback"];
+        get: operations["oauthCallback"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1480,74 +1446,13 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        magic_link: boolean;
                         github: boolean;
+                        google: boolean;
                         /** @description DEV_AUTH (development only) */
                         dev: boolean;
                     };
                 };
             };
-        };
-    };
-    sendMagicLink: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    email: string;
-                    /** @description Same-site path to open after sign-in */
-                    next?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Sent */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        status: string;
-                    };
-                };
-            };
-            400: components["responses"]["Error"];
-            429: components["responses"]["Error"];
-        };
-    };
-    verifyMagicLink: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    token: string;
-                    /** @description The browser's IANA zone */
-                    timezone?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Signed in */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SignedIn"];
-                };
-            };
-            400: components["responses"]["Error"];
         };
     };
     devSignIn: {
@@ -1719,18 +1624,20 @@ export interface operations {
             404: components["responses"]["Error"];
         };
     };
-    githubStart: {
+    oauthStart: {
         parameters: {
             query?: {
                 next?: string;
             };
             header?: never;
-            path?: never;
+            path: {
+                provider: "github" | "google";
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Redirect to GitHub */
+            /** @description Redirect to the provider */
             302: {
                 headers: {
                     [name: string]: unknown;
@@ -1740,16 +1647,18 @@ export interface operations {
             404: components["responses"]["Error"];
         };
     };
-    githubCallback: {
+    oauthCallback: {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                provider: "github" | "google";
+            };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Redirect into the app (or /sign-in?error=github) */
+            /** @description Redirect into the app (or /sign-in?error=<provider>) */
             302: {
                 headers: {
                     [name: string]: unknown;

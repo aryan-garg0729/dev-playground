@@ -34,6 +34,9 @@ type Profile struct {
 	Email  string // primary, verified
 }
 
+// Name is "github".
+func (g *GitHub) Name() string { return "github" }
+
 func (g *GitHub) client() *http.Client {
 	if g.HTTP != nil {
 		return g.HTTP
