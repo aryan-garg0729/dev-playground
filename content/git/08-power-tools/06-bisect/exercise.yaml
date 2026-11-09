@@ -1,0 +1,29 @@
+id: gt.toolbox.bisect
+type: project_cli
+version: 1
+title: Find the Bad Commit
+xp: 30
+difficulty: 3
+tags: [bisect]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The bisect session is over and you're back on main
+      cli_command:
+        command: "test -e .git/BISECT_START && echo bisect=running || echo bisect=off; git branch --show-current"
+        tests:
+          - stdout_contains_all: ["bisect=off", "main"]
+    - description: Find the commit that broke the email address
+      cli_command:
+        command: "git log --format=culprit=%H -S'hi@exmaple.com' audit/history"
+        captures: [{ name: culprit, regex: "culprit=([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["culprit="]
+    - description: answers.txt names that commit
+      cli_command:
+        command: "grep -x 'bisect_bad=${culprit}' answers.txt"
+        tests:
+          - exit_code: 0

@@ -1,0 +1,22 @@
+id: dk.basics.what-is-docker
+type: mcq
+version: 1
+title: What Is Docker?
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A programming language for writing servers" }
+    - { id: b, text: "A tool that packs an app together with everything it needs, so it runs the same on any machine" }
+    - { id: c, text: "A cloud company that hosts your website" }
+    - { id: d, text: "A faster way to install apps on your laptop" }
+  answer: [b]
+  explain: >
+    Docker packs your app plus everything it depends on (the right language version,
+    libraries, settings, files) into one box. Any computer with Docker can run that box
+    the same way. It's not a language (you can put any language in it) and it's not a
+    cloud host (though cloud hosts love running Docker boxes).

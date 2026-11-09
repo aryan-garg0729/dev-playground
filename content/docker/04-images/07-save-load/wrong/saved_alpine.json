@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "[{\"Config\":\"blobs/sha256/ab3f\",\"RepoTags\":[\"alpine:3.20\"],\"Layers\":[]}]"}}, {"cli": {"exit_code": 0, "stdout": "tags=[\"cq/base:copy\",\"cq/base:mine\",\"alpine:3.20\"]\n"}}]}

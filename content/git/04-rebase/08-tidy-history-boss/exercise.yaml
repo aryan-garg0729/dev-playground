@@ -1,0 +1,45 @@
+id: gt.rebasing.tidy-history-boss
+type: project_cli
+version: 1
+title: Tidy History
+xp: 50
+difficulty: 3
+tags: [rebase, squash]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find F4 (the change on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^F4:'"
+        captures: [{ name: f4, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Exactly one G4, and no wip left anywhere
+      cli_command:
+        command: "echo \"g4_commits=$(git log --all --format=%s | grep -c '^G4:')\"; git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_all: ["g4_commits=1\n"]
+          - stdout_contains_none: ["wip"]
+    - description: G4 was rebased onto F4 and is main's tip
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["G4:", "parents=${f4}"]
+    - description: History since F4 is a straight line
+      cli_command:
+        command: "echo \"merges=$(git rev-list --merges --count ${f4}..main)\""
+        tests:
+          - stdout_contains_all: ["merges=0\n"]
+    - description: The links page has all three links
+      cli_command:
+        command: "git show main:links.md"
+        tests:
+          - stdout_contains_all: ["git-scm.com", "docs.github.com", "learngitbranching"]
+    - description: add-links was deleted
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - stdout_contains_none: ["add-links"]

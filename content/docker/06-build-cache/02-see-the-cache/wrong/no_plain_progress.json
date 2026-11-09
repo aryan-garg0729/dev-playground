@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "log=empty\n"}}, {"cli": {"exit_code": 1, "stdout": ""}}]}

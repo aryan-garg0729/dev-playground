@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -26,6 +26,40 @@ function LessonImage({ src, alt }: { src: string; alt: string }) {
   );
 }
 
+/** A fenced code block with a Copy button (copies the block's text exactly). */
+function CodeBlock({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLPreElement>(null);
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    const text = ref.current?.textContent ?? '';
+    navigator.clipboard.writeText(text.replace(/\n$/, '')).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      },
+      () => setCopied(false),
+    );
+  };
+  return (
+    <div className="relative">
+      <pre
+        ref={ref}
+        className="text-code-sm overflow-x-auto border-l-2 border-border-strong pl-[14px] pr-16 text-text-secondary [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-text-secondary"
+      >
+        {children}
+      </pre>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={copied ? 'Copied' : 'Copy code'}
+        className="text-caption absolute right-0 top-0 rounded-sm border border-border bg-surface-raised px-2 py-1 text-text-muted hover:text-text"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  );
+}
+
 /**
  * Renders author-written markdown (lesson prompts), with GitHub-flavoured tables,
  * strikethrough and task lists. Raw HTML in the source is not
@@ -33,8 +67,10 @@ function LessonImage({ src, alt }: { src: string; alt: string }) {
  * Images load only from the lesson's own assets; any other image (another site,
  * a missing file, or an image in tutor output) shows as its alt text.
  */
-export function Markdown({ children }: { children: string }) {
+export function Markdown({ children, dropTitle = false }: { children: string; dropTitle?: boolean }) {
   const resolve = useLessonAsset();
+  // Lesson pages already show the title, so a prompt's leading "# Title" line is dropped there.
+  const source = dropTitle ? children.replace(/^\s*# [^\n]*(\n+|$)/, '') : children;
   return (
     <div className="text-body flex flex-col gap-3 text-text-secondary">
       <ReactMarkdown
@@ -81,9 +117,12 @@ export function Markdown({ children }: { children: string }) {
             </li>
           ),
           strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
-          pre: ({ children }) => (
-            <pre className="text-code-sm overflow-x-auto border-l-2 border-border-strong pl-[14px] text-text-secondary [&_code]:bg-transparent [&_code]:p-0 [&_code]:text-text-secondary">{children}</pre>
-          ),
+          pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+          // The CSS reset strips heading sizes, so headings bring their own.
+          h1: ({ children }) => <h1 className="text-page-title text-text">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-[17px] font-semibold leading-6 text-text [&:not(:first-child)]:mt-3">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-section text-text [&:not(:first-child)]:mt-2">{children}</h3>,
+          h4: ({ children }) => <h4 className="text-section text-text-secondary">{children}</h4>,
           code: ({ children, className }) =>
             className ? (
               <code>{children}</code>
@@ -96,7 +135,7 @@ export function Markdown({ children }: { children: string }) {
           },
         }}
       >
-        {children}
+        {source}
       </ReactMarkdown>
     </div>
   );

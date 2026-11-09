@@ -1,0 +1,28 @@
+id: dk.debug.top-stats
+type: project_cli
+version: 1
+title: Who's Eating the CPU?
+xp: 20
+difficulty: 2
+tags: [stats, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find which worker was the busy one
+      cli_command:
+        command: "docker ps -a --no-trunc --filter name=cq-worker --format '{{.Names}} {{.Command}}' | grep 'while' | awk '{print \"busy=\" $1}'"
+        captures: [{ name: busy, regex: "busy=(cq-worker-\\d)" }]
+        tests:
+          - stdout_contains_all: ["busy=cq-worker-"]
+    - description: answers.txt names the busy worker
+      cli_command:
+        command: "grep -x 'busiest=${busy}' answers.txt"
+        tests:
+          - exit_code: 0
+    - description: Both workers are stopped now
+      cli_command:
+        command: "docker ps --filter name=cq-worker --format '{{.Names}}'"
+        tests:
+          - stdout_contains_none: ["cq-worker"]

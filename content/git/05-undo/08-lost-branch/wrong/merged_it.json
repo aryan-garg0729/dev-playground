@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "E5: try a dark theme\n"}}, {"cli": {"exit_code": 0, "stdout": "  add-hobbies\n  add-skills\n  blog/posts\n  experiment/old-home\n* main\n  recovered/dark-theme\n"}}, {"cli": {"exit_code": 0, "stdout": "E5: try a dark theme\nD5: add a todo list\n"}}]}

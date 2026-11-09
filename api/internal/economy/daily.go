@@ -321,7 +321,17 @@ func (s *Service) OpenDailyChest(ctx context.Context, user uuid.UUID, requestID 
 }
 
 // LockedChapters returns the chapters of a course behind an undefeated boss.
+// With DevUnlockAll, the default dev user has none.
 func (s *Service) LockedChapters(ctx context.Context, user uuid.NullUUID, courseID string) (map[string]bool, error) {
+	if s.DevUnlockAll && user.Valid {
+		u, err := store.New(s.Pool).GetUser(ctx, user.UUID)
+		if err != nil {
+			return nil, fmt.Errorf("locked chapters: %w", err)
+		}
+		if u.Email == DevUserEmail {
+			return map[string]bool{}, nil
+		}
+	}
 	ids, err := store.New(s.Pool).LockedChapters(ctx, store.LockedChaptersParams{UserID: user, CourseID: courseID})
 	if err != nil {
 		return nil, fmt.Errorf("locked chapters: %w", err)

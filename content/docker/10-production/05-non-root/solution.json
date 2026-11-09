@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "uid=10001(brewer) gid=10001(brewer) groups=10001(brewer)\n"}}, {"cli": {"exit_code": 0, "stdout": "data=writable\ntouch: /usr/local/bin/x: Permission denied\n"}}, {"cli": {"exit_code": 0, "stdout": "hc=[\"CMD-SHELL\",\"wget -qO- http://localhost:8080/healthz || exit 1\"]\n"}}]}

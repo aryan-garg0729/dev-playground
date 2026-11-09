@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 127, "stdout": "sh: docker: command not found\n"}}, {"cli": {"exit_code": 127, "stdout": "sh: docker: command not found\n"}}]}

@@ -1,0 +1,25 @@
+id: dk.ports.exec
+type: project_cli
+version: 1
+title: Run Commands Inside
+xp: 20
+difficulty: 1
+tags: [exec]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8081
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The page file inside cq-web has your text
+      cli_command:
+        command: docker exec cq-web cat /usr/share/nginx/html/index.html
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Hello from inside the container"]
+    - description: Your browser gets the new page
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Hello from inside the container"

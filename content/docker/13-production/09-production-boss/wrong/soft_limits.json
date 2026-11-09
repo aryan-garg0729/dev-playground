@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "image=cq/webapp:prod health=healthy\n"}}, {"cli": {"exit_code": 0, "stdout": "10001\n"}}, {"cli": {"exit_code": 0, "stdout": "ro=true caps=[\"ALL\"] sec=[\"no-new-privileges\"] mem=134217728 swap=-1 restart=unless-stopped\n127.0.0.1:8101\n"}}, {"cli": {"exit_code": 0, "stdout": "volume:cq-prod-data:/data \nstatus=201"}}]}

@@ -1,0 +1,20 @@
+id: gt.rebasing.what-is-rebase-quiz
+type: mcq
+version: 1
+title: What Rebase Does
+xp: 5
+difficulty: 2
+tags: [rebase]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Yes: rebase moves the same commits, so the ids stay" }
+    - { id: b, text: "No: each copy has a new parent, and the parent is part of what makes a commit's id" }
+    - { id: c, text: "No, but only because the date changes" }
+    - { id: d, text: "It depends on the branch name" }
+  answer: [b]
+  explain: >
+    Rebase doesn't move commits, it makes new copies of them on top of the new base. A
+    commit's id is a hash of its contents, and that includes its parent. New parent, new
+    id. The old commits are left behind, no longer on any branch.

@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "volume:eb-ledger:/data:rw=true bind::/config:rw=false  tmpfs={\"/tmp\":\"\"}\n"}}, {"cli": {"exit_code": 0, "stdout": "elixir-of-life\n"}}, {"cli": {"exit_code": 0, "stdout": "recreated=no\n"}}, {"http": {"status": 200, "headers": {}, "body": "elixir-of-life\n"}}]}

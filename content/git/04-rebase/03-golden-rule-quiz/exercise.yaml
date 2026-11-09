@@ -1,0 +1,21 @@
+id: gt.rebasing.golden-rule-quiz
+type: mcq
+version: 1
+title: The Golden Rule
+xp: 5
+difficulty: 2
+tags: [rebase]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing: Git notices the commits have the same changes" }
+    - { id: b, text: "Your teammate's work is built on commits that no longer exist in your version, and combining them makes duplicates or a mess" }
+    - { id: c, text: "Git refuses to rebase main" }
+    - { id: d, text: "Your teammate's copy is updated automatically" }
+  answer: [b]
+  explain: >
+    Rebase replaces commits with new copies. Anyone who already had the old commits is
+    now building on a history that no longer matches yours. When you try to combine the
+    two, the same changes show up twice under different ids. So: rebase only commits
+    nobody else has seen.

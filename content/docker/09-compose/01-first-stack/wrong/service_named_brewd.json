@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "brewd=running\n"}}, {"cli": {"exit_code": 1, "stdout": "no such service: api\n"}}, {"http": {"status": 200, "headers": {}, "body": "ok\n"}}]}

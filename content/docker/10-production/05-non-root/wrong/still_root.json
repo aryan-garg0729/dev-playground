@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon)\n"}}, {"cli": {"exit_code": 0, "stdout": "data=writable\n"}}, {"cli": {"exit_code": 0, "stdout": "hc=[\"CMD-SHELL\",\"wget -qO- http://localhost:8080/healthz || exit 1\"]\n"}}]}

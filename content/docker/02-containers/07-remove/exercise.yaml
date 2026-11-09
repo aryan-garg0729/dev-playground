@@ -1,0 +1,20 @@
+id: dk.containers.remove
+type: project_cli
+version: 1
+title: Clean Up
+xp: 20
+difficulty: 1
+tags: [rm]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-first, cq-one, cq-two and cq-three are gone, but cq-sleeper is still here
+      cli_command:
+        command: "docker ps -a --filter name=cq- --format '{{.Names}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq-sleeper"]
+          - stdout_contains_none: ["cq-first", "cq-one", "cq-two", "cq-three"]

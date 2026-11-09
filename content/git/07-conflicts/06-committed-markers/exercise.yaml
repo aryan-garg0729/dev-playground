@@ -1,0 +1,28 @@
+id: gt.resolving.committed-markers
+type: project_cli
+version: 1
+title: Markers Got Committed
+xp: 25
+difficulty: 2
+tags: [conflicts, grep]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: No conflict markers anywhere on main
+      cli_command:
+        command: "git grep -n -e '^<<<<<<<' -e '^=======$' -e '^>>>>>>>' main; echo grep_exit=$?"
+        tests:
+          - stdout_contains_all: ["grep_exit=1"]
+    - description: The hobbies page has the agreed favourite food
+      cli_command:
+        command: "git show main:hobbies.md"
+        tests:
+          - stdout_contains_all: ["Favourite food: ramen.\n"]
+          - stdout_contains_none: ["pizza", "sushi"]
+    - description: The bad commit is still in history, with your fix G7 on top
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 main"
+        tests:
+          - stdout_contains_all: ["G7:", "Merge favourite food"]

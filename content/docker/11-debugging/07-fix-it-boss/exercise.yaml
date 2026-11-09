@@ -1,0 +1,31 @@
+id: dk.debug.fix-it-boss
+type: project_cli
+version: 1
+title: On Call
+xp: 50
+difficulty: 3
+tags: [debugging]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-bug-port's webapp answers on http://localhost:8096
+      http_request:
+        request: { method: GET, url: "http://localhost:8096/healthz" }
+        tests:
+          - status_code: 200
+          - body_contains: "ok"
+    - description: cq-bug-env is running with its token
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}}' cq-bug-env && docker logs cq-bug-env"
+        tests:
+          - stdout_contains_all: ["status=running"]
+          - stdout_contains_all: ["worker ready"]
+    - description: cq-bug-net reached cq-api by name
+      cli_command:
+        command: "docker inspect -f 'nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}}' cq-bug-net && docker logs cq-bug-net"
+        tests:
+          - stdout_contains_all: ["cq-net,"]
+          - stdout_contains_all: ["connected to cq-api"]

@@ -1,0 +1,33 @@
+id: gt.branching.fast-forward
+type: project_cli
+version: 1
+title: Merge, the Easy Way
+xp: 20
+difficulty: 1
+tags: [merge]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: You're on main
+      cli_command:
+        command: git branch --show-current
+        tests:
+          - stdout_contains_all: ["main"]
+    - description: Find add-projects' commit
+      cli_command:
+        command: git rev-parse add-projects
+        captures: [{ name: proj, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: main now points at exactly that commit
+      cli_command:
+        command: git rev-parse main
+        tests:
+          - stdout_contains_all: ["${proj}"]
+    - description: No merge commit was made
+      cli_command:
+        command: "echo \"merges=$(git rev-list --merges --count main)\""
+        tests:
+          - stdout_contains_all: ["merges=0\n"]

@@ -1,0 +1,21 @@
+id: dk.images.latest-quiz
+type: mcq
+version: 1
+title: The latest Trap
+xp: 5
+difficulty: 2
+tags: [tags]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Docker checks for a newer version every time you run nginx:latest" }
+    - { id: b, text: "latest always means the newest version" }
+    - { id: c, text: "latest is just the default tag name; it can be any version, and it changes when someone pushes a new one" }
+    - { id: d, text: "latest images can't be removed" }
+  answer: [c]
+  explain: >
+    latest is an ordinary tag that Docker uses when you don't type one. Whoever publishes
+    the image decides what it points at, and they can move it at any time. Your computer
+    keeps whichever latest it pulled first until you pull again. Pin a real version like
+    nginx:1.27-alpine so everyone gets the same thing.

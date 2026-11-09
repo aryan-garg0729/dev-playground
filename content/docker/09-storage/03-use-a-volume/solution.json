@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":""}},{"cli":{"exit_code":0,"stdout":"status=running volume:cq-notes:/data \n"}},{"http":{"status":200,"headers":{"Content-Type":"text/plain; charset=utf-8"},"body":"buy milk\n"}}]}

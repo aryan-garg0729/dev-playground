@@ -1,0 +1,38 @@
+id: dk.dockerfile.release-boss
+type: project_cli
+version: 1
+title: Release 1.1
+xp: 50
+difficulty: 2
+tags: [dockerfile, build, env]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8088
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:1.1 has APP_VERSION=1.1 and GREETING=Welcome built in
+      cli_command:
+        command: "docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' cq/webapp:1.1"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["APP_VERSION=1.1", "GREETING=Welcome"]
+    - description: cq/webapp:1.1 starts the webapp and has no test data
+      cli_command:
+        command: "docker image inspect -f 'cmd={{json .Config.Cmd}}' cq/webapp:1.1 && docker run --rm cq/webapp:1.1 ls /src"
+        tests:
+          - stdout_contains_all: ["cmd=[\"webapp\"]", "main.go"]
+          - stdout_contains_none: ["test-data"]
+    - description: cq-release runs cq/webapp:1.1 on port 8088
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-release && docker port cq-release 8080/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=cq/webapp:1.1", ":8088"]
+    - description: The release greets visitors
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Welcome from webapp 1.1"

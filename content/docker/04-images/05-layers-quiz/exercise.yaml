@@ -1,0 +1,21 @@
+id: dk.images.layers-quiz
+type: mcq
+version: 1
+title: Why Layers Help
+xp: 5
+difficulty: 2
+tags: [layers]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The network got faster" }
+    - { id: b, text: "Both images share the same bottom layers, so Docker only downloaded the layers it didn't have" }
+    - { id: c, text: "Docker compressed the second image better" }
+    - { id: d, text: "The second image is broken and missing files" }
+  answer: [b]
+  explain: >
+    Layers are identified by their content, so identical layers are stored once and
+    shared. "Already exists" means Docker already had that exact layer from the first
+    image. Only the new top layers were downloaded. The same sharing saves disk space:
+    ten images built on the same base keep one copy of it.

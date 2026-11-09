@@ -1,0 +1,29 @@
+id: dk.debug.diff-cp
+type: project_cli
+version: 1
+title: What Changed, and Copy It Out
+xp: 20
+difficulty: 2
+tags: [diff, cp, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-writer created a report file
+      cli_command:
+        command: docker diff cq-writer
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["A /reports/report.txt"]
+    - description: Read the report inside cq-writer
+      cli_command:
+        command: docker exec cq-writer cat /reports/report.txt
+        captures: [{ name: token, regex: "token=(\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: report.txt on your computer is a copy of it
+      cli_command:
+        command: "grep -x 'token=${token}' report.txt"
+        tests:
+          - exit_code: 0

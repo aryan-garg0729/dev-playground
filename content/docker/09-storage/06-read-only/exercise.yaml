@@ -1,0 +1,29 @@
+id: dk.storage.read-only
+type: project_cli
+version: 1
+title: Look, Don't Touch
+xp: 20
+difficulty: 2
+tags: [bind-mount, read-only]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-ro has your config folder at /config, read-only
+      cli_command:
+        command: "docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Destination}}:rw={{.RW}} {{end}}' cq-ro"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["bind:/config:rw=false"]
+    - description: The container can read the config
+      cli_command:
+        command: docker exec cq-ro cat /config/settings.txt
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["theme=dark"]
+    - description: The container cannot change the config
+      cli_command:
+        command: "docker exec cq-ro sh -c 'echo hacked > /config/settings.txt 2>&1; echo done'"
+        tests:
+          - stdout_contains_all: ["Read-only file system"]

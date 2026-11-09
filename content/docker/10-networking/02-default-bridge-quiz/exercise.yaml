@@ -1,0 +1,21 @@
+id: dk.networking.default-bridge-quiz
+type: mcq
+version: 1
+title: Can You Hear Me?
+xp: 5
+difficulty: 2
+tags: [networks, dns]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Containers can never talk to each other" }
+    - { id: b, text: "On the default network, containers can't find each other by name; you need your own network for that" }
+    - { id: c, text: "The webapp isn't running" }
+    - { id: d, text: "You must publish the port with -p first" }
+  answer: [b]
+  explain: >
+    The default network only connects containers by IP address, and those addresses change
+    every time a container is recreated. Networks you create yourself come with a built-in
+    name lookup (DNS), so containers can reach each other by container name. Publishing a
+    port only matters for traffic from your computer, not between containers.

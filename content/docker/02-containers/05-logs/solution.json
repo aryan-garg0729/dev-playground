@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"status=exited exit=0\n"}},{"cli":{"exit_code":0,"stdout":"count 1\ncount 2\ncount 3\ncount 4\ncount 5\nall done\n"}}]}

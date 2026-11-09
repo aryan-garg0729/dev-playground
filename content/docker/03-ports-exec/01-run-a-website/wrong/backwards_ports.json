@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "status=running image=nginx:1.27-alpine\nno public port '80/tcp' published for cq-web\n"}}, {"http": {"error": "Get \"http://localhost\": dial tcp [::1]:8081: connect: connection refused"}}]}

@@ -1,0 +1,12 @@
+id: dk.storage
+title: Storage
+exercises:
+  - 01-vanished-quiz
+  - 02-volumes
+  - 03-use-a-volume
+  - 04-bind-mount
+  - 05-mount-types-quiz
+  - 06-read-only
+  - 07-tmpfs-quiz
+  - 08-remove-volumes
+  - 09-notebook-boss

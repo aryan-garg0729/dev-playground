@@ -1,0 +1,25 @@
+id: dk.storage.bind-mount
+type: project_cli
+version: 1
+title: Share a Folder
+xp: 20
+difficulty: 2
+tags: [bind-mount]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8091
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-live serves your site folder through a bind mount
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} {{range .Mounts}}{{.Type}}:{{.Destination}} {{end}}' cq-live && docker inspect -f '{{range .Mounts}}{{.Source}}{{end}}' cq-live | grep -q '/site$' && echo source=site"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "bind:/usr/share/nginx/html", "source=site"]
+    - description: Your edit shows up without a rebuild
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Edited on my computer"

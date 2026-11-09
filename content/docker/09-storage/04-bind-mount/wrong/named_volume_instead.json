@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "status=running volume:/usr/share/nginx/html \n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "<title>Welcome to nginx!</title>\n"}}]}

@@ -1,0 +1,42 @@
+id: dk.compose.whole-stack-boss
+type: project_cli
+version: 1
+title: The Whole Stack in One File
+xp: 50
+difficulty: 3
+tags: [compose]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8099
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: api is healthy and front is running
+      cli_command:
+        command: "docker compose ps --format '{{.Service}}={{.State}}/{{.Health}}'"
+        tests:
+          - stdout_contains_all: ["api=running/healthy"]
+          - stdout_contains_all: ["front=running/"]
+    - description: api is not published; only the front door is
+      cli_command:
+        command: "docker inspect -f 'ports={{json .HostConfig.PortBindings}}' $(docker compose ps -q api) && docker port $(docker compose ps -q front) 80/tcp"
+        tests:
+          - stdout_contains_all: ["ports={}", ":8099"]
+    - description: The notes are in the volume
+      cli_command:
+        command: docker compose exec -T api cat /notes/notes.txt
+        tests:
+          - stdout_contains_all: ["saved through the front door"]
+    - description: api was recreated after the note was saved
+      cli_command:
+        command: |-
+          c=$(docker inspect -f '{{.Created}}' $(docker compose ps -q api) | cut -c1-19 | tr -d 'T:-'); o=$(docker compose exec -T api date -u -r /notes/notes.txt +%Y%m%d%H%M%S); if [ "$c" -gt "$o" ]; then echo "recreated=yes"; else echo "recreated=no"; fi
+        tests:
+          - stdout_contains_all: ["recreated=yes"]
+    - description: The front door serves the saved notes
+      http_request:
+        request: { method: GET, url: "${baseURL}/notes" }
+        tests:
+          - status_code: 200
+          - body_contains: "saved through the front door"

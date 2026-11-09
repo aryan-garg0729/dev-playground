@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "FROM alpine:3.20\nCMD [\"echo\", \"Hello from my own image!\"]\n"}}, {"cli": {"exit_code": 125, "stdout": "Unable to find image 'cq/hello:v1' locally\ndocker: Error response from daemon: pull access denied for cq/hello\n"}}]}

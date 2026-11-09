@@ -1,0 +1,30 @@
+id: dk.networking.isolation
+type: project_cli
+version: 1
+title: Keep Them Apart
+xp: 20
+difficulty: 2
+tags: [networks, security]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-vault is only on cq-private
+      cli_command:
+        command: "docker inspect -f 'nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}}' cq-vault"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["nets=cq-private,"]
+          - stdout_contains_none: ["cq-net,"]
+    - description: From cq-private, cq-vault answers
+      cli_command:
+        command: docker run --rm --network cq-private alpine:3.20 wget -qO- -T 3 http://cq-vault:8080/healthz
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ok"]
+    - description: From cq-net, cq-vault can't even be found
+      cli_command:
+        command: "docker run --rm --network cq-net alpine:3.20 sh -c 'wget -qO- -T 3 http://cq-vault:8080/healthz 2>&1 || true'"
+        tests:
+          - stdout_contains_all: ["bad address"]

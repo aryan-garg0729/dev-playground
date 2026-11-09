@@ -1,0 +1,20 @@
+id: dk.dockerfile.instructions-quiz
+type: mcq
+version: 1
+title: The Main Instructions
+xp: 5
+difficulty: 1
+tags: [dockerfile]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "CMD" }
+    - { id: b, text: "RUN" }
+    - { id: c, text: "COPY" }
+    - { id: d, text: "FROM" }
+  answer: [b]
+  explain: >
+    RUN runs a command while the image is being built, and whatever it changes (like an
+    installed program) is saved into the image. CMD only sets what runs later, when a
+    container starts. COPY brings files from your folder, and FROM picks the starting image.

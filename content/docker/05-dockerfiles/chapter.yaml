@@ -1,0 +1,15 @@
+id: dk.dockerfile
+title: Dockerfiles
+exercises:
+  - 01-what-quiz
+  - 02-first-dockerfile
+  - 03-copy-a-website
+  - 04-instructions-quiz
+  - 05-run-instruction
+  - 06-webapp
+  - 07-rebuild
+  - 08-context-quiz
+  - 09-dockerignore
+  - 10-env
+  - 11-run-cd-quiz
+  - 12-release-boss

@@ -1,0 +1,21 @@
+id: dk.compose.depends-quiz
+type: mcq
+version: 1
+title: What depends_on Waits For
+xp: 5
+difficulty: 3
+tags: [compose]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Until the database is ready to accept connections" }
+    - { id: b, text: "Only until the database container has started, which can be seconds before it's actually ready" }
+    - { id: c, text: "Until the database's healthcheck passes" }
+    - { id: d, text: "It doesn't wait at all" }
+  answer: [b]
+  explain: >
+    Plain depends_on only controls start order: the web container starts after the db
+    container has started. A database often needs several more seconds to get ready, so
+    the web app's first connections can fail. To wait for real readiness, give the db a
+    healthcheck and use condition: service_healthy.

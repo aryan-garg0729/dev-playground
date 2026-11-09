@@ -1,0 +1,22 @@
+id: dk.production.disk-space-quiz
+type: mcq
+version: 1
+title: Where Did My Disk Space Go?
+xp: 5
+difficulty: 2
+tags: [prune, disk]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "docker system prune --all --volumes, to get everything back at once" }
+    - { id: b, text: "docker system prune, then docker builder prune if the build cache is still large" }
+    - { id: c, text: "Delete Docker's files by hand" }
+    - { id: d, text: "docker volume prune --all" }
+  answer: [b]
+  explain: >
+    Plain docker system prune removes stopped containers, unused networks, nameless images
+    and leftover build cache: nothing running, named or holding data. docker builder prune
+    clears the rest of the build cache, which only costs slower next builds. --volumes and
+    docker volume prune delete volumes no container is using right now, which includes the
+    data of every stopped stack. Deleting Docker's files by hand corrupts it.

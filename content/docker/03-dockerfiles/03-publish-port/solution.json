@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "status=running image=elixirbytes/brewd:v1\n0.0.0.0:18080\n[::]:18080\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "ok\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "brewd dev\n"}}]}

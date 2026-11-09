@@ -1,0 +1,21 @@
+id: dk.images.size-quiz
+type: mcq
+version: 1
+title: Why Is This Image So Big?
+xp: 5
+difficulty: 1
+tags: [images, size]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The alpine variant is missing nginx and doesn't really work" }
+    - { id: b, text: "They're built on different base Linux systems: Alpine is tiny, Debian brings many more tools" }
+    - { id: c, text: "The bigger one includes your website files" }
+    - { id: d, text: "Docker compresses alpine images but not others" }
+  answer: [b]
+  explain: >
+    Both run the same nginx. The difference is the Linux underneath: nginx:1.27 is built
+    on Debian, which includes lots of tools and libraries, while nginx:1.27-alpine is built
+    on Alpine, a distribution designed to be tiny. Smaller images download faster and
+    contain fewer things that could have security holes.

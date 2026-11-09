@@ -1,0 +1,39 @@
+id: gt.undoing.restore-source
+type: project_cli
+version: 1
+title: Bring Back an Old Version
+xp: 25
+difficulty: 2
+tags: [restore]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find the commit before B5
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^B5:'"
+        captures: [{ name: before, regex: "parents=([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Look up the FAQ as it was before B5
+      cli_command:
+        command: "git rev-parse ${before}:faq.md"
+        captures: [{ name: good, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: C5's FAQ is exactly that version
+      cli_command:
+        command: "git log -1 --format=%H ':/^C5:' | xargs -I{} git rev-parse {}:faq.md"
+        tests:
+          - stdout_contains_all: ["${good}"]
+    - description: B5 is still in history, with C5 after it on main
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 main"
+        tests:
+          - stdout_contains_all: ["C5:", "B5:"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

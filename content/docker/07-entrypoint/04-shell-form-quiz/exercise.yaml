@@ -1,0 +1,20 @@
+id: dk.entrypoint.shell-form-quiz
+type: mcq
+version: 1
+title: Brackets or No Brackets?
+xp: 5
+difficulty: 2
+tags: [cmd, shell-form]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "[\"webapp\"]" }
+    - { id: b, text: "[\"/bin/sh\",\"-c\",\"webapp\"]" }
+    - { id: c, text: "[\"sh\",\"webapp\"]" }
+    - { id: d, text: "webapp" }
+  answer: [b]
+  explain: >
+    Without brackets (shell form), Docker wraps the text in /bin/sh -c, so the container's
+    main process is a shell that then starts webapp. With brackets (exec form, the JSON
+    list), Docker runs webapp directly. Prefer the brackets for the main command.

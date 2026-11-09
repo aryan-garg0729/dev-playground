@@ -1,0 +1,47 @@
+id: gt.toolbox.hotfix-boss
+type: project_cli
+version: 1
+title: Hotfix Release
+xp: 60
+difficulty: 3
+tags: [worktree, tags, merge]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The hotfix worktree was removed properly
+      cli_command:
+        command: "echo worktrees=$(git worktree list | wc -l | tr -d ' '); test -e ../project-hotfix && echo folder=still-there || echo folder=gone"
+        tests:
+          - stdout_contains_all: ["worktrees=1\n", "folder=gone"]
+    - description: Find the v1.0.0 commit
+      cli_command:
+        command: "git rev-parse 'v1.0.0^{commit}'"
+        captures: [{ name: v100, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: E8 on hotfix/v1.0.1 was built on v1.0.0
+      cli_command:
+        command: "git log -1 --format='%H %s parents=%P' hotfix/v1.0.1"
+        captures: [{ name: e8, regex: "^([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E8:", "parents=${v100}\n"]
+    - description: v1.0.1 is an annotated tag on E8
+      cli_command:
+        command: "echo type=$(git cat-file -t v1.0.1); git rev-parse 'v1.0.1^{commit}'"
+        tests:
+          - stdout_contains_all: ["type=tag\n", "${e8}"]
+    - description: F8 is a real merge of v1.0.0 and E8 at the tip of main
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["F8:", "${v100}", "${e8}"]
+    - description: main has the fixed blog link
+      cli_command:
+        command: "git show main:contact.md"
+        tests:
+          - stdout_contains_all: ["Blog: blog.example.com"]
+          - stdout_contains_none: ["example.com/blog"]

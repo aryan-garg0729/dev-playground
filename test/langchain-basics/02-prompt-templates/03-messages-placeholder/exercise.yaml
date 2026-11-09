@@ -1,0 +1,17 @@
+id: lc.prompts.messages-placeholder
+type: mcq
+version: 1
+title: Slotting in chat history
+xp: 10
+difficulty: 2
+tags: [prompts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "MessagesPlaceholder(\"history\")" }
+    - { id: b, text: "(\"human\", \"{history}\")" }
+    - { id: c, text: "prompt.partial(history=...)" }
+    - { id: d, text: "PromptTemplate.from_template(\"{history}\")" }
+  answer: [a]
+  explain: MessagesPlaceholder injects a list of messages, keeping each one's role. A "{history}" string variable would flatten the whole history into one human message.

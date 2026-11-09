@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"layers=8\n"}},{"cli":{"exit_code":0,"stdout":"nginx_layers=8\n"}}]}

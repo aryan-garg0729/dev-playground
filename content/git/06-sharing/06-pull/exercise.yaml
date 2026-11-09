@@ -1,0 +1,27 @@
+id: gt.sharing.pull
+type: project_cli
+version: 1
+title: Catch Up
+xp: 20
+difficulty: 2
+tags: [pull]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Your main is at the teammate's A6
+      cli_command:
+        command: "git log -1 --format='%s by %ae' main"
+        tests:
+          - stdout_contains_all: ["A6:", "teammate@example.com"]
+    - description: main and origin/main agree
+      cli_command:
+        command: git status -sb
+        tests:
+          - stdout_contains_all: ["## main...origin/main\n"]
+    - description: No merge commit was needed
+      cli_command:
+        command: "git log -1 --format='parents=%P' main | awk '{print \"parent_count=\" NF}'"
+        tests:
+          - stdout_contains_all: ["parent_count=1\n"]

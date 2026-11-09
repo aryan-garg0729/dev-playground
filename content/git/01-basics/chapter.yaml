@@ -1,0 +1,14 @@
+id: gt.basics
+title: Git basics
+exercises:
+  - 01-what-is-git
+  - 02-install
+  - 03-commands-quiz
+  - 04-config
+  - 05-init
+  - 06-three-areas-quiz
+  - 07-stage
+  - 08-first-commit
+  - 09-history
+  - 10-log-quiz
+  - 11-first-snapshots-boss

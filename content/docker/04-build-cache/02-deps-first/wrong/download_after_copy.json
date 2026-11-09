@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "COPY app/ .\nCOPY app/go.mod ./\nRUN go mod download\nRUN go build -o /usr/local/bin/brewd .\n"}}, {"cli": {"exit_code": 0, "stdout": "order=source-first\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}]}

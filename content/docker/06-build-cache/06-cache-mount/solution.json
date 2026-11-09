@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"RUN --mount=type=cache,target=/root/.cache/go-build \\\n    go build -o /usr/local/bin/webapp .\n"}},{"cli":{"exit_code":0,"stdout":"webapp dev\n"}},{"cli":{"exit_code":0,"stdout":"cache_files=0\n"}}]}

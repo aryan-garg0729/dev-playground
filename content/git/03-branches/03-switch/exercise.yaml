@@ -1,0 +1,41 @@
+id: gt.branching.switch
+type: project_cli
+version: 1
+title: Switch Branches
+xp: 20
+difficulty: 1
+tags: [branches, switch]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: You're on add-projects
+      cli_command:
+        command: git branch --show-current
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["add-projects"]
+    - description: Find main's commit
+      cli_command:
+        command: git rev-parse main
+        captures: [{ name: main, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: A3 was committed on top of main's commit
+      cli_command:
+        command: "git log -1 --format='parents=%P' add-projects"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["parents=${main}"]
+    - description: A3 is on add-projects and has projects.md
+      cli_command:
+        command: "git log -1 --format=%s add-projects; git ls-tree --name-only add-projects"
+        tests:
+          - stdout_contains_all: ["A3:", "projects.md"]
+    - description: main hasn't moved
+      cli_command:
+        command: "git --no-pager log --format=%s main"
+        tests:
+          - exit_code: 0
+          - stdout_contains_none: ["A3:"]

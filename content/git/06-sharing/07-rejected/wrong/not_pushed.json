@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "f2227571a5e55a4d51f4fe53ffcda1da674ed68d\n"}}, {"cli": {"exit_code": 0, "stdout": "B6: sign the guestbook parents=2222222222222222222222222222222222222222\n"}}, {"cli": {"exit_code": 0, "stdout": "# Guestbook\n- Nice site!\n# My Website\n"}}, {"cli": {"exit_code": 0, "stdout": "## main...origin/main [ahead 1]\n"}}]}

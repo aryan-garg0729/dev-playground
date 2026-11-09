@@ -1,0 +1,43 @@
+id: dk.dockerfile.webapp
+type: project_cli
+version: 1
+title: Containerise an App
+xp: 25
+difficulty: 2
+tags: [dockerfile, build]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8085
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The app's files are in app/
+      cli_command:
+        command: "ls app"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["go.mod", "main.go"]
+    - description: cq/webapp:v1 starts the webapp by default
+      cli_command:
+        command: "docker image inspect -f 'cmd={{json .Config.Cmd}} workdir={{.Config.WorkingDir}}' cq/webapp:v1"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cmd=[\"webapp\"]", "workdir=/src"]
+    - description: cq-app runs cq/webapp:v1 on port 8085
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-app && docker port cq-app 8080/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=cq/webapp:v1", ":8085"]
+    - description: The app says hello
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Hello from webapp dev"
+    - description: The app's health check answers ok
+      http_request:
+        request: { method: GET, url: "${baseURL}/healthz" }
+        tests:
+          - status_code: 200
+          - body_contains: "ok"

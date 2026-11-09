@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "grep_exit=1\n"}}, {"cli": {"exit_code": 0, "stdout": "# Hobbies\n\nFavourite food: sushi.\n"}}, {"cli": {"exit_code": 0, "stdout": "G7: fix the favourite food\nMerge favourite food\n"}}]}

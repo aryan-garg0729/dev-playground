@@ -1,0 +1,31 @@
+id: dk.compose.first-stack
+type: project_cli
+version: 1
+title: Your First compose.yaml
+xp: 20
+difficulty: 2
+tags: [compose]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8097
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: compose.yaml defines one service, api
+      cli_command:
+        command: docker compose config --services
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["api"]
+    - description: The api service is running
+      cli_command:
+        command: "docker compose ps --format '{{.Service}}={{.State}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["api=running"]
+    - description: It answers on port 8097
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "from webapp"

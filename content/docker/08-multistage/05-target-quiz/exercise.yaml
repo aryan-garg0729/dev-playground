@@ -1,0 +1,20 @@
+id: dk.multistage.target-quiz
+type: mcq
+version: 1
+title: Stop at a Stage
+xp: 5
+difficulty: 2
+tags: [multistage]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "docker build --target build -t cq/webapp:debug ." }
+    - { id: b, text: "docker build --stage 1 -t cq/webapp:debug ." }
+    - { id: c, text: "docker run --target build cq/webapp:scratch" }
+    - { id: d, text: "docker build -f build -t cq/webapp:debug ." }
+  answer: [a]
+  explain: >
+    --target NAME tells docker build to stop after the stage with that name and make it the
+    image. You get the build stage, with the Go tools and source code, to look around in.
+    -f picks a different Dockerfile, and --stage doesn't exist.

@@ -1,0 +1,29 @@
+id: dk.production.memory-limit
+type: project_cli
+version: 1
+title: Put a Lid on Memory
+xp: 20
+difficulty: 2
+tags: [limits]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-hog may use 32 MB and no extra swap
+      cli_command:
+        command: "docker inspect -f 'mem={{.HostConfig.Memory}} swap={{.HostConfig.MemorySwap}}' cq-hog"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["mem=33554432", "swap=33554432"]
+    - description: cq-hog was stopped by force when it hit the limit
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' cq-hog"
+        tests:
+          - stdout_contains_all: ["status=exited", "exit=137"]
+    - description: Its logs show the memory growing before it died
+      cli_command:
+        command: docker logs cq-hog
+        tests:
+          - stdout_contains_all: ["holding"]
+          - stdout_lines_gt: 5

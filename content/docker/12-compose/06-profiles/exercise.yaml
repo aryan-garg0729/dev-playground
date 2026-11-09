@@ -1,0 +1,31 @@
+id: dk.compose.profiles
+type: project_cli
+version: 1
+title: Optional Services
+xp: 20
+difficulty: 2
+tags: [compose, profiles]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Without the debug profile, toolbox isn't part of the stack
+      cli_command:
+        command: docker compose config --services
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["api", "front"]
+          - stdout_contains_none: ["toolbox"]
+    - description: With the debug profile, it is
+      cli_command:
+        command: docker compose --profile debug config --services
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["toolbox"]
+    - description: toolbox is running and can reach the api by name
+      cli_command:
+        command: docker compose --profile debug exec -T toolbox wget -qO- -T 3 http://api:8080/healthz
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ok"]

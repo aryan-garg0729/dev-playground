@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=running image=nginx:1.27-alpine\n0.0.0.0:8084\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "<title>Welcome to nginx!</title>\n"}}]}

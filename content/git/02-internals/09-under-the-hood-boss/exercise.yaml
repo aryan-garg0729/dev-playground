@@ -1,0 +1,47 @@
+id: gt.internals.under-the-hood-boss
+type: project_cli
+version: 1
+title: Under the Hood
+xp: 50
+difficulty: 2
+tags: [gitignore, internals]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find commit B2
+      cli_command:
+        command: "git log -1 --format=%H ':/^B2:'"
+        captures: [{ name: b2, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: C2 sits on B2 and adds the FAQ page but no drafts
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^C2:' && git show ':/^C2:' --format= --name-only"
+        tests:
+          - stdout_contains_all: ["parents=${b2}", "faq.md", ".gitignore"]
+          - stdout_contains_none: ["drafts/", ".draft"]
+    - description: Draft files and the drafts folder are ignored
+      cli_command:
+        command: "git check-ignore -v ideas.draft drafts/plan.md"
+        tests:
+          - exit_code: 0
+          - stdout_lines_gt: 1
+    - description: Look up C2's tree
+      cli_command:
+        command: "git log -1 --format=tree=%T ':/^C2:'"
+        captures: [{ name: tree, regex: "tree=([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt records C2's tree id
+      cli_command:
+        command: "grep -x 'c2_tree=${tree}' answers.txt"
+        tests:
+          - exit_code: 0
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

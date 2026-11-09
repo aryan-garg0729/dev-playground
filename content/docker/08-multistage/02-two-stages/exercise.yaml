@@ -1,0 +1,34 @@
+id: dk.multistage.two-stages
+type: project_cli
+version: 1
+title: Build Here, Ship There
+xp: 25
+difficulty: 3
+tags: [multistage]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The Dockerfile has a build stage and copies from it
+      cli_command:
+        command: grep -E '^(FROM|COPY --from)' Dockerfile
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["AS build", "FROM alpine:3.20", "COPY --from=build"]
+    - description: cq/webapp:slim works and reports its version
+      cli_command:
+        command: docker run --rm cq/webapp:slim --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp 1.5"]
+    - description: cq/webapp:slim has no Go tools and no source code
+      cli_command:
+        command: "docker run --rm --entrypoint sh cq/webapp:slim -c 'command -v go || echo no-go; ls /src 2>&1'"
+        tests:
+          - stdout_contains_all: ["no-go", "No such file"]
+    - description: cq/webapp:slim is far smaller
+      cli_command:
+        command: "docker image inspect -f '{{.Size}}' cq/webapp:slim | awk '{print ($1 < 30000000 ? \"size=small\" : \"size=too-big\")}'"
+        tests:
+          - stdout_contains_all: ["size=small"]

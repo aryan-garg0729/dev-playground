@@ -1,0 +1,33 @@
+id: dk.entrypoint.graceful-boss
+type: project_cli
+version: 1
+title: Graceful Release 1.4
+xp: 50
+difficulty: 3
+tags: [entrypoint, signals]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The entrypoint is the start script, in brackets (exec) form
+      cli_command:
+        command: "docker image inspect -f 'entrypoint={{json .Config.Entrypoint}}' cq/webapp:1.4"
+        tests:
+          - stdout_contains_all: ["start.sh"]
+          - stdout_contains_none: ["\"-c\""]
+    - description: A test container is started, inspected and stopped
+      cli_command:
+        command: |-
+          docker rm -f cq-probe >/dev/null 2>&1; docker run -d --name cq-probe cq/webapp:1.4 >/dev/null && sleep 1; echo "pid1=$(docker exec cq-probe cat /proc/1/comm)"; s=$(date +%s); docker stop cq-probe >/dev/null; e=$(date +%s); if [ $((e - s)) -lt 3 ]; then echo "stop=fast"; else echo "stop=slow"; fi; docker inspect -f 'exit={{.State.ExitCode}}' cq-probe; docker logs cq-probe 2>&1; docker rm cq-probe >/dev/null
+        tests:
+          - stdout_contains_all: ["pid1=webapp", "stop=fast"]
+          - stdout_contains_all: ["exit=0", "starting webapp", "webapp: shutting down"]
+    - description: Options pass through to the webapp, and the version is 1.4
+      cli_command:
+        command: docker run --rm cq/webapp:1.4 --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["starting webapp", "webapp 1.4"]
+          - stdout_contains_none: ["listening"]

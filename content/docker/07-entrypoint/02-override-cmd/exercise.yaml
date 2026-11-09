@@ -1,0 +1,30 @@
+id: dk.entrypoint.override-cmd
+type: project_cli
+version: 1
+title: Replace the Command
+xp: 20
+difficulty: 2
+tags: [cmd]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-peek ran ls instead of the webapp
+      cli_command:
+        command: "docker inspect -f 'path={{.Path}} args={{json .Args}} exit={{.State.ExitCode}}' cq-peek"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["path=ls", "/usr/local/bin", "exit=0"]
+    - description: cq-peek listed the webapp program
+      cli_command:
+        command: docker logs cq-peek
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp"]
+    - description: cq-version printed the version and exited
+      cli_command:
+        command: "docker inspect -f 'path={{.Path}} exit={{.State.ExitCode}}' cq-version && docker logs cq-version"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["path=webapp", "exit=0", "webapp 1.3"]

@@ -1,0 +1,11 @@
+id: dk.compose
+title: Docker Compose
+exercises:
+  - 01-why-compose-quiz
+  - 02-first-stack
+  - 03-build-env-volumes
+  - 04-depends-quiz
+  - 05-healthy-first
+  - 06-profiles
+  - 07-down-quiz
+  - 08-whole-stack-boss

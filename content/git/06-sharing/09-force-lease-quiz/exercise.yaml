@@ -1,0 +1,22 @@
+id: gt.sharing.force-lease-quiz
+type: mcq
+version: 1
+title: Force, Carefully
+xp: 5
+difficulty: 3
+tags: [push]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "--force: it always works" }
+    - { id: b, text: "--force-with-lease: it overwrites only if the remote branch is still where you last saw it" }
+    - { id: c, text: "Neither: delete the remote branch and push again" }
+    - { id: d, text: "--force-with-lease, because it merges the teammate's commit in for you" }
+  answer: [b]
+  explain: >
+    Both let a push replace the remote branch. --force does it blindly, so if a teammate
+    pushed a fix to your branch since your last fetch, it's silently gone.
+    --force-with-lease first checks the remote branch is still where your origin/ copy says
+    it was, and refuses if someone moved it. It merges nothing; it just won't destroy work
+    you haven't seen.

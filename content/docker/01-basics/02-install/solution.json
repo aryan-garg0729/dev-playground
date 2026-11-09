@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"Docker version 29.7.2, build a7dcaa6fdb\n"}},{"cli":{"exit_code":0,"stdout":"client=29.7.2 server=29.5.2\n"}}]}

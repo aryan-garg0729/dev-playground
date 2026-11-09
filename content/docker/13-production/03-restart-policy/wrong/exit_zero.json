@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=exited exit=0 restarts=0 policy=on-failure:3\n"}}, {"cli": {"exit_code": 0, "stdout": "crashed at 11:12:36\n"}}]}

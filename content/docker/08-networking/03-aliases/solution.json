@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "eb-net=[\"orders\"] \n"}}, {"cli": {"exit_code": 0, "stdout": "ok\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd 1.6.0\n"}}]}

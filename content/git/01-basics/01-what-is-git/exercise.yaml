@@ -1,0 +1,22 @@
+id: gt.basics.what-is-git
+type: mcq
+version: 1
+title: What Is Git?
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A website for storing code online" }
+    - { id: b, text: "A program on your computer that records snapshots of your project's files, so you can see history, undo mistakes and work with others" }
+    - { id: c, text: "A backup service that copies your files every hour" }
+    - { id: d, text: "A programming language" }
+  answer: [b]
+  explain: >
+    Git is a version control system: a program that runs on your own computer and records
+    snapshots (commits) of your project whenever you ask. GitHub is a separate website that
+    hosts Git projects online. Git never backs up anything on its own: you decide when to
+    take a snapshot.

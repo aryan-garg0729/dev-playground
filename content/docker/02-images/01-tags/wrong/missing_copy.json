@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 1, "stdout": "ok\nError: No such image: elixirbytes/base:copy\n"}}, {"cli": {"exit_code": 0, "stdout": "distinct=1\n"}}]}

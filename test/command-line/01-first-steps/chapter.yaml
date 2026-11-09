@@ -1,0 +1,5 @@
+id: cl.first
+title: First steps
+exercises:
+  - 01-hello-script
+  - 02-local-server

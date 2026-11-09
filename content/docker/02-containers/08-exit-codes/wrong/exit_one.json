@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=exited exit=1\n"}}, {"cli": {"exit_code": 0, "stdout": "error: config file not found\n"}}]}

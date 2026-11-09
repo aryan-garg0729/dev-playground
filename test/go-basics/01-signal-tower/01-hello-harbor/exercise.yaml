@@ -1,0 +1,22 @@
+id: go.tower.hello-harbor
+type: code
+version: 1
+title: Hello, harbor
+xp: 15
+difficulty: 1
+tags: [output]
+free: true
+spec:
+  language: go
+  runner: wasm
+  prompt: prompt.md
+  entry: main.go
+  starter: starter.go
+  solution: solution.go
+  hints:
+    - Which package has Println?
+    - Check the capital letters and the exact words.
+  checks:
+    - kind: stdout_equals
+      name: Prints the startup line
+      expected: "Saltmere tower online\n"

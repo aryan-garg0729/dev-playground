@@ -1,0 +1,28 @@
+id: dk.production.non-root
+type: project_cli
+version: 1
+title: Don't Run as Root
+xp: 25
+difficulty: 3
+tags: [security, user]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:prod runs as user app, UID 10001
+      cli_command:
+        command: docker run --rm --entrypoint id cq/webapp:prod
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["uid=10001(app)"]
+    - description: It can write to /data, but not to the program's folder
+      cli_command:
+        command: "docker run --rm --entrypoint sh cq/webapp:prod -c 'touch /data/probe && echo data=writable; touch /usr/local/bin/x 2>&1'"
+        tests:
+          - stdout_contains_all: ["data=writable", "Permission denied"]
+    - description: The healthcheck is still there
+      cli_command:
+        command: "docker image inspect -f 'hc={{json .Config.Healthcheck.Test}}' cq/webapp:prod"
+        tests:
+          - stdout_contains_all: ["/healthz"]

@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 1, "stdout": "Error: No such image: elixirbytes/brewd:v1\n"}}, {"cli": {"exit_code": 125, "stdout": "Unable to find image 'elixirbytes/brewd:v1' locally\ndocker: Error response from daemon: pull access denied for elixirbytes/brewd\n"}}, {"cli": {"exit_code": 125, "stdout": "Unable to find image 'elixirbytes/brewd:v1' locally\n"}}]}

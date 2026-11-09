@@ -392,3 +392,35 @@ func TestSkeletonKey(t *testing.T) {
 		t.Fatalf("second key in a course: %s", body)
 	}
 }
+
+// With DEV_AUTH, the default dev user sees every chapter open; anyone else,
+// including dev sign-ins with an email, still meets the boss lock.
+func TestDevUserHasEveryChapterOpen(t *testing.T) {
+	e := setupWith(t, false, opts{devAuth: true})
+	after := "/api/v1/exercises/demo.more.after"
+	signIn := func(body string) {
+		rec := e.doRaw(jsonReq(http.MethodPost, "/api/v1/auth/dev", body))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("dev sign-in %s = %d: %s", body, rec.Code, rec.Body)
+		}
+		e.cookie = sessionFrom(t, rec).Value
+	}
+	var course struct{ Chapters []struct{ Locked bool } }
+
+	signIn(`{"email":"learner@example.com"}`)
+	if code, _ := e.do(http.MethodGet, after, "", nil); code != http.StatusForbidden {
+		t.Fatalf("learner: locked chapter = %d, want 403", code)
+	}
+
+	signIn(`{}`)
+	if code, body := e.do(http.MethodGet, after, "", nil); code != http.StatusOK {
+		t.Fatalf("dev user: locked chapter = %d %s, want 200", code, body)
+	}
+	e.getJSON("/api/v1/courses/demo", &course)
+	for i, ch := range course.Chapters {
+		if ch.Locked {
+			t.Fatalf("dev user: chapter %d is locked", i)
+		}
+	}
+	e.post(after+"/submit", `{"exercise_id":"demo.more.after","version":1,"answer":{"choices":["b"]}}`, http.StatusOK)
+}

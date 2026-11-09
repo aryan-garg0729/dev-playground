@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/aryangarg/codequest/api/internal/auth"
+	"github.com/aryangarg/codequest/api/internal/economy"
 	"github.com/aryangarg/codequest/api/internal/ratelimit"
 	"github.com/aryangarg/codequest/api/internal/store"
 )
@@ -71,7 +72,7 @@ func (a *api) devSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 	starter := req.Email == ""
 	if starter {
-		req.Email, req.Name = "dev@codequest.local", "Dev User"
+		req.Email, req.Name = economy.DevUserEmail, "Dev User"
 	}
 	email, err := auth.NormalizeEmail(req.Email)
 	if err != nil {

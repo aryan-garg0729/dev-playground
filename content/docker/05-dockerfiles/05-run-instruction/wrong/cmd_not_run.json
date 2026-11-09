@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "FROM alpine:3.20\n"}}, {"cli": {"exit_code": 127, "stdout": "docker: Error response from daemon: exec: \"curl\": executable file not found in $PATH\n"}}, {"cli": {"exit_code": 0, "stdout": "no-curl\n"}}]}

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"image=nginx:1.27-alpine nets=cq-net, mounts=/etc/nginx/conf.d:rw=false \n0.0.0.0:8094\n[::]:8094\n"}},{"cli":{"exit_code":0,"stdout":"ports={}\n"}},{"http":{"status":200,"headers":{"Content-Type":"text/plain; charset=utf-8"},"body":"Welcome from webapp 1.6\n"}}]}

@@ -1,0 +1,24 @@
+id: dk.production.healthcheck
+type: project_cli
+version: 1
+title: A Built-In Health Check
+xp: 20
+difficulty: 2
+tags: [healthcheck]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:health has a healthcheck that calls /healthz
+      cli_command:
+        command: "docker image inspect -f 'test={{json .Config.Healthcheck.Test}} interval={{.Config.Healthcheck.Interval}}' cq/webapp:health"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/healthz", "interval=5s"]
+    - description: cq-health is healthy
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} health={{.State.Health.Status}}' cq-health"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "health=healthy"]

@@ -1,0 +1,21 @@
+id: dk.ports.shell-quiz
+type: mcq
+version: 1
+title: Leaving the Shell
+xp: 5
+difficulty: 1
+tags: [exec]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "cq-web stops, because you left it" }
+    - { id: b, text: "cq-web keeps running, because exec only started an extra process next to nginx" }
+    - { id: c, text: "cq-web restarts" }
+    - { id: d, text: "cq-web is removed" }
+  answer: [b]
+  explain: >
+    A container lives as long as its main command, and here that's nginx. docker exec
+    started an extra sh next to it. Exiting sh ends only that extra process, so nginx and
+    the container keep running. (Compare: docker run -it alpine:3.20 sh makes sh the main
+    command, so exiting it does stop that container.)

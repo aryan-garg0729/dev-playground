@@ -1,0 +1,29 @@
+id: gt.rebasing.reword
+type: project_cli
+version: 1
+title: Fix an Old Message
+xp: 20
+difficulty: 2
+tags: [rebase, reword]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The last two commits on main are E4 on top of the reworded D4
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 main"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E4: link the privacy page\nD4: add the privacy page\n"]
+    - description: The old message is gone from every branch
+      cli_command:
+        command: "git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_none: ["D4: stuff"]
+    - description: The privacy page is still there
+      cli_command:
+        command: "git show main:privacy.md"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cookies"]

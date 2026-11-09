@@ -1,0 +1,22 @@
+id: dk.basics.parts-quiz
+type: mcq
+version: 1
+title: The Parts of Docker
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The docker command downloads the image and runs the app itself" }
+    - { id: b, text: "The docker command asks the engine; the engine pulls the image from a registry and starts a container" }
+    - { id: c, text: "The registry runs the container and streams it to your computer" }
+    - { id: d, text: "The container downloads its own image when it starts" }
+  answer: [b]
+  explain: >
+    The docker command is just a remote control. It sends your request to the Docker
+    engine. The engine checks for the image, downloads it from a registry (Docker Hub
+    by default) if it's missing, and starts a container from it. The registry only
+    stores images; it never runs anything.

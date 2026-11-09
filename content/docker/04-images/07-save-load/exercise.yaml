@@ -1,0 +1,24 @@
+id: dk.images.save-load
+type: project_cli
+version: 1
+title: Images as Files
+xp: 20
+difficulty: 2
+tags: [save, load]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: base.tar is an image archive that carries the cq/base:mine name
+      cli_command:
+        command: tar -xOf base.tar manifest.json
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq/base:mine"]
+    - description: cq/base:mine is back on your computer
+      cli_command:
+        command: "docker image inspect -f 'tags={{json .RepoTags}}' cq/base:mine"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq/base:mine"]

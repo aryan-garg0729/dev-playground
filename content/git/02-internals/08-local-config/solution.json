@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"file:.git/config\tyou@work.example\n"}},{"cli":{"exit_code":0,"stdout":"author=you@work.example\n"}},{"cli":{"exit_code":0,"stdout":"author=learner@example.com\n"}}]}

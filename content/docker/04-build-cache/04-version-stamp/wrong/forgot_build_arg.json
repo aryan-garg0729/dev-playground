@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}, {"cli": {"exit_code": 0, "stdout": "version=dev\n"}}, {"cli": {"exit_code": 0, "stdout": "PATH=/usr/local/bin:/usr/bin:/bin\nHOME=/root\n"}}]}

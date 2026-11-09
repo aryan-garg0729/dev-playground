@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "mem=33554432 swap=33554432\n"}}, {"cli": {"exit_code": 0, "stdout": "status=exited exit=137\n"}}, {"cli": {"exit_code": 0, "stdout": "cauldron holds 12 bytes\ncauldron holds 24 bytes\ncauldron holds 3145728 bytes\ncauldron holds 6291456 bytes\ncauldron holds 12582912 bytes\n"}}]}

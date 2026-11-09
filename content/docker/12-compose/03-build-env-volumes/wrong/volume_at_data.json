@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "image=cq/webapp:compose\n"}}, {"cli": {"exit_code": 0, "stdout": "/notes\nvolume:/data \n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "Hello from Compose from webapp dev\n"}}]}

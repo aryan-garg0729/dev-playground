@@ -1,0 +1,26 @@
+id: dk.basics.install
+type: project_cli
+version: 1
+title: Install Docker
+xp: 15
+difficulty: 1
+tags: [setup]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The docker command is installed
+      cli_command:
+        command: "docker --version"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Docker version"]
+    - description: The Docker engine is running and answers
+      cli_command:
+        command: "docker version --format 'client={{.Client.Version}} server={{.Server.Version}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["client=", "server="]
+          - stdout_contains_none: ["Cannot connect", "permission denied"]

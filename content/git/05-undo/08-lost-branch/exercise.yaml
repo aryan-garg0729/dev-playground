@@ -1,0 +1,28 @@
+id: gt.undoing.lost-branch
+type: project_cli
+version: 1
+title: Rescue a Deleted Branch
+xp: 25
+difficulty: 3
+tags: [reflog, branches]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: recovered/dark-theme points at E5
+      cli_command:
+        command: "git log -1 --format=%s recovered/dark-theme"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E5:"]
+    - description: try/dark-theme is still deleted
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - stdout_contains_none: ["try/dark-theme"]
+    - description: E5 didn't end up on main
+      cli_command:
+        command: "git --no-pager log --format=%s main"
+        tests:
+          - stdout_contains_none: ["E5:"]

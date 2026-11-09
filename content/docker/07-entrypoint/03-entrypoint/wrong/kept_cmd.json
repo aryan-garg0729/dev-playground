@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "entrypoint=null\n"}}, {"cli": {"exit_code": 0, "stdout": "path=--version args=[] exit=127\n"}}, {"cli": {"exit_code": 0, "stdout": "path=ls\ngo.mod\nmain.go\n"}}]}

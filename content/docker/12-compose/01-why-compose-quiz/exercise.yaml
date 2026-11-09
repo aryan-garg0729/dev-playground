@@ -1,0 +1,21 @@
+id: dk.compose.why-compose-quiz
+type: mcq
+version: 1
+title: Too Many Commands
+xp: 5
+difficulty: 1
+tags: [compose]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Compose replaces Docker: it's a different way to run apps, without containers" }
+    - { id: b, text: "Compose describes all your containers, networks and volumes in one file and starts them with one command" }
+    - { id: c, text: "Compose is only for running containers in the cloud" }
+    - { id: d, text: "Compose makes images smaller" }
+  answer: [b]
+  explain: >
+    Compose is a tool built into Docker. You write compose.yaml once, describing every
+    container (service), network and volume, then docker compose up creates them all and
+    docker compose down removes them. Underneath it uses exactly the same containers,
+    networks and volumes you've been making by hand.

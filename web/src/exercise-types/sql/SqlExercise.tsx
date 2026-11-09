@@ -33,7 +33,7 @@ export function SqlExercise({ header, publicView: pv, draft, onChange, onRun, on
       header={header}
       problem={
         <>
-          <Markdown>{pv.prompt}</Markdown>
+          <Markdown dropTitle>{pv.prompt}</Markdown>
           <details className="flex flex-col gap-2">
             <summary className="text-section cursor-pointer text-text">Tables and data</summary>
             <pre className="text-code-sm mt-2 overflow-x-auto border-l-2 border-border-strong pl-[14px] text-text-secondary">{pv.setup}</pre>

@@ -1,0 +1,45 @@
+id: gt.sharing.team-day-boss
+type: project_cli
+version: 1
+title: Team Day
+xp: 60
+difficulty: 3
+tags: [remotes, rebase, revert]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: add-blog is on the remote with H6, and yours tracks it
+      cli_command:
+        command: "git --git-dir=../project-origin.git log -1 --format=%s add-blog && git rev-parse --abbrev-ref add-blog@{upstream}"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["H6:", "origin/add-blog"]
+    - description: Find the teammate's G6 on the remote
+      cli_command:
+        command: "git --git-dir=../project-origin.git log -1 --format=%H ':/^G6:'"
+        captures: [{ name: g6, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Your I6 sits on G6, with no merge commit
+      cli_command:
+        command: "git --git-dir=../project-origin.git log -1 --format='parents=%P' ':/^I6:'"
+        tests:
+          - stdout_contains_all: ["parents=${g6}\n"]
+    - description: The remote's main ends with the revert of G6, and G6 is still in history
+      cli_command:
+        command: "git --git-dir=../project-origin.git log --format=%s -n 3 main"
+        tests:
+          - stdout_contains_all: ['Revert "G6:', "I6:", "G6:"]
+    - description: secret.md is gone from the remote's main
+      cli_command:
+        command: git --git-dir=../project-origin.git ls-tree --name-only main
+        tests:
+          - stdout_contains_none: ["secret.md"]
+    - description: Your main and origin/main agree
+      cli_command:
+        command: git status -sb
+        tests:
+          - stdout_contains_all: ["## main...origin/main\n"]

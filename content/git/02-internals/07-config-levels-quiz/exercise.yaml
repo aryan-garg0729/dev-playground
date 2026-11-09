@@ -1,0 +1,21 @@
+id: gt.internals.config-levels-quiz
+type: mcq
+version: 1
+title: Which Setting Wins?
+xp: 5
+difficulty: 2
+tags: [config]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "you@personal.example, because global settings apply to every repo" }
+    - { id: b, text: "you@work.example, because the most specific level wins" }
+    - { id: c, text: "Whichever was set most recently" }
+    - { id: d, text: "Git refuses to commit until the two agree" }
+  answer: [b]
+  explain: >
+    Git reads every level and the most specific one wins: local (this repo's .git/config)
+    beats global (~/.gitconfig), which beats system. Global is a default, not an order.
+    That's how you can keep your personal email everywhere and still commit to one work
+    project with your work email.

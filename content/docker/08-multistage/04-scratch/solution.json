@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"webapp dev\n"}},{"cli":{"exit_code":0,"stdout":"layers=1\nshell=none\n"}},{"cli":{"exit_code":0,"stdout":"size=tiny\n"}}]}

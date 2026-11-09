@@ -1,0 +1,22 @@
+id: dk.production.secrets-quiz
+type: mcq
+version: 1
+title: Keep Secrets Out of Images
+xp: 5
+difficulty: 3
+tags: [security, secrets]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nobody: it's only in the image, not in the code" }
+    - { id: b, text: "Anyone who can pull the image, with docker image inspect or by running env in a container" }
+    - { id: c, text: "Only people with access to the build server" }
+    - { id: d, text: "Nobody, if the image is small" }
+  answer: [b]
+  explain: >
+    ENV values are part of the image's settings. docker image inspect shows them, and every
+    container sees them in its environment. COPY a key file in and it's in a layer forever,
+    even if a later step deletes it. ARG values are recorded in docker history. Pass secrets
+    at run time instead (-e, an env file or a read-only mounted file), or use a build secret
+    mount if a build step really needs one.

@@ -1,0 +1,30 @@
+id: dk.cache.cache-mount
+type: project_cli
+version: 1
+title: A Cache That Survives
+xp: 25
+difficulty: 3
+tags: [cache, buildkit]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The go build step uses a cache mount
+      cli_command:
+        command: grep -A1 -- '--mount=type=cache' Dockerfile
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["target=/root/.cache/go-build", "go build"]
+    - description: cq/webapp:fast works
+      cli_command:
+        command: docker run --rm cq/webapp:fast webapp --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp"]
+    - description: The compiler cache is not baked into the image
+      cli_command:
+        command: "docker run --rm cq/webapp:fast sh -c 'ls -A /root/.cache/go-build 2>/dev/null | wc -l' | awk '{print \"cache_files=\" $1}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cache_files=0"]

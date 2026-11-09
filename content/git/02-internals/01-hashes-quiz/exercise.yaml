@@ -1,0 +1,22 @@
+id: gt.internals.hashes-quiz
+type: mcq
+version: 1
+title: What's in a Commit Id?
+xp: 5
+difficulty: 2
+tags: [internals]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing: commit ids are random and never change" }
+    - { id: b, text: "The commit gets a completely different id, because its id is calculated from its contents" }
+    - { id: c, text: "Only the last few characters of the id change" }
+    - { id: d, text: "The id stays the same, only the message changes" }
+  answer: [b]
+  explain: >
+    A commit id is a hash: a fingerprint calculated from everything in the commit (the
+    files' snapshot, the parent, the author, the time and the message). Change any of it,
+    even one letter of the message, and you get a completely different id. That's why
+    Git can tell instantly whether two commits are identical, and why "changing" a commit
+    really means making a new one.

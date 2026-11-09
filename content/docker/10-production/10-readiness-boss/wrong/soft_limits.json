@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "image=localhost:15000/elixirbytes/brewd:release health=healthy\n"}}, {"cli": {"exit_code": 0, "stdout": "10001\n"}}, {"cli": {"exit_code": 0, "stdout": "ro=false caps=null sec=null mem=67108864 swap=134217728 restart=unless-stopped\n"}}, {"http": {"status": 201, "headers": {}, "body": "ordered philosophers-stone\n"}}]}

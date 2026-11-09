@@ -1,0 +1,35 @@
+id: gt.branching.merge-commit
+type: project_cli
+version: 1
+title: A Real Merge
+xp: 25
+difficulty: 2
+tags: [merge]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find B3 (the gallery, on add-gallery)
+      cli_command:
+        command: "git log -1 --format=%H ':/^B3:'"
+        captures: [{ name: b3, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Find C3 (the projects link, on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^C3:'"
+        captures: [{ name: c3, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: D3 is a merge commit with C3 and B3 as its parents
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^D3:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["${c3}", "${b3}"]
+    - description: main is at D3 and has both changes
+      cli_command:
+        command: "git log -1 --format=%s main; git ls-tree --name-only main; git show main:index.md"
+        tests:
+          - stdout_contains_all: ["D3:", "gallery.md", "projects.md", "[Projects](projects.md)"]

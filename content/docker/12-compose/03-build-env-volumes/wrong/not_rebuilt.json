@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "image=cq/webapp:1.6\n"}}, {"cli": {"exit_code": 0, "stdout": "/notes\nvolume:/notes \n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "Welcome from webapp 1.6\n"}}]}

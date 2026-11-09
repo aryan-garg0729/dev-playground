@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "size=too-big\n"}}, {"cli": {"exit_code": 0, "stdout": "/usr/local/go/bin/go\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}]}

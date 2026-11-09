@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "ok\nok\n"}}, {"cli": {"exit_code": 0, "stdout": "distinct=2\n"}}]}

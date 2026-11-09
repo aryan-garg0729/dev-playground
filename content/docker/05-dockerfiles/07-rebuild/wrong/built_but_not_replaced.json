@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=running image=cq/site:v1\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "<h1>Built into the image</h1>\n"}}, {"cli": {"exit_code": 0, "stdout": "<h1>Built into the image</h1>\n"}}]}

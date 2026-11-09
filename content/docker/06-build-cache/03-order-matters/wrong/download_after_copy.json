@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "COPY app/ .\nRUN go mod download\nRUN go build -o /usr/local/bin/webapp .\n"}}, {"cli": {"exit_code": 0, "stdout": "order=code-first\n"}}, {"cli": {"exit_code": 0, "stdout": "#9 [4/5] RUN go mod download\n#9 DONE 0.2s\n"}}, {"cli": {"exit_code": 0, "stdout": "#9 [5/6] COPY app/ .\n#9 DONE 0.0s\n"}}]}

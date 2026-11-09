@@ -1,0 +1,21 @@
+id: gt.basics.commands-quiz
+type: mcq
+version: 1
+title: Talking to Git
+xp: 5
+difficulty: 1
+tags: [cli]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "git status --help" }
+    - { id: b, text: "git help-status" }
+    - { id: c, text: "help git status" }
+    - { id: d, text: "git --status" }
+  answer: [a]
+  explain: >
+    Every Git command follows git <command> [options], and --help is an option every
+    command understands (git help status does the same). It opens the command's manual.
+    Press q to leave it.

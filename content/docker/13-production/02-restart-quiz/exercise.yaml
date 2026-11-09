@@ -1,0 +1,21 @@
+id: dk.production.restart-quiz
+type: mcq
+version: 1
+title: Restart Policies
+xp: 5
+difficulty: 2
+tags: [restart]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "no" }
+    - { id: b, text: "on-failure" }
+    - { id: c, text: "always" }
+    - { id: d, text: "unless-stopped" }
+  answer: [d]
+  explain: >
+    unless-stopped restarts the container after crashes and after Docker or the computer
+    restarts, but respects a deliberate docker stop. always would also bring back a
+    container you stopped on purpose the next time Docker starts. on-failure doesn't
+    restart after a reboot if the container had exited cleanly, and no never restarts.

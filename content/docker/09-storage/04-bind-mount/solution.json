@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"status=running bind:/usr/share/nginx/html \nsource=site\n"}},{"http":{"status":200,"headers":{"Content-Type":"text/html"},"body":"\u003ch1\u003eEdited on my computer\u003c/h1\u003e\n"}}]}

@@ -1,0 +1,25 @@
+id: dk.containers.background
+type: project_cli
+version: 1
+title: Run in the Background
+xp: 20
+difficulty: 1
+tags: [run]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-sleeper is running from alpine:3.20
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-sleeper"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=alpine:3.20"]
+    - description: cq-sleeper was started in the background (detached)
+      cli_command:
+        command: "docker inspect -f 'attached={{.Config.AttachStdout}}' cq-sleeper"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["attached=false"]

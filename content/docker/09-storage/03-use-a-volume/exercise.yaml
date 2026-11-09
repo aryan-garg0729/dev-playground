@@ -1,0 +1,30 @@
+id: dk.storage.use-a-volume
+type: project_cli
+version: 1
+title: Data That Survives
+xp: 25
+difficulty: 2
+tags: [volumes]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8090
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The first container, cq-notes-1, is gone
+      cli_command:
+        command: "docker ps -a --filter name=cq-notes-1 --format '{{.Names}}'"
+        tests:
+          - stdout_contains_none: ["cq-notes-1"]
+    - description: cq-notes-2 has the cq-notes volume at /data
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} {{range .Mounts}}{{.Type}}:{{.Name}}:{{.Destination}} {{end}}' cq-notes-2"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "volume:cq-notes:/data"]
+    - description: The note saved by the first container is still there
+      http_request:
+        request: { method: GET, url: "${baseURL}/notes" }
+        tests:
+          - status_code: 200
+          - body_contains: "buy milk"

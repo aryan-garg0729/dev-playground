@@ -1,0 +1,30 @@
+id: dk.networking.reverse-proxy
+type: project_cli
+version: 1
+title: One Front Door
+xp: 25
+difficulty: 3
+tags: [networks, proxy]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8094
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-front runs nginx on cq-net, publishes 8094 and reads its config read-only
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}} mounts={{range .Mounts}}{{.Destination}}:rw={{.RW}} {{end}}' cq-front && docker port cq-front 80/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["image=nginx:1.27-alpine", "nets=cq-net,", "/etc/nginx/conf.d:rw=false", ":8094"]
+    - description: cq-api is still hidden (no published ports)
+      cli_command:
+        command: "docker inspect -f 'ports={{json .HostConfig.PortBindings}}' cq-api"
+        tests:
+          - stdout_contains_all: ["ports={}"]
+    - description: Visiting the front door reaches the webapp behind it
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Welcome from webapp 1.6"

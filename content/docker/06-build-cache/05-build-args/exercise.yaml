@@ -1,0 +1,34 @@
+id: dk.cache.build-args
+type: project_cli
+version: 1
+title: Pick the Version at Build Time
+xp: 20
+difficulty: 2
+tags: [arg]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:1.2 reports version 1.2
+      cli_command:
+        command: docker run --rm cq/webapp:1.2 webapp --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp 1.2"]
+    - description: The image is labelled with version 1.2
+      cli_command:
+        command: "docker image inspect -f 'version={{index .Config.Labels \"org.opencontainers.image.version\"}}' cq/webapp:1.2"
+        tests:
+          - stdout_contains_all: ["version=1.2"]
+    - description: The VERSION build argument didn't leak into containers
+      cli_command:
+        command: docker run --rm cq/webapp:1.2 printenv VERSION
+        tests:
+          - exit_code: 1
+    - description: Without --build-arg the version falls back to dev
+      cli_command:
+        command: docker run --rm cq/webapp:nover webapp --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp dev"]

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=running image=cq/webapp:prod\n"}}, {"cli": {"exit_code": 0, "stdout": "cq/webapp@sha256:2410be9e4ca760c0d6c72907fa748bcf15075b8fa579ccaa4a99e95b89909ff0\nlocalhost:15000/cq/webapp@sha256:2410be9e4ca760c0d6c72907fa748bcf15075b8fa579ccaa4a99e95b89909ff0\n\n"}}]}

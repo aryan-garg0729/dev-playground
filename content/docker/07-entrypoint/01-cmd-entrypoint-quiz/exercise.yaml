@@ -1,0 +1,20 @@
+id: dk.entrypoint.cmd-entrypoint-quiz
+type: mcq
+version: 1
+title: CMD vs ENTRYPOINT
+xp: 5
+difficulty: 2
+tags: [cmd, entrypoint]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It runs ls -l /tmp, because the words after the image replace CMD" }
+    - { id: b, text: "It runs ls -l /tmp --version" }
+    - { id: c, text: "It runs ls --version, because ENTRYPOINT is fixed and the words after the image replace CMD" }
+    - { id: d, text: "It fails, because you can't pass words after the image" }
+  answer: [c]
+  explain: >
+    The container runs ENTRYPOINT followed by CMD. Words after the image name replace
+    CMD only, so ENTRYPOINT ["ls"] stays and --version takes the place of ["-l", "/tmp"].
+    The result is ls --version.

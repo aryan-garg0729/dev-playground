@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "image=registry:2\n0.0.0.0:15000\n[::]:15000\n"}}, {"http": {"status": 200, "headers": {}, "body": "{\"repositories\":[\"elixirbytes/brewd\"]}\n"}}, {"http": {"status": 200, "headers": {}, "body": "{\"name\":\"elixirbytes/brewd\",\"tags\":[\"prod\"]}\n"}}]}

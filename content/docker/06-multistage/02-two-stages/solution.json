@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "size=ok\n"}}, {"cli": {"exit_code": 0, "stdout": "no-go\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}]}

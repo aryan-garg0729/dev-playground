@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "image=cq/webapp:1.6 volume:/data:rw=true bind:/config:rw=false \n cq-book \n"}}, {"cli": {"exit_code": 0, "stdout": "first note\nsecond note\n"}}, {"cli": {"exit_code": 0, "stdout": "recreated=no\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "first note\nsecond note\n"}}]}

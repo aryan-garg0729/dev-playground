@@ -1,0 +1,35 @@
+id: gt.basics.first-commit
+type: project_cli
+version: 1
+title: Your First Commit
+xp: 20
+difficulty: 1
+tags: [commit]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: A commit labelled A1 exists
+      cli_command:
+        command: "git --no-pager log --format=%s"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["A1:"]
+    - description: A1 holds the home page
+      cli_command:
+        command: "git show ':/^A1:' --format= --name-only"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["index.md"]
+    - description: A1 was made with your name and email
+      cli_command:
+        command: "test \"$(git log -1 --format=%ae ':/^A1:')\" = \"$(git config user.email)\" && echo author=you || echo author=someone-else"
+        tests:
+          - stdout_contains_all: ["author=you"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

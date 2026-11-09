@@ -63,7 +63,7 @@ export function CodeExercise(props: ExerciseRendererProps<CodePublicView, CodeAn
       header={header}
       problem={
         <>
-          <Markdown>{pv.prompt}</Markdown>
+          <Markdown dropTitle>{pv.prompt}</Markdown>
           <ProblemExamples examples={pv.examples} constraints={pv.constraints} />
         </>
       }

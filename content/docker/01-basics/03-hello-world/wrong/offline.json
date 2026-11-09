@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "Error: No such image: hello-world\n"}}, {"cli": {"exit_code": 125, "stdout": "docker: Error response from daemon: dial tcp: lookup registry-1.docker.io: no such host\n"}}]}

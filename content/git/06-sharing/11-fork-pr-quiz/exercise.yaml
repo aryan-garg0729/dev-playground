@@ -1,0 +1,21 @@
+id: gt.sharing.fork-pr-quiz
+type: mcq
+version: 1
+title: Forks and Pull Requests
+xp: 5
+difficulty: 2
+tags: [github, forks]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Push your branch straight to the project's main" }
+    - { id: b, text: "Fork the project, push a branch to your fork, then open a pull request asking the maintainers to merge it" }
+    - { id: c, text: "Email them your whole project folder" }
+    - { id: d, text: "Clone it and wait for them to pull from your computer" }
+  answer: [b]
+  explain: >
+    You can't push to someone else's repository. A fork is your own copy of it on GitHub,
+    which you can push to. A pull request then asks the maintainers to pull your branch
+    into their project. They review it, discuss it and, if they like it, merge it with a
+    click.

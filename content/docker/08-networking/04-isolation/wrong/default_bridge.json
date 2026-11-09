@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "nets=bridge,\n"}}, {"cli": {"exit_code": 1, "stdout": "ping: bad address 'eb-vault'\n"}}, {"cli": {"exit_code": 1, "stdout": "ping: bad address 'eb-vault'\n"}}]}

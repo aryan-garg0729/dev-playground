@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"Revert \"D6: publish my phone number\"\nD6: publish my phone number\n"}},{"cli":{"exit_code":0,"stdout":".gitignore\nabout.md\ncontact.md\nfaq.md\ngallery.md\nguestbook.md\nhobbies.md\nindex.md\nlinks.md\nnews.md\nprivacy.md\nprojects.md\nskills.md\ntodo.md\n"}},{"cli":{"exit_code":0,"stdout":"## main...origin/main\n"}}]}

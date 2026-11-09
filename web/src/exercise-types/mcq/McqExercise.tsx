@@ -48,7 +48,7 @@ export function McqExercise({ header, publicView, draft, onChange, onSubmit, res
   return (
     <article className="flex min-w-0 max-w-[760px] flex-1 flex-col gap-4 self-start rounded-lg border border-border bg-surface px-6 py-5">
       {header}
-      <Markdown>{question}</Markdown>
+      <Markdown dropTitle>{question}</Markdown>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-section mb-2 text-text">{multiple ? 'Select all that apply' : 'Choose one answer'}</legend>

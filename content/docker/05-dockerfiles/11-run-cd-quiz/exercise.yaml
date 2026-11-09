@@ -1,0 +1,21 @@
+id: dk.dockerfile.run-cd-quiz
+type: mcq
+version: 1
+title: Every RUN Starts Fresh
+xp: 5
+difficulty: 2
+tags: [dockerfile]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "/tmp/app, because the cd happened first" }
+    - { id: b, text: "/ (the root folder), because each RUN starts a brand new shell" }
+    - { id: c, text: "The build fails because cd isn't allowed" }
+    - { id: d, text: "/src" }
+  answer: [b]
+  explain: >
+    Every RUN step runs in its own new shell, and the shell's current folder is thrown
+    away when that step ends. Only files survive between steps. The second RUN starts
+    in the default folder again, which is /. Use WORKDIR to change folders for every
+    later step.

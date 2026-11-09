@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "module elixirbytes/brewd\n\ngo 1.23\n"}}, {"cli": {"exit_code": 0, "stdout": "var version = \"dev\"\n\t\tif err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {\n\tsignal.Notify(stop, syscall.SIGTERM, os.Interrupt)\n"}}, {"cli": {"exit_code": 1, "stdout": "ls: app/testdata: No such file or directory\n"}}]}

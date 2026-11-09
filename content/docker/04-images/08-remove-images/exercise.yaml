@@ -1,0 +1,25 @@
+id: dk.images.remove-images
+type: project_cli
+version: 1
+title: Remove Images
+xp: 15
+difficulty: 1
+tags: [rmi]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/base:copy is gone but cq/base:mine is kept
+      cli_command:
+        command: "docker images cq/base --format 'tag={{.Tag}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["tag=mine"]
+          - stdout_contains_none: ["tag=copy"]
+    - description: cq-user and the busybox:1.36 image are both removed
+      cli_command:
+        command: "docker ps -a --filter name=cq-user --format '{{.Names}}'; docker images busybox --format 'tag={{.Tag}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_none: ["cq-user", "tag=1.36"]

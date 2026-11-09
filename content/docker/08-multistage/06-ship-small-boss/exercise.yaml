@@ -1,0 +1,37 @@
+id: dk.multistage.ship-small-boss
+type: project_cli
+version: 1
+title: Ship It Small, 1.6
+xp: 50
+difficulty: 3
+tags: [multistage]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8089
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:1.6 reports version 1.6 and carries the 1.6 label
+      cli_command:
+        command: "docker run --rm cq/webapp:1.6 --version && docker image inspect -f 'label={{index .Config.Labels \"org.opencontainers.image.version\"}}' cq/webapp:1.6"
+        tests:
+          - stdout_contains_all: ["webapp 1.6", "label=1.6"]
+    - description: cq/webapp:1.6 is small and has at most 2 layers
+      cli_command:
+        command: "docker image inspect -f '{{.Size}} {{len .RootFS.Layers}}' cq/webapp:1.6 | awk '{print ($1 < 30000000 ? \"size=small\" : \"size=too-big\"), ($2 <= 2 ? \"layers=ok\" : \"layers=too-many\")}'"
+        tests:
+          - stdout_contains_all: ["size=small"]
+          - stdout_contains_all: ["layers=ok"]
+    - description: cq-small runs cq/webapp:1.6 on port 8089
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-small && docker port cq-small 8080/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=cq/webapp:1.6", ":8089"]
+    - description: The small image serves the app
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Welcome from webapp 1.6"

@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 1, "stdout": "no configuration file provided: not found\n"}}, {"cli": {"exit_code": 1, "stdout": "docker: 'docker inspect' requires at least 1 argument\n"}}, {"http": {"status": 200, "headers": {}, "body": "ok\n"}}]}

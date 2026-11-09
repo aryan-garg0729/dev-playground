@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "entrypoint=[\"/brewd\"] layers=2\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}, {"cli": {"exit_code": 0, "stdout": ""}}]}

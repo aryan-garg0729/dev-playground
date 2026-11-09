@@ -1,0 +1,20 @@
+id: dk.compose.down-quiz
+type: mcq
+version: 1
+title: Down, or Down -v?
+xp: 5
+difficulty: 2
+tags: [compose, volumes]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "docker compose down" }
+    - { id: b, text: "docker compose down -v" }
+    - { id: c, text: "docker compose stop, then docker volume prune" }
+    - { id: d, text: "docker compose rm" }
+  answer: [a]
+  explain: >
+    down removes the containers and the network but keeps named volumes, so the notes
+    survive and come back with the next up. down -v also deletes the volumes and the data
+    in them. Use -v only when you really want a clean slate.

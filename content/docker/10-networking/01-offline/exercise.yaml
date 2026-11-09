@@ -1,0 +1,29 @@
+id: dk.networking.offline
+type: project_cli
+version: 1
+title: Cut the Cable
+xp: 15
+difficulty: 1
+tags: [networks]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-offline has no network at all
+      cli_command:
+        command: "docker inspect -f 'network={{.HostConfig.NetworkMode}}' cq-offline"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["network=none"]
+    - description: cq-offline couldn't reach the internet
+      cli_command:
+        command: docker logs cq-offline
+        tests:
+          - stdout_contains_all: ["offline"]
+          - stdout_contains_none: ["online"]
+    - description: cq-online, on the default network, could
+      cli_command:
+        command: docker logs cq-online
+        tests:
+          - stdout_contains_all: ["online"]

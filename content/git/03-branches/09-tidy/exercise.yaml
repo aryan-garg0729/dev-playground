@@ -1,0 +1,24 @@
+id: gt.branching.tidy
+type: project_cli
+version: 1
+title: Tidy Up Branches
+xp: 20
+difficulty: 1
+tags: [branches]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The merged branches are gone and blog was renamed
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["* main", "blog/posts", "experiment/old-home"]
+          - stdout_contains_none: ["add-projects", "add-gallery", "blog\n"]
+    - description: Your work is still on main
+      cli_command:
+        command: "git --no-pager log --format=%s main"
+        tests:
+          - stdout_contains_all: ["A3:", "B3:", "D3:"]

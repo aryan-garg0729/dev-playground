@@ -1,0 +1,23 @@
+id: dk.production.restart-policy
+type: project_cli
+version: 1
+title: Try, Try Again
+xp: 20
+difficulty: 2
+tags: [restart]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-flaky has an on-failure policy with 3 retries, and used them all
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}} restarts={{.RestartCount}} policy={{.HostConfig.RestartPolicy.Name}}:{{.HostConfig.RestartPolicy.MaximumRetryCount}}' cq-flaky"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=exited", "exit=1", "restarts=3", "policy=on-failure:3"]
+    - description: It ran four times in total
+      cli_command:
+        command: docker logs cq-flaky
+        tests:
+          - stdout_lines_gt: 3

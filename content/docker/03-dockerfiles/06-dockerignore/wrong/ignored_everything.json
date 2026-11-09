@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "app\n"}}, {"cli": {"exit_code": 125, "stdout": "Unable to find image 'elixirbytes/brewd:lean' locally\n"}}, {"cli": {"exit_code": 125, "stdout": "Unable to find image 'elixirbytes/brewd:lean' locally\n"}}]}

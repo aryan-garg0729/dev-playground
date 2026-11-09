@@ -84,7 +84,7 @@ func setupWith(t *testing.T, withUser bool, o opts) *env {
 	}
 	rdb, prefix := testredis.New(t)
 	board := &game.Board{Redis: rdb, Prefix: prefix}
-	econ := &economy.Service{Pool: pool, Now: o.now, Rand: o.rand}
+	econ := &economy.Service{Pool: pool, Now: o.now, Rand: o.rand, DevUnlockAll: o.devAuth}
 	if err := econ.Sync(ctx); err != nil {
 		t.Fatal(err)
 	}

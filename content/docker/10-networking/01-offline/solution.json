@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"network=none\n"}},{"cli":{"exit_code":0,"stdout":"wget: bad address 'example.com'\noffline\n"}},{"cli":{"exit_code":0,"stdout":"online\n"}}]}

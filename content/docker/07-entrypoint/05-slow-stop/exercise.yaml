@@ -1,0 +1,28 @@
+id: dk.entrypoint.slow-stop
+type: project_cli
+version: 1
+title: The 10-Second Stop
+xp: 25
+difficulty: 3
+tags: [signals, entrypoint]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:banner starts through the start.sh script
+      cli_command:
+        command: "docker image inspect -f 'entrypoint={{json .Config.Entrypoint}}' cq/webapp:banner"
+        tests:
+          - stdout_contains_all: ["start.sh"]
+    - description: cq-slow had to be forced to stop
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' cq-slow"
+        tests:
+          - stdout_contains_all: ["status=exited", "exit=137"]
+    - description: The banner printed, but the webapp never heard the stop request
+      cli_command:
+        command: docker logs cq-slow
+        tests:
+          - stdout_contains_all: ["starting webapp"]
+          - stdout_contains_none: ["shutting down"]

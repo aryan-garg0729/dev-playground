@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "os=linux\nos=linux\nError: No such image: busybox:1.36\n"}}, {"cli": {"exit_code": 0, "stdout": "3.20.10\n"}}, {"cli": {"exit_code": 0, "stdout": "alpine=3.20.10\n"}}, {"cli": {"exit_code": 0, "stdout": "BusyBox v1.36.1 (2023-05-18 22:34:17 UTC) multi-call binary.\n"}}, {"cli": {"exit_code": 0, "stdout": "busybox=1.36.1\n"}}]}

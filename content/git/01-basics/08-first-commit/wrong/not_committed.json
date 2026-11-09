@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 128, "stdout": "fatal: your current branch 'main' does not have any commits yet\n"}}, {"cli": {"exit_code": 128, "stdout": "fatal: bad revision\n"}}, {"cli": {"exit_code": 0, "stdout": "author=someone-else\n"}}, {"cli": {"exit_code": 1, "stdout": "A  index.md\n"}}]}

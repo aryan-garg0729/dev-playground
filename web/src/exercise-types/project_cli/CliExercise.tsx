@@ -36,7 +36,7 @@ export function CliExercise({ header, publicView, result, aside, boss }: Exercis
     <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-start">
       <article className="flex min-w-0 flex-1 flex-col gap-4 rounded-lg border border-border bg-surface px-6 py-5 lg:max-w-[560px]">
         {header}
-        <Markdown>{prompt}</Markdown>
+        <Markdown dropTitle>{prompt}</Markdown>
         {boss && <BossHP maxHP={maxHP} result={latest} revealed={revealed} />}
         {boss && <DefeatReward reward={boss.reward} />}
         {aside}

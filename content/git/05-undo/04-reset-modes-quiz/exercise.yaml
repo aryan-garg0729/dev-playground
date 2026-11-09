@@ -1,0 +1,21 @@
+id: gt.undoing.reset-modes-quiz
+type: mcq
+version: 1
+title: Three Kinds of Reset
+xp: 5
+difficulty: 2
+tags: [reset]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "--soft" }
+    - { id: b, text: "--mixed" }
+    - { id: c, text: "--hard" }
+    - { id: d, text: "Any of them: they only differ in speed" }
+  answer: [c]
+  explain: >
+    All three move the branch back. --soft leaves the changes staged and --mixed leaves
+    them in your files, unstaged. Only --hard also resets your files, so the changes are
+    gone from the folder. (The commit itself can still be found in the reflog, which is
+    the next-but-one lesson.)

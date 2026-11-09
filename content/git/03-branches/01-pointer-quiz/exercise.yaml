@@ -1,0 +1,21 @@
+id: gt.branching.pointer-quiz
+type: mcq
+version: 1
+title: What Is a Branch?
+xp: 5
+difficulty: 1
+tags: [branches]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A full copy of every file, so it gets slower as the project grows" }
+    - { id: b, text: "A copy of every commit on main" }
+    - { id: c, text: "A tiny file holding one commit id, so it costs almost nothing" }
+    - { id: d, text: "A separate .git folder" }
+  answer: [c]
+  explain: >
+    A branch is just a name that points at a commit: one small file in .git/refs/heads
+    containing a 40-character id. Making a branch copies nothing. When you commit on it,
+    Git simply moves that pointer to the new commit. That's why Git users create branches
+    for every little idea.

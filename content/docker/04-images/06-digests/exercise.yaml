@@ -1,0 +1,26 @@
+id: dk.images.digests
+type: project_cli
+version: 1
+title: Pin an Exact Image
+xp: 20
+difficulty: 2
+tags: [digests]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Look up alpine:3.20's digest
+      cli_command:
+        command: "docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' alpine:3.20"
+        captures: [{ name: digest, regex: "@(sha256:[0-9a-f]{64})" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@sha256:"]
+    - description: cq-pinned was started by digest, not by tag, and finished cleanly
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} exit={{.State.ExitCode}}' cq-pinned"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@${digest}", "exit=0"]
+          - stdout_contains_none: ["alpine:3.20"]

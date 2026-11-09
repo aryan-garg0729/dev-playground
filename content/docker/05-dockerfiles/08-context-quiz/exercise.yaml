@@ -1,0 +1,21 @@
+id: dk.dockerfile.context-quiz
+type: mcq
+version: 1
+title: The Build Context
+xp: 5
+difficulty: 2
+tags: [build, context]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The Go tools are being downloaded" }
+    - { id: b, text: "docker build sends the whole folder, including the .tar files from the images chapter" }
+    - { id: c, text: "The app's code is 26 MB" }
+    - { id: d, text: "Docker is uploading the image to Docker Hub" }
+  answer: [b]
+  explain: >
+    The dot in docker build . means "send this whole folder to the builder". That
+    includes base.tar and web.tar from the images chapter, even though the Dockerfile only
+    copies app/. The Go tools come from the FROM image, which isn't part of the context,
+    and docker build never uploads anything to Docker Hub.

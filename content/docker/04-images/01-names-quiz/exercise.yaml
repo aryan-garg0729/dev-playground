@@ -1,0 +1,20 @@
+id: dk.images.names-quiz
+type: mcq
+version: 1
+title: Reading an Image Name
+xp: 5
+difficulty: 1
+tags: [images, tags]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "registry ghcr.io, repository acme/shop, tag 2.1" }
+    - { id: b, text: "registry Docker Hub, repository ghcr.io/acme, tag shop:2.1" }
+    - { id: c, text: "registry acme, repository shop, tag ghcr.io" }
+    - { id: d, text: "registry ghcr.io, repository acme, tag latest" }
+  answer: [a]
+  explain: >
+    The first part has a dot, so it's a registry address: ghcr.io (GitHub's registry).
+    Everything up to the colon after it is the repository, acme/shop. After the colon
+    is the tag, 2.1. Only names with no registry part come from Docker Hub.

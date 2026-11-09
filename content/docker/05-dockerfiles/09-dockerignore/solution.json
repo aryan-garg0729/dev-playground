@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"*.tar\nanswers.txt\napp/test-data\n"}},{"cli":{"exit_code":0,"stdout":"go.mod\nmain.go\ntest-data\n"}},{"cli":{"exit_code":0,"stdout":"go.mod\nmain.go\n"}}]}

@@ -43,6 +43,9 @@ type Service struct {
 	// Rand returns a uniform int in [0, n) (crypto/rand when nil); tests fix it.
 	Rand func(n int) int
 	Log  *slog.Logger
+	// DevUnlockAll opens every chapter for the default dev user (DevUserEmail).
+	// Set only when DEV_AUTH=1, which production refuses.
+	DevUnlockAll bool
 }
 
 func (s *Service) now() time.Time {
@@ -210,6 +213,9 @@ func (s *Service) openChest(ctx context.Context, q *store.Queries, user uuid.UUI
 	}
 	return &game.ChestDrop{Bytes: bytes, PowerUp: p}, nil
 }
+
+// DevUserEmail is the default dev user that DEV_AUTH signs in without an email.
+const DevUserEmail = "dev@codequest.local"
 
 // Dev starter grant: what the default dev user (DEV_AUTH only) starts with, so
 // level-gated UI and every power-up can be tried without grinding.

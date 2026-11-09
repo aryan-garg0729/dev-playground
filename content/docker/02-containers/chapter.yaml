@@ -1,0 +1,13 @@
+id: dk.containers
+title: Containers
+exercises:
+  - 01-run-and-exit
+  - 02-lifecycle-quiz
+  - 03-background
+  - 04-stop-start
+  - 05-logs
+  - 06-many-containers
+  - 07-remove
+  - 08-exit-codes
+  - 09-stop-vs-kill-quiz
+  - 10-cleanup-crew-boss

@@ -1,0 +1,18 @@
+id: dk.storage.volumes
+type: project_cli
+version: 1
+title: Volumes
+xp: 15
+difficulty: 1
+tags: [volumes]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The volume cq-notes exists
+      cli_command:
+        command: "docker volume inspect -f 'name={{.Name}} driver={{.Driver}}' cq-notes"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["name=cq-notes", "driver=local"]

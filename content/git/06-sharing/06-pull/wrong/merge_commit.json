@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "Merge branch 'main' of project-origin by you@work.example\n"}}, {"cli": {"exit_code": 0, "stdout": "## main...origin/main\n"}}, {"cli": {"exit_code": 0, "stdout": "parent_count=2\n"}}]}

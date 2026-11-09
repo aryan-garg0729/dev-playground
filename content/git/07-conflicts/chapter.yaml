@@ -1,0 +1,10 @@
+id: gt.resolving
+title: Conflicts
+exercises:
+  - 01-markers-quiz
+  - 02-merge-conflict
+  - 03-sides-quiz
+  - 04-rebase-conflict
+  - 05-rebase-sides-quiz
+  - 06-committed-markers
+  - 07-reviews-boss

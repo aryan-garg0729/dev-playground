@@ -1,0 +1,13 @@
+id: dk.images
+title: Images and tags
+exercises:
+  - 01-names-quiz
+  - 02-tags
+  - 03-latest-quiz
+  - 04-layers
+  - 05-layers-quiz
+  - 06-digests
+  - 07-save-load
+  - 08-remove-images
+  - 09-size-quiz
+  - 10-image-librarian-boss

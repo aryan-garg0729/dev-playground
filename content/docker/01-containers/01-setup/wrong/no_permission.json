@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 1, "stdout": "permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock\n"}}, {"cli": {"exit_code": 126, "stdout": "docker: permission denied while trying to connect to the Docker daemon socket\n"}}]}

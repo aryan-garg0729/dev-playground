@@ -1,0 +1,11 @@
+id: dk.cache
+title: The build cache
+exercises:
+  - 01-cache-quiz
+  - 02-see-the-cache
+  - 03-order-matters
+  - 04-arg-env-quiz
+  - 05-build-args
+  - 06-cache-mount
+  - 07-stale-index-quiz
+  - 08-fast-release-boss

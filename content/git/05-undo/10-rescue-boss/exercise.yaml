@@ -1,0 +1,45 @@
+id: gt.undoing.rescue-boss
+type: project_cli
+version: 1
+title: Rescue Mission
+xp: 50
+difficulty: 3
+tags: [reflog, reset, restore]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: main has F5, G5 and your fix I5 on top
+      cli_command:
+        command: "git --no-pager log --format=%s -n 3 main"
+        tests:
+          - stdout_contains_all: ["I5:", "G5:", "F5:"]
+    - description: Find F5
+      cli_command:
+        command: "git log -1 --format=%H ':/^F5:'"
+        captures: [{ name: f5, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Look up the home page as it was at F5
+      cli_command:
+        command: "git rev-parse ${f5}:index.md"
+        captures: [{ name: page, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: The home page on main is exactly the F5 version
+      cli_command:
+        command: "git rev-parse main:index.md"
+        tests:
+          - stdout_contains_all: ["${page}"]
+    - description: add-resume is back at H5, and H5 is not on main
+      cli_command:
+        command: "git log -1 --format=%s add-resume; echo on_main=$(git --no-pager log --format=%s main | grep -c '^H5:')"
+        tests:
+          - stdout_contains_all: ["H5:", "on_main=0\n"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

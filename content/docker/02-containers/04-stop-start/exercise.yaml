@@ -1,0 +1,19 @@
+id: dk.containers.stop-start
+type: project_cli
+version: 1
+title: Stop and Start
+xp: 20
+difficulty: 1
+tags: [stop, start]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-sleeper has been stopped at least once and is running again
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} stopped_before={{if eq .State.FinishedAt \"0001-01-01T00:00:00Z\"}}no{{else}}yes{{end}}' cq-sleeper"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "stopped_before=yes"]

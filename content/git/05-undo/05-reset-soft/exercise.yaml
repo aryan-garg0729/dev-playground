@@ -1,0 +1,38 @@
+id: gt.undoing.reset-soft
+type: project_cli
+version: 1
+title: Redo the Last Commits
+xp: 25
+difficulty: 2
+tags: [reset]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find C5
+      cli_command:
+        command: "git log -1 --format=%H ':/^C5:'"
+        captures: [{ name: c5, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: D5 sits directly on C5 at the tip of main
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["D5:", "parents=${c5}"]
+    - description: The two scrappy commits are gone from every branch
+      cli_command:
+        command: "git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_none: ["todo 1", "todo 2"]
+    - description: You used reset to get there
+      cli_command:
+        command: "git reflog --format=%gs"
+        tests:
+          - stdout_contains_all: ["reset: moving to"]
+    - description: D5 has both lines
+      cli_command:
+        command: "git show main:todo.md"
+        tests:
+          - stdout_contains_all: ["Add a photo", "Fix the footer"]

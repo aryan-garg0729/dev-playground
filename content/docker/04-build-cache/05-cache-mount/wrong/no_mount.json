@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 1, "stdout": ""}}, {"cli": {"exit_code": 0, "stdout": "#8 [stage-0 4/6] RUN go mod download\n#8 CACHED\n"}}, {"cli": {"exit_code": 1, "stdout": ""}}, {"cli": {"exit_code": 0, "stdout": "00\n01\n02\n"}}]}

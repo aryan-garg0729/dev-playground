@@ -1,0 +1,23 @@
+id: dk.debug.find-the-error
+type: project_cli
+version: 1
+title: Find the Error in the Noise
+xp: 20
+difficulty: 2
+tags: [logs, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Read the error code from cq-noisy's logs
+      cli_command:
+        command: "docker logs cq-noisy 2>&1 | grep ERROR"
+        captures: [{ name: code, regex: "code=(\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt has the right error_code= line
+      cli_command:
+        command: "grep -x 'error_code=${code}' answers.txt"
+        tests:
+          - exit_code: 0

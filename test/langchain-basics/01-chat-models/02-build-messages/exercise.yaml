@@ -1,0 +1,32 @@
+id: lc.chat.build-messages
+type: code
+version: 1
+title: Build a message list
+xp: 20
+difficulty: 1
+tags: [messages]
+free: true
+spec:
+  language: python
+  runner: docker-python
+  prompt: prompt.md
+  entry: main.py
+  starter: starter.py
+  solution: solution.py
+  limits: { timeout_ms: 5000, memory_mb: 256 }
+  examples:
+    - input: 'build_messages("a pirate", "Why is the sea salty?")'
+      output: '[SystemMessage("You are a pirate. Answer in one sentence."), HumanMessage("Why is the sea salty?")]'
+      explanation: the persona goes into the system message, the question into the human message
+  constraints:
+    - "Return a list of exactly two messages: SystemMessage, then HumanMessage"
+  hints:
+    - Which message type carries instructions, and which carries the user's words?
+    - "Both classes live in langchain_core.messages."
+  checks:
+    - kind: unit_tests
+      file: tests_visible.py
+      visible: true
+    - kind: unit_tests
+      file: tests_hidden.py
+      weight: 2

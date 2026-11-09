@@ -1,0 +1,36 @@
+id: dk.production.production-boss
+type: project_cli
+version: 1
+title: Production Ready
+xp: 60
+difficulty: 3
+tags: [security, limits, restart, healthcheck]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-prod runs cq/webapp:prod and is healthy
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} health={{.State.Health.Status}}' cq-prod"
+        tests:
+          - stdout_contains_all: ["image=cq/webapp:prod"]
+          - stdout_contains_all: ["health=healthy"]
+    - description: The app isn't root
+      cli_command:
+        command: docker exec cq-prod id -u
+        tests:
+          - stdout_contains_all: ["10001"]
+    - description: cq-prod is locked down, limited, restarts itself and is only on localhost
+      cli_command:
+        command: "docker inspect -f 'ro={{.HostConfig.ReadonlyRootfs}} caps={{json .HostConfig.CapDrop}} sec={{json .HostConfig.SecurityOpt}} mem={{.HostConfig.Memory}} swap={{.HostConfig.MemorySwap}} restart={{.HostConfig.RestartPolicy.Name}}' cq-prod && docker port cq-prod 8080/tcp"
+        tests:
+          - stdout_contains_all: ["ro=true", "caps=[\"ALL\"]", "no-new-privileges"]
+          - stdout_contains_all: ["mem=134217728", "swap=134217728"]
+          - stdout_contains_all: ["restart=unless-stopped", "127.0.0.1:8101"]
+    - description: It saves notes into the cq-prod-data volume
+      cli_command:
+        command: "docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Name}}:{{.Destination}} {{end}}' cq-prod && curl -s -o /dev/null -w 'status=%{http_code}' -X POST 'http://127.0.0.1:8101/notes?text=prod+check'"
+        tests:
+          - stdout_contains_all: ["volume:cq-prod-data:/data", "status=201"]

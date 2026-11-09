@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"entrypoint=[\"sh\",\"/src/start.sh\"]\n"}},{"cli":{"exit_code":0,"stdout":"pid1=webapp\nstop=fast\nexit=0\nstarting webapp...\n2026/11/09 10:58:22 webapp 1.4 listening on :8080\n2026/11/09 10:58:23 webapp: shutting down\n"}},{"cli":{"exit_code":0,"stdout":"starting webapp...\nwebapp 1.4\n"}}]}

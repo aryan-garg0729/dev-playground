@@ -1,0 +1,20 @@
+id: dk.ports.ports-quiz
+type: mcq
+version: 1
+title: Which Side Is Which?
+xp: 5
+difficulty: 1
+tags: [ports]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "-p 3000:5432" }
+    - { id: b, text: "-p 5432:3000" }
+    - { id: c, text: "-p 3000" }
+    - { id: d, text: "--port 5432" }
+  answer: [b]
+  explain: >
+    The left number is always your computer, the right number is always the
+    container. The app listens on 3000 inside its box, and you want to reach it
+    on 5432, so it's -p 5432:3000.

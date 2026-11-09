@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "size=ok\n"}}, {"cli": {"exit_code": 0, "stdout": "no-go\n"}}, {"cli": {"exit_code": 127, "stdout": "docker: Error response from daemon: failed to create task for container: exec: \"brewd\": executable file not found in $PATH\n"}}]}

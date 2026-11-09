@@ -1,0 +1,35 @@
+id: gt.branching.detached
+type: project_cli
+version: 1
+title: Visit the Past
+xp: 25
+difficulty: 2
+tags: [head, detached]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find A1
+      cli_command:
+        command: "git log -1 --format=%H ':/^A1:'"
+        captures: [{ name: a1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: experiment/old-home holds E3, made on top of A1
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' experiment/old-home"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["E3:", "parents=${a1}"]
+    - description: You're back on main
+      cli_command:
+        command: git symbolic-ref --short HEAD
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["main"]
+    - description: main doesn't contain E3
+      cli_command:
+        command: "git --no-pager log --format=%s main"
+        tests:
+          - stdout_contains_none: ["E3:"]

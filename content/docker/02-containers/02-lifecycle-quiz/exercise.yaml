@@ -1,0 +1,21 @@
+id: dk.containers.lifecycle-quiz
+type: mcq
+version: 1
+title: A Container's Life
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It crashed, because containers should keep running" }
+    - { id: b, text: "It finished normally: its command ended, so the container stopped" }
+    - { id: c, text: "Docker deleted it to save memory" }
+    - { id: d, text: "It's paused and will resume when you open the terminal again" }
+  answer: [b]
+  explain: >
+    A container lives exactly as long as its main command. echo prints and ends, so the
+    container moves to "exited", and the (0) means it ended without errors. Nothing
+    was deleted: docker ps -a still lists it, and docker start would run it again.

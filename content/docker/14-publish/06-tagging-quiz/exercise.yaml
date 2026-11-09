@@ -1,0 +1,21 @@
+id: dk.publish.tagging-quiz
+type: mcq
+version: 1
+title: Tagging a Release
+xp: 5
+difficulty: 2
+tags: [tags, releases]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Push 2.4.1 only" }
+    - { id: b, text: "Push 2.4.1, and move 2.4, 2 and latest to point at the same image" }
+    - { id: c, text: "Overwrite 2.4.0 with the new image so nobody has to change anything" }
+    - { id: d, text: "Push latest only" }
+  answer: [b]
+  explain: >
+    A full version tag like 2.4.1 is a promise: it never changes. The shorter tags are
+    moving pointers that follow the newest release in their line, so people who choose
+    2.4 get bug fixes automatically. Overwriting 2.4.0 breaks that promise, and pushing
+    only latest leaves nobody able to pin a version.

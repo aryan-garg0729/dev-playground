@@ -1,0 +1,35 @@
+id: gt.resolving.merge-conflict
+type: project_cli
+version: 1
+title: Resolve a Merge Conflict
+xp: 30
+difficulty: 3
+tags: [conflicts, merge]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find A7 (the branch side)
+      cli_command:
+        command: "git log -1 --format=%H ':/^A7:'"
+        captures: [{ name: a7, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Find B7 (the main side)
+      cli_command:
+        command: "git log -1 --format=%H ':/^B7:'"
+        captures: [{ name: b7, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: C7 is main's tip and merges B7 and A7
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["C7:", "${b7}", "${a7}"]
+    - description: The office hours line combines both sides, and the new section survived
+      cli_command:
+        command: "git show main:contact.md"
+        tests:
+          - stdout_contains_all: ["Office hours: Tuesdays, 09:30, online\n", "## Response time"]
+          - stdout_contains_none: ["<<<<<<<", "=======", ">>>>>>>", "Mondays", "10:00"]

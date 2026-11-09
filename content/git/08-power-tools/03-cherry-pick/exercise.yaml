@@ -1,0 +1,34 @@
+id: gt.toolbox.cherry-pick
+type: project_cli
+version: 1
+title: Pick One Commit
+xp: 25
+difficulty: 2
+tags: [cherry-pick]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: There are two D8 commits, the original and the copy
+      cli_command:
+        command: "echo \"d8_commits=$(git log --all --format=%s | grep -c '^D8:')\""
+        tests:
+          - stdout_contains_all: ["d8_commits=2\n"]
+    - description: main's tip is a D8, and C8 is not on main
+      cli_command:
+        command: "git --no-pager log --format=%s -n 5 main"
+        tests:
+          - stdout_contains_all: ["D8:"]
+          - stdout_contains_none: ["C8:"]
+    - description: try/footer is still there with C8 and D8
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 try/footer"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["D8:", "C8:"]
+    - description: main has the fixed about page
+      cli_command:
+        command: "git show main:about.md"
+        tests:
+          - stdout_contains_all: ["I am learning Git every day."]

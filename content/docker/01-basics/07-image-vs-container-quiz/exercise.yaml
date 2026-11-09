@@ -1,0 +1,21 @@
+id: dk.basics.image-vs-container-quiz
+type: mcq
+version: 1
+title: Images vs Containers
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "3 images and 3 containers" }
+    - { id: b, text: "1 image and 1 container" }
+    - { id: c, text: "1 image and 3 containers" }
+    - { id: d, text: "3 images and 1 container" }
+  answer: [c]
+  explain: >
+    The image is downloaded once and reused. Every docker run makes a brand new
+    container from it, so three runs give three containers (all finished, but still
+    there until you remove them). One recipe, three cakes.

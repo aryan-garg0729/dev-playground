@@ -1,0 +1,51 @@
+id: gt.branching.news-boss
+type: project_cli
+version: 1
+title: Launch the News Page
+xp: 50
+difficulty: 2
+tags: [branches, merge]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find G3 (the last commit of the news branch)
+      cli_command:
+        command: "git log -1 --format=%H ':/^G3:'"
+        captures: [{ name: g3, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Find H3 (the FAQ change on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^H3:'"
+        captures: [{ name: h3, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: G3 sits directly on F3
+      cli_command:
+        command: "git --no-pager log --format=%s -n 2 ${g3}"
+        tests:
+          - stdout_contains_all: ["F3:"]
+    - description: I3 merges H3 and G3
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^I3:'"
+        tests:
+          - stdout_contains_all: ["${h3}", "${g3}"]
+    - description: main is at I3 with the news page
+      cli_command:
+        command: "git log -1 --format=%s main; git ls-tree --name-only main"
+        tests:
+          - stdout_contains_all: ["I3:", "news.md"]
+    - description: launch/news was deleted and you're on main
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - stdout_contains_all: ["* main"]
+          - stdout_contains_none: ["launch/news"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

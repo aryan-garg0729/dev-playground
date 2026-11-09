@@ -1,0 +1,22 @@
+id: dk.basics.help-quiz
+type: mcq
+version: 1
+title: Ask Docker for Help
+xp: 5
+difficulty: 1
+tags: [cli]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "--delete" }
+    - { id: b, text: "-d" }
+    - { id: c, text: "--rm" }
+    - { id: d, text: "--clean" }
+  answer: [c]
+  explain: >
+    docker run --help lists "--rm  Automatically remove the container and its
+    associated anonymous volumes when it exits". -d means "detached" (run in the
+    background), which you'll meet in the next chapter. --delete and --clean
+    don't exist.

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "api=running/\nfront=running/\n"}}, {"cli": {"exit_code": 0, "stdout": "name: docker-course\nservices:\n  front:\n    depends_on:\n      api:\n        condition: service_started\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "Hello from Compose from webapp dev\n"}}]}

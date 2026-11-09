@@ -1,0 +1,21 @@
+id: dk.cache.arg-env-quiz
+type: mcq
+version: 1
+title: ARG vs ENV
+xp: 5
+difficulty: 2
+tags: [arg, env]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "ARG, because it's only needed while building and shouldn't stay in containers" }
+    - { id: b, text: "ENV, because ENV values can't be seen by docker inspect" }
+    - { id: c, text: "Either: ARG and ENV are the same thing" }
+    - { id: d, text: "Neither: you have to edit the Dockerfile each time" }
+  answer: [a]
+  explain: >
+    ARG values exist only during docker build and can be changed with --build-arg, so
+    they're perfect for "which version am I building". ENV values are baked into the
+    image and every container sees them. (Neither is safe for passwords: build args are
+    recorded in the image's history.)

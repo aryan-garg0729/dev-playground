@@ -1,0 +1,21 @@
+id: dk.storage.mount-types-quiz
+type: mcq
+version: 1
+title: Volume or Bind Mount?
+xp: 5
+difficulty: 2
+tags: [volumes, bind-mount]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "-v pgdata:/var/lib/postgresql/data, a named volume" }
+    - { id: b, text: "-v \"$(pwd)\":/var/lib/postgresql/data, a bind mount of your project folder" }
+    - { id: c, text: "No mount: the container keeps the data" }
+    - { id: d, text: "--tmpfs /var/lib/postgresql/data" }
+  answer: [a]
+  explain: >
+    A database's files are data the app owns, which you never edit by hand: that's what
+    named volumes are for. They survive container removal and Docker manages them for you.
+    Bind mounts are for sharing your own files (code, config) with a container. Without a
+    mount the data dies with the container, and tmpfs lives only in memory.

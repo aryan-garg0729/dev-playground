@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "FROM golang:1.23-alpine\n"}}, {"cli": {"exit_code": 0, "stdout": "webapp 1.5\n"}}, {"cli": {"exit_code": 0, "stdout": "/usr/local/go/bin/go\n/src: go.mod main.go\n"}}, {"cli": {"exit_code": 0, "stdout": "size=too-big\n"}}]}

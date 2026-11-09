@@ -1,0 +1,36 @@
+id: gt.basics.history
+type: project_cli
+version: 1
+title: Build Up History
+xp: 20
+difficulty: 1
+tags: [commit, diff, log]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find commit A1
+      cli_command:
+        command: "git log -1 --format=%H ':/^A1:'"
+        captures: [{ name: a1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: B1 sits directly on top of A1
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^B1:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["parents=${a1}"]
+    - description: B1 adds the about page and links it from the home page
+      cli_command:
+        command: "git show ':/^B1:' --format= --name-only"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["about.md", "index.md"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

@@ -1,0 +1,21 @@
+id: dk.storage.vanished-quiz
+type: mcq
+version: 1
+title: Where Did My Data Go?
+xp: 5
+difficulty: 1
+tags: [storage]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The app has a bug and didn't save the note" }
+    - { id: b, text: "The note was saved in the old container's own scratch layer, which was deleted with the container" }
+    - { id: c, text: "Docker deletes all files every 24 hours" }
+    - { id: d, text: "The note is still there, it just needs a restart" }
+  answer: [b]
+  explain: >
+    The note was written to /data inside the container, which lives in that container's
+    private writable layer. docker rm deleted the layer along with the container. The new
+    container started fresh from the image. To keep data, store it outside the container,
+    in a volume.

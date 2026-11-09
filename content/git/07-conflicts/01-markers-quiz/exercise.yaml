@@ -1,0 +1,21 @@
+id: gt.resolving.markers-quiz
+type: mcq
+version: 1
+title: Reading Conflict Markers
+xp: 5
+difficulty: 2
+tags: [conflicts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The top part is from the branch being merged in; the bottom is yours" }
+    - { id: b, text: "The top part (after <<<<<<< HEAD) is the branch you're on; the bottom is the branch being merged in" }
+    - { id: c, text: "The top part is the old version from before either change" }
+    - { id: d, text: "Git has already picked the top part; the bottom is just for reference" }
+  answer: [b]
+  explain: >
+    During a merge, HEAD is the branch you're on, so the part between <<<<<<< HEAD and
+    ======= is "ours", and the part between ======= and >>>>>>> update-hours is "theirs",
+    the branch being merged in. Git hasn't picked anything: the file stays unresolved until
+    you edit it and delete all three marker lines.

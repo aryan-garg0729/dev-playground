@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "add the home page\n"}}, {"cli": {"exit_code": 128, "stdout": "fatal: ambiguous argument ':/^A1:': unknown revision or path not in the working tree.\n"}}, {"cli": {"exit_code": 0, "stdout": "author=you\n"}}, {"cli": {"exit_code": 0, "stdout": ""}}]}

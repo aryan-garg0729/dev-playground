@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "size=too-big layers=too-many\n"}}, {"cli": {"exit_code": 0, "stdout": "/usr/local/go/bin/go\ngo.mod\nmain.go\n"}}, {"cli": {"exit_code": 0, "stdout": "version=1.6.0\n"}}, {"http": {"status": 200, "headers": {}, "body": "brewd 1.6.0\n"}}]}

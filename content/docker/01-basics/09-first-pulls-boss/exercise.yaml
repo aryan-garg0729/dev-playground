@@ -1,0 +1,42 @@
+id: dk.basics.first-pulls-boss
+type: project_cli
+version: 1
+title: Image Explorer
+xp: 50
+difficulty: 1
+tags: [pull, run]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: alpine:3.20, nginx:1.27-alpine and busybox:1.36 are all downloaded
+      cli_command:
+        command: "docker image inspect -f 'os={{.Os}}' alpine:3.20 nginx:1.27-alpine busybox:1.36"
+        tests:
+          - exit_code: 0
+          - stdout_lines_gt: 2
+    - description: Find the exact Alpine version inside alpine:3.20
+      cli_command:
+        command: docker run --rm alpine:3.20 cat /etc/alpine-release
+        captures: [{ name: alpine, regex: "(\\d+\\.\\d+\\.\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt has the right alpine= line
+      cli_command:
+        command: "grep -x 'alpine=${alpine}' answers.txt"
+        tests:
+          - exit_code: 0
+    - description: Find the BusyBox version inside busybox:1.36
+      cli_command:
+        command: "docker run --rm busybox:1.36 busybox | head -n 1"
+        captures: [{ name: busybox, regex: "BusyBox v(\\d+\\.\\d+\\.\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt has the right busybox= line
+      cli_command:
+        command: "grep -x 'busybox=${busybox}' answers.txt"
+        tests:
+          - exit_code: 0

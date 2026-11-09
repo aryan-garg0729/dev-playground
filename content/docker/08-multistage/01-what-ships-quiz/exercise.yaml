@@ -1,0 +1,21 @@
+id: dk.multistage.what-ships-quiz
+type: mcq
+version: 1
+title: What Are We Shipping?
+xp: 5
+difficulty: 2
+tags: [multistage, size]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The webapp program is huge" }
+    - { id: b, text: "The image still contains the whole Go toolchain and the source code, which were only needed to build the program" }
+    - { id: c, text: "Docker adds a copy of every layer for safety" }
+    - { id: d, text: "Alpine is big" }
+  answer: [b]
+  explain: >
+    The finished program is a single file of a few megabytes. Everything else in the image
+    (the Go compiler, its standard library, the source in /src, the build cache) was only
+    needed to produce that file. It's shipped anyway because the build and the final
+    image are the same thing. Multi-stage builds separate them.

@@ -1,0 +1,10 @@
+id: dk.publish
+title: Sharing images
+exercises:
+  - 01-registries-quiz
+  - 02-local-registry
+  - 03-push
+  - 04-pull-and-run
+  - 05-docker-hub
+  - 06-tagging-quiz
+  - 07-release-day-boss

@@ -1,0 +1,12 @@
+id: js-basics
+title: JavaScript Basics
+description: >
+  Small JavaScript scripts for a bakery's order board: console output, reading
+  input, arithmetic and formatting money. Graded on the server.
+order: 6
+chapters:
+  - 01-order-board
+icon: js
+level: beginner
+tags: [JavaScript]
+topics: Output, input, numbers and strings in JavaScript

@@ -1,0 +1,25 @@
+id: dk.ports.run-a-website
+type: project_cli
+version: 1
+title: Run a Website
+xp: 20
+difficulty: 1
+tags: [ports, run]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8081
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-web runs nginx:1.27-alpine and publishes port 80 on your port 8081
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-web && docker port cq-web 80/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=nginx:1.27-alpine", ":8081"]
+    - description: The website answers on http://localhost:8081
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Welcome to nginx!"

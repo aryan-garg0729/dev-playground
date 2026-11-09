@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": ".gitignore:1:answers.txt\tanswers.txt\n"}}, {"cli": {"exit_code": 0, "stdout": ".gitignore:2:*.log\tdebug.log\n"}}, {"cli": {"exit_code": 0, "stdout": ".gitignore\nanswers.txt\n---\n.gitignore\nabout.md\nanswers.txt\ncontact.md\nindex.md\n"}}, {"cli": {"exit_code": 0, "stdout": ""}}]}

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"c6d8a58f0484f70af2915ae630fd557146edd066\n"}},{"cli":{"exit_code":0,"stdout":"type=tag\nc6d8a58f0484f70af2915ae630fd557146edd066\n"}},{"cli":{"exit_code":0,"stdout":"type=tag\nC4: add the hobbies page\n"}},{"cli":{"exit_code":0,"stdout":"type=commit\nA8: reply faster\n"}}]}

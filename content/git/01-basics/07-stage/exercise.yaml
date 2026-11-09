@@ -1,0 +1,25 @@
+id: gt.basics.stage
+type: project_cli
+version: 1
+title: Stage a File
+xp: 15
+difficulty: 1
+tags: [add, status]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: index.md is staged for the next commit
+      cli_command:
+        command: git diff --cached --name-only
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["index.md"]
+    - description: index.md has the home page text
+      cli_command:
+        command: cat index.md
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["# My Website", "Welcome to my website."]

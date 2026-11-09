@@ -1,0 +1,18 @@
+id: lc.chat.message-roles
+type: mcq
+version: 1
+title: Message roles
+xp: 5
+difficulty: 1
+tags: [messages]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "SystemMessage" }
+    - { id: b, text: "HumanMessage" }
+    - { id: c, text: "AIMessage" }
+    - { id: d, text: "ToolMessage" }
+  answer: [a]
+  explain: SystemMessage holds instructions and persona and usually goes first. HumanMessage is what the user says, AIMessage is the model's reply, and ToolMessage carries a tool's result.

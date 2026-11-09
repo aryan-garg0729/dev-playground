@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "webapp 1.2\n"}}, {"cli": {"exit_code": 0, "stdout": "version=1.2\n"}}, {"cli": {"exit_code": 0, "stdout": "1.2\n"}}, {"cli": {"exit_code": 0, "stdout": "webapp dev\n"}}]}

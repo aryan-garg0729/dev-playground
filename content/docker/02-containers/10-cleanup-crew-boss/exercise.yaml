@@ -1,0 +1,43 @@
+id: dk.containers.cleanup-crew-boss
+type: project_cli
+version: 1
+title: Container Control Room
+xp: 50
+difficulty: 2
+tags: [run, logs, exit-codes, rm]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-keeper runs in the background from alpine:3.20
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}} attached={{.Config.AttachStdout}}' cq-keeper"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=alpine:3.20", "attached=false"]
+    - description: cq-job finished cleanly and its logs say so
+      cli_command:
+        command: "docker inspect -f 'exit={{.State.ExitCode}}' cq-job && docker logs cq-job"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["exit=0", "job done"]
+    - description: cq-mystery has finished
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' cq-mystery"
+        captures: [{ name: mystery, regex: "exit=(\\d+)" }]
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=exited"]
+    - description: answers.txt has cq-mystery's real exit code
+      cli_command:
+        command: "grep -x 'mystery_exit=${mystery}' answers.txt"
+        tests:
+          - exit_code: 0
+    - description: The old practice containers are cleaned up
+      cli_command:
+        command: "docker ps -a --filter name=cq- --format '{{.Names}}'"
+        tests:
+          - stdout_contains_none: ["cq-sleeper", "cq-counter", "cq-crash"]

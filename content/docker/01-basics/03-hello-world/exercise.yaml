@@ -1,0 +1,25 @@
+id: dk.basics.hello-world
+type: project_cli
+version: 1
+title: Hello, Container
+xp: 15
+difficulty: 1
+tags: [run]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The hello-world image is on your computer
+      cli_command:
+        command: "docker image inspect -f 'found={{index .RepoTags 0}}' hello-world"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["found=hello-world"]
+    - description: A hello-world container runs and says hello
+      cli_command:
+        command: docker run --rm hello-world
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Hello from Docker!"]

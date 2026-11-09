@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "network=bridge\n"}}, {"cli": {"exit_code": 0, "stdout": "online\n"}}, {"cli": {"exit_code": 0, "stdout": "online\n"}}]}

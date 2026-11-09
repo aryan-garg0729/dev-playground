@@ -1,0 +1,21 @@
+id: dk.storage.tmpfs-quiz
+type: mcq
+version: 1
+title: Memory-Only Storage
+xp: 5
+difficulty: 2
+tags: [tmpfs]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "They're still in /scratch when the container starts again" }
+    - { id: b, text: "They're gone: tmpfs lives in memory and is emptied when the container stops" }
+    - { id: c, text: "Docker moves them into a volume" }
+    - { id: d, text: "They're saved into the image" }
+  answer: [b]
+  explain: >
+    tmpfs is a folder that lives in memory. It's fast, never touches the disk, and is
+    wiped every time the container stops, including on a plain stop + start. That makes
+    it right for temporary files and anything sensitive you don't want written to disk,
+    and wrong for anything you want to keep.

@@ -1,0 +1,28 @@
+id: gt.undoing.restore
+type: project_cli
+version: 1
+title: Throw Away a Change
+xp: 20
+difficulty: 1
+tags: [restore]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: contact.md matches the last commit again
+      cli_command:
+        command: "git diff --quiet HEAD -- contact.md && echo contact=restored || echo contact=changed"
+        tests:
+          - stdout_contains_all: ["contact=restored"]
+    - description: Your about.md edit is still there, unstaged
+      cli_command:
+        command: git diff --name-only
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["about.md"]
+    - description: The edit says what it should
+      cli_command:
+        command: git diff -- about.md
+        tests:
+          - stdout_contains_all: ["+I also play the guitar."]

@@ -1,0 +1,28 @@
+id: dk.production.lockdown
+type: project_cli
+version: 1
+title: Lock It Down
+xp: 25
+difficulty: 3
+tags: [security]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-locked has a read-only filesystem, a tmpfs at /tmp, no extra powers
+      cli_command:
+        command: "docker inspect -f 'ro={{.HostConfig.ReadonlyRootfs}} caps={{json .HostConfig.CapDrop}} sec={{json .HostConfig.SecurityOpt}} tmpfs={{json .HostConfig.Tmpfs}}' cq-locked"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["ro=true", "caps=[\"ALL\"]", "no-new-privileges", "/tmp"]
+    - description: Nothing outside /data and /tmp can be written
+      cli_command:
+        command: "docker exec cq-locked sh -c 'touch /etc/x 2>&1; echo done'"
+        tests:
+          - stdout_contains_all: ["Read-only file system"]
+    - description: The app still saves notes into its volume
+      http_request:
+        request: { method: POST, url: "http://127.0.0.1:8100/notes?text=still+works" }
+        tests:
+          - status_code: 201

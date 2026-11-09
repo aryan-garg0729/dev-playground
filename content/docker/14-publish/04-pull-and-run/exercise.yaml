@@ -1,0 +1,23 @@
+id: dk.publish.pull-and-run
+type: project_cli
+version: 1
+title: Pull It Back
+xp: 20
+difficulty: 2
+tags: [registry, pull]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-shipped runs the image from your registry
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-shipped"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=localhost:15000/cq/webapp:1.0"]
+    - description: The image came from the registry (it has a registry digest)
+      cli_command:
+        command: "docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' localhost:15000/cq/webapp:1.0"
+        tests:
+          - stdout_contains_all: ["localhost:15000/cq/webapp@sha256:"]

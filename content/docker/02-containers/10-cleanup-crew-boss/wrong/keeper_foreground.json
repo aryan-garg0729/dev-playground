@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "status=running image=alpine:3.20 attached=true\n"}}, {"cli": {"exit_code": 0, "stdout": "exit=0\njob done\n"}}, {"cli": {"exit_code": 0, "stdout": "status=exited exit=8\n"}}, {"cli": {"exit_code": 0, "stdout": "mystery_exit=8\n"}}, {"cli": {"exit_code": 0, "stdout": "cq-mystery\ncq-job\ncq-keeper\n"}}]}

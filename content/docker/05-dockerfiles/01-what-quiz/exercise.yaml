@@ -1,0 +1,20 @@
+id: dk.dockerfile.what-quiz
+type: mcq
+version: 1
+title: What Is a Dockerfile?
+xp: 5
+difficulty: 1
+tags: [dockerfile]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Dockerfile, then docker run, then docker build" }
+    - { id: b, text: "Dockerfile, then docker build makes an image, then docker run makes a container" }
+    - { id: c, text: "docker run reads the Dockerfile directly and starts a container" }
+    - { id: d, text: "docker build makes a container, then docker run turns it into an image" }
+  answer: [b]
+  explain: >
+    The Dockerfile is the recipe. docker build follows it and produces an image.
+    docker run starts a container from that image. Run never reads the Dockerfile:
+    after a change to the Dockerfile you must build again.

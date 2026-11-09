@@ -1,0 +1,22 @@
+id: gt.basics.log-quiz
+type: mcq
+version: 1
+title: Reading the Log
+xp: 5
+difficulty: 1
+tags: [log]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "7c1e9d0 is the oldest commit, because it's at the top" }
+    - { id: b, text: "7c1e9d0 is the newest commit, and its parent is 9a04b31" }
+    - { id: c, text: "9a04b31 was made after 7c1e9d0" }
+    - { id: d, text: "They're unrelated commits that happen to be on the same branch" }
+  answer: [b]
+  explain: >
+    git log starts at the newest commit and walks backwards, so the newest is on top and
+    the very first commit is at the bottom. --parents prints each commit's parent after
+    its own id: 7c1e9d0's parent is 9a04b31, and 9a04b31 has none, which makes it the
+    first commit. Every commit points back at the one before it: that chain is the history.

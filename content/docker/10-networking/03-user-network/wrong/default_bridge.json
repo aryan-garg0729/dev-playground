@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "name=cq-net driver=bridge\n"}}, {"cli": {"exit_code": 0, "stdout": "nets=bridge, ports={} image=cq/webapp:1.6\n"}}, {"cli": {"exit_code": 1, "stdout": "wget: bad address 'cq-api:8080'\n"}}]}

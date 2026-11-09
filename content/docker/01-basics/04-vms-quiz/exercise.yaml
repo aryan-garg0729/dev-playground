@@ -1,0 +1,22 @@
+id: dk.basics.vms-quiz
+type: mcq
+version: 1
+title: Containers vs Virtual Machines
+xp: 5
+difficulty: 1
+tags: [concepts]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Containers each run their own full operating system, just like a VM" }
+    - { id: b, text: "Containers share the computer's operating system, so they start in about a second and use less memory" }
+    - { id: c, text: "Containers are slower than VMs but more secure" }
+    - { id: d, text: "Containers only work in the cloud" }
+  answer: [b]
+  explain: >
+    A virtual machine boots a whole operating system of its own, which takes time and
+    memory. A container doesn't boot anything: it borrows the operating system your
+    computer is already running and only brings the app's own files. That's why a
+    container starts in about a second and you can run dozens on a laptop.

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "7e078d0c7d9e04a92e8c40219f2739d06bef170f\n"}}, {"cli": {"exit_code": 0, "stdout": "parents=7e078d0c7d9e04a92e8c40219f2739d06bef170f\n"}}, {"cli": {"exit_code": 0, "stdout": "about.md\nindex.md\n"}}, {"cli": {"exit_code": 1, "stdout": " M index.md\n"}}]}

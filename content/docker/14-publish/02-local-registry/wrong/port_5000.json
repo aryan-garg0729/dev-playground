@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "status=running image=registry:2\nno public port '5000/tcp' published for cq-registry\n"}}, {"http": {"error": "connect: connection refused"}}]}

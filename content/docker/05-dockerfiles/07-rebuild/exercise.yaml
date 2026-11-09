@@ -1,0 +1,31 @@
+id: dk.dockerfile.rebuild
+type: project_cli
+version: 1
+title: I Changed It, Nothing Changed
+xp: 20
+difficulty: 1
+tags: [build]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8084
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-site now runs cq/site:v2
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-site"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=cq/site:v2"]
+    - description: http://localhost:8084 shows Version 2
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Version 2"
+    - description: cq/site:v1 was not changed
+      cli_command:
+        command: docker run --rm cq/site:v1 cat /usr/share/nginx/html/index.html
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Built into the image"]

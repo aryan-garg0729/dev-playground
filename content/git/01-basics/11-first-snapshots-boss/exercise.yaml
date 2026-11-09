@@ -1,0 +1,48 @@
+id: gt.basics.first-snapshots-boss
+type: project_cli
+version: 1
+title: First Snapshots
+xp: 50
+difficulty: 1
+tags: [commit, add]
+free: true
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find commit B1
+      cli_command:
+        command: "git log -1 --format=%H ':/^B1:'"
+        captures: [{ name: b1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: C1 sits on B1 and adds only the contact page
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^C1:' && git show ':/^C1:' --format= --name-status"
+        tests:
+          - stdout_contains_all: ["parents=${b1}", "A\tcontact.md"]
+          - stdout_contains_none: ["index.md"]
+    - description: Find commit C1
+      cli_command:
+        command: "git log -1 --format=%H ':/^C1:'"
+        captures: [{ name: c1, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: D1 sits on C1 and changes only the home page
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^D1:' && git show ':/^D1:' --format= --name-status"
+        tests:
+          - stdout_contains_all: ["parents=${c1}", "M\tindex.md"]
+          - stdout_contains_none: ["contact.md"]
+    - description: The home page links the contact page
+      cli_command:
+        command: "git show HEAD:index.md"
+        tests:
+          - stdout_contains_all: ["- [Contact](contact.md)"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

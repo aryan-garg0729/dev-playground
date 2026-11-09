@@ -1,0 +1,26 @@
+id: dk.networking.localhost-only
+type: project_cli
+version: 1
+title: Just for Me
+xp: 20
+difficulty: 2
+tags: [ports, security]
+spec:
+  prompt: prompt.md
+  base_url: http://127.0.0.1:8093
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-admin publishes 8093 on 127.0.0.1 only
+      cli_command:
+        command: docker port cq-admin 8080/tcp
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["127.0.0.1:8093"]
+          - stdout_contains_none: ["0.0.0.0", "[::]"]
+    - description: It still works from your own computer
+      http_request:
+        request: { method: GET, url: "${baseURL}/healthz" }
+        tests:
+          - status_code: 200
+          - body_contains: "ok"

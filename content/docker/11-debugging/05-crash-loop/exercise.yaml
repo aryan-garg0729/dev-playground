@@ -1,0 +1,24 @@
+id: dk.debug.crash-loop
+type: project_cli
+version: 1
+title: It Exits Straight Away
+xp: 20
+difficulty: 2
+tags: [logs, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-broken is running now
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}}' cq-broken"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running"]
+    - description: It started with an API key
+      cli_command:
+        command: docker logs cq-broken
+        tests:
+          - stdout_contains_all: ["started with key"]
+          - stdout_contains_none: ["not set"]

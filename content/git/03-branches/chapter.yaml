@@ -1,0 +1,13 @@
+id: gt.branching
+title: Branches and merging
+exercises:
+  - 01-pointer-quiz
+  - 02-create
+  - 03-switch
+  - 04-head-quiz
+  - 05-fast-forward
+  - 06-merge-commit
+  - 07-graph-quiz
+  - 08-detached
+  - 09-tidy
+  - 10-news-boss

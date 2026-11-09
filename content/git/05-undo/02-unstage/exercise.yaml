@@ -1,0 +1,29 @@
+id: gt.undoing.unstage
+type: project_cli
+version: 1
+title: Unstage a File
+xp: 20
+difficulty: 1
+tags: [restore, staging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: A5 changes about.md and nothing else
+      cli_command:
+        command: "git show --name-only --format=%s ':/^A5:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["A5:", "about.md"]
+          - stdout_contains_none: ["passwords.txt"]
+    - description: No commit on any branch has ever contained passwords.txt
+      cli_command:
+        command: "echo \"secret_commits=$(git log --all --oneline -- passwords.txt | wc -l | tr -d ' ')\""
+        tests:
+          - stdout_contains_all: ["secret_commits=0\n"]
+    - description: passwords.txt is deleted and nothing is left over
+      cli_command:
+        command: "git status --short; test ! -e passwords.txt && test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

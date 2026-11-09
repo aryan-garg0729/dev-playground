@@ -1,0 +1,21 @@
+id: dk.cache.stale-index-quiz
+type: mcq
+version: 1
+title: The Stale Package List
+xp: 5
+difficulty: 3
+tags: [cache, dockerfile]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "apt-get is broken in Docker" }
+    - { id: b, text: "The apt-get update line was CACHED from months ago, so apt-get install used an old package list" }
+    - { id: c, text: "curl was removed from Debian" }
+    - { id: d, text: "The base image is too new" }
+  answer: [b]
+  explain: >
+    The cache only compares the instruction text. "RUN apt-get update" never changes, so
+    Docker reuses the layer from months ago with its old list of packages, and the new
+    install line tries to download versions that no longer exist. Put both in one step,
+    RUN apt-get update && apt-get install -y curl, so they always run together.

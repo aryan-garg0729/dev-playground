@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "brewd 1.4.0\n"}}, {"cli": {"exit_code": 0, "stdout": "version=1.4.0\n"}}, {"cli": {"exit_code": 0, "stdout": "PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nHOSTNAME=4f1c2d3e4b5a\nBUILD_VERSION=1.4.0\nHOME=/root\n"}}]}

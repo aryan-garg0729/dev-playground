@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"webapp 1.6\nlabel=1.6\n"}},{"cli":{"exit_code":0,"stdout":"size=small layers=ok\n"}},{"cli":{"exit_code":0,"stdout":"status=running image=cq/webapp:1.6\n0.0.0.0:8089\n[::]:8089\n"}},{"http":{"status":200,"headers":{"Content-Type":"text/plain; charset=utf-8"},"body":"Welcome from webapp 1.6\n"}}]}

@@ -1,0 +1,21 @@
+id: gt.undoing.three-undos-quiz
+type: mcq
+version: 1
+title: Restore, Reset or Revert?
+xp: 5
+difficulty: 2
+tags: [reset, restore, revert]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "git reset --hard HEAD~1, so the bad commit disappears" }
+    - { id: b, text: "git revert, which adds a new commit that undoes the bad one" }
+    - { id: c, text: "git restore on every file, then delete the branch" }
+    - { id: d, text: "Nothing can be done once it's shared" }
+  answer: [b]
+  explain: >
+    The commit is already shared, so history should only grow. git revert adds a new commit
+    that does the exact opposite of the bad one; everyone who has the bad commit simply
+    gets the fix too. Resetting rewrites history other people already have, which breaks
+    the golden rule from the rebase chapter.

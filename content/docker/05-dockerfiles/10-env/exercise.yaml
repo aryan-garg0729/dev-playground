@@ -1,0 +1,30 @@
+id: dk.dockerfile.env
+type: project_cli
+version: 1
+title: Default Settings with ENV
+xp: 20
+difficulty: 2
+tags: [dockerfile, env]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:1.0 has APP_VERSION=1.0 built in
+      cli_command:
+        command: "docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' cq/webapp:1.0"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["APP_VERSION=1.0"]
+    - description: cq-app-v1 uses the defaults from the image
+      http_request:
+        request: { method: GET, url: "http://localhost:8086/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Hello from webapp 1.0"
+    - description: cq-howdy overrides GREETING with -e
+      http_request:
+        request: { method: GET, url: "http://localhost:8087/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Howdy from webapp 1.0"

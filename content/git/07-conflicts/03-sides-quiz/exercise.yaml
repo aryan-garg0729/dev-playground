@@ -1,0 +1,21 @@
+id: gt.resolving.sides-quiz
+type: mcq
+version: 1
+title: Ours, Theirs, Abort
+xp: 5
+difficulty: 2
+tags: [conflicts]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "git checkout --theirs prices.md, then git add prices.md" }
+    - { id: b, text: "git checkout --ours prices.md, then git add prices.md" }
+    - { id: c, text: "git merge --abort" }
+    - { id: d, text: "git add prices.md straight away" }
+  answer: [a]
+  explain: >
+    You're on main merging new-prices, so "theirs" is new-prices. checkout --theirs takes
+    that side's whole file, and git add marks it resolved. --ours would keep main's
+    version, the opposite of what you want. --abort cancels the whole merge. Adding straight
+    away would commit the file with the markers still in it, since markers are just text.

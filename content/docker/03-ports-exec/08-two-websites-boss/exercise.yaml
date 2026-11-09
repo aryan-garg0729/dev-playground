@@ -1,0 +1,37 @@
+id: dk.ports.two-websites-boss
+type: project_cli
+version: 1
+title: Two Websites, One Laptop
+xp: 50
+difficulty: 2
+tags: [ports, exec]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-site-a and cq-site-b both run nginx:1.27-alpine
+      cli_command:
+        command: "docker inspect -f '{{.Name}} status={{.State.Status}} image={{.Config.Image}}' cq-site-a cq-site-b"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/cq-site-a status=running image=nginx:1.27-alpine", "/cq-site-b status=running image=nginx:1.27-alpine"]
+    - description: Site A answers on port 8082
+      http_request:
+        request: { method: GET, url: "http://localhost:8082/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Site A is live"
+    - description: Site B answers on port 8083
+      http_request:
+        request: { method: GET, url: "http://localhost:8083/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Site B is live"
+    - description: Site B has SITE_NAME=b set
+      cli_command:
+        command: docker exec cq-site-b printenv SITE_NAME
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["b"]

@@ -1,0 +1,38 @@
+id: gt.toolbox.stash
+type: project_cli
+version: 1
+title: Put Work on a Shelf
+xp: 25
+difficulty: 2
+tags: [stash]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The stash is empty again
+      cli_command:
+        command: "echo \"stashes=$(git stash list | wc -l | tr -d ' ')\""
+        tests:
+          - stdout_contains_all: ["stashes=0\n"]
+    - description: Find the A8 fix
+      cli_command:
+        command: "git log -1 --format=%H ':/^A8:'"
+        captures: [{ name: a8, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: B8 sits on A8 at the tip of main
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["B8:", "parents=${a8}\n"]
+    - description: The fix is in the contact page
+      cli_command:
+        command: "git show main:contact.md"
+        tests:
+          - stdout_contains_all: ["I reply within an hour."]
+    - description: The events page has the lines from before and after the interruption
+      cli_command:
+        command: "git show main:events.md"
+        tests:
+          - stdout_contains_all: ["Next event: Git meetup", "Bring a laptop."]

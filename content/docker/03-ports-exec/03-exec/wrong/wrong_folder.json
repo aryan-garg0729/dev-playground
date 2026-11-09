@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "<!DOCTYPE html>\n<title>Welcome to nginx!</title>\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "<!DOCTYPE html>\n<title>Welcome to nginx!</title>\n"}}]}

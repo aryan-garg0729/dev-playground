@@ -1,0 +1,28 @@
+id: dk.entrypoint.exec-fix
+type: project_cli
+version: 1
+title: The exec Fix
+xp: 25
+difficulty: 3
+tags: [signals, exec]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: start.sh hands over to the webapp with exec
+      cli_command:
+        command: grep -E '^[[:space:]]*exec ' app/start.sh
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp"]
+    - description: cq-fast runs cq/webapp:graceful and stopped cleanly
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}} image={{.Config.Image}}' cq-fast"
+        tests:
+          - stdout_contains_all: ["status=exited", "exit=0", "image=cq/webapp:graceful"]
+    - description: The banner still prints, and the webapp heard the stop
+      cli_command:
+        command: docker logs cq-fast
+        tests:
+          - stdout_contains_all: ["starting webapp", "webapp: shutting down"]

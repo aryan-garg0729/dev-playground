@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"ERROR payment failed code=512\n"}},{"cli":{"exit_code":0,"stdout":"error_code=512\n"}}]}

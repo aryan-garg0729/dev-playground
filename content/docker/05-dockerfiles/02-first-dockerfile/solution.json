@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"FROM alpine:3.20\nCMD [\"echo\", \"Hello from my own image!\"]\n"}},{"cli":{"exit_code":0,"stdout":"Hello from my own image!\n"}}]}

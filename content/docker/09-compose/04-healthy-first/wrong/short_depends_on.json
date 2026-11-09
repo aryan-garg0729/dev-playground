@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "api=running/healthy\nfront=running/\n"}}, {"cli": {"exit_code": 0, "stdout": "services:\n  front:\n    depends_on:\n      api:\n        condition: service_started\n"}}, {"http": {"status": 200, "headers": {}, "body": "brewd 1.6.0\n"}}]}

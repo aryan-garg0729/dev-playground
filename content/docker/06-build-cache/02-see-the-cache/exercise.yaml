@@ -1,0 +1,22 @@
+id: dk.cache.see-the-cache
+type: project_cli
+version: 1
+title: See the Cache
+xp: 20
+difficulty: 2
+tags: [cache, build]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: build.log is a plain-progress build log
+      cli_command:
+        command: "grep -c '^#' build.log | awk '{print ($1 > 3 ? \"log=ok\" : \"log=empty\")}'"
+        tests:
+          - stdout_contains_all: ["log=ok"]
+    - description: In build.log, the compile step (go build) came from the cache
+      cli_command:
+        command: grep -A1 'go build -o' build.log
+        tests:
+          - stdout_contains_all: ["CACHED"]

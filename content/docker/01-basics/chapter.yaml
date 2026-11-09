@@ -1,0 +1,12 @@
+id: dk.basics
+title: Docker basics
+exercises:
+  - 01-what-is-docker
+  - 02-install
+  - 03-hello-world
+  - 04-vms-quiz
+  - 05-parts-quiz
+  - 06-docker-hub
+  - 07-image-vs-container-quiz
+  - 08-help-quiz
+  - 09-first-pulls-boss

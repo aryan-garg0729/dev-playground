@@ -1,0 +1,1 @@
+Write `continue_conversation(model, history, question)`. Turn `history` into `HumanMessage` and `AIMessage` objects, add the new `question` as a final `HumanMessage`, invoke the model with the whole list, and return the `AIMessage` it replies with.

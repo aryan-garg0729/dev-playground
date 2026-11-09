@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "path=/usr/local/bin/entrypoint.sh args=[\"--version\"] exit=0\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd starting on 809264b461d9\nbrewd dev\n"}}, {"cli": {"exit_code": 0, "stdout": "path=ls args=[\"/usr/local/bin\"]\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd\nentrypoint.sh\n"}}]}

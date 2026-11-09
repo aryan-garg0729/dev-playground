@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "volume:/var/lib/docker/volumes/orders/_data:/data \n"}}, {"cli": {"exit_code": 1, "stdout": "cat: orders/orders.log: No such file or directory\n"}}, {"http": {"status": 200, "headers": {}, "body": "griffin\n"}}]}

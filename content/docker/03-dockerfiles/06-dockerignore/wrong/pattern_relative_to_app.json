@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "testdata\n"}}, {"cli": {"exit_code": 0, "stdout": "go.mod\nmain.go\ntestdata\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd dev\n"}}]}

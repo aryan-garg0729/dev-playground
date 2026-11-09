@@ -1,0 +1,13 @@
+id: gt.undoing
+title: Undoing things
+exercises:
+  - 01-restore
+  - 02-unstage
+  - 03-restore-source
+  - 04-reset-modes-quiz
+  - 05-reset-soft
+  - 06-three-undos-quiz
+  - 07-reflog
+  - 08-lost-branch
+  - 09-reflog-limits-quiz
+  - 10-rescue-boss

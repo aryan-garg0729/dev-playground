@@ -1,0 +1,39 @@
+id: gt.rebasing.squash
+type: project_cli
+version: 1
+title: Squash Commits
+xp: 25
+difficulty: 3
+tags: [rebase, squash]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Exactly one C4 commit exists
+      cli_command:
+        command: "echo \"c4_commits=$(git log --all --format=%s | grep -c '^C4:')\""
+        tests:
+          - stdout_contains_all: ["c4_commits=1\n"]
+    - description: No wip commit survives on any branch
+      cli_command:
+        command: "git --no-pager log --all --format=%s"
+        tests:
+          - exit_code: 0
+          - stdout_contains_none: ["wip"]
+    - description: Find B4
+      cli_command:
+        command: "git log -1 --format=%H ':/^B4:'"
+        captures: [{ name: b4, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: C4 sits on B4 and is main's tip
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["C4:", "parents=${b4}"]
+    - description: The hobbies page has all three hobbies
+      cli_command:
+        command: "git show main:hobbies.md"
+        tests:
+          - stdout_contains_all: ["Cooking", "Hiking", "Chess"]

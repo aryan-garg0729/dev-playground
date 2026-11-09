@@ -1,0 +1,42 @@
+id: dk.images.image-librarian-boss
+type: project_cli
+version: 1
+title: Image Librarian
+xp: 50
+difficulty: 2
+tags: [tags, layers, save]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/web:1.0 and cq/web:stable are both nginx:1.27-alpine
+      cli_command:
+        command: "docker image inspect -f '{{.Id}}' nginx:1.27-alpine cq/web:1.0 cq/web:stable | sort -u | wc -l | awk '{print \"distinct=\" $1}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["distinct=1"]
+    - description: web.tar holds cq/web:1.0 and nothing else
+      cli_command:
+        command: tar -xOf web.tar manifest.json
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq/web:1.0"]
+          - stdout_contains_none: ["cq/web:stable", "nginx:1.27-alpine"]
+    - description: Count cq/web:1.0's layers
+      cli_command:
+        command: "docker image inspect -f 'layers={{len .RootFS.Layers}}' cq/web:1.0"
+        captures: [{ name: layers, regex: "layers=(\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt has the right web_layers= line
+      cli_command:
+        command: "grep -x 'web_layers=${layers}' answers.txt"
+        tests:
+          - exit_code: 0
+    - description: The old cq/base:mine tag is cleaned up
+      cli_command:
+        command: "docker images cq/base --format 'tag={{.Tag}}'"
+        tests:
+          - stdout_contains_none: ["tag=mine"]

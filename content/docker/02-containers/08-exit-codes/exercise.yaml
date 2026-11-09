@@ -1,0 +1,25 @@
+id: dk.containers.exit-codes
+type: project_cli
+version: 1
+title: Exit Codes
+xp: 20
+difficulty: 1
+tags: [exit-codes]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-crash failed with exit code 3
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' cq-crash"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=exited", "exit=3"]
+    - description: cq-crash's logs explain what went wrong
+      cli_command:
+        command: docker logs cq-crash
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["config file not found"]

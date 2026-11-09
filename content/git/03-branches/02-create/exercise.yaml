@@ -1,0 +1,30 @@
+id: gt.branching.create
+type: project_cli
+version: 1
+title: Create a Branch
+xp: 15
+difficulty: 1
+tags: [branches]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: blog exists and you're still on main
+      cli_command:
+        command: git branch --no-color
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["* main", "  blog"]
+    - description: Find main's commit
+      cli_command:
+        command: git rev-parse main
+        captures: [{ name: main, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: blog points at the same commit as main
+      cli_command:
+        command: git rev-parse blog
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["${main}"]

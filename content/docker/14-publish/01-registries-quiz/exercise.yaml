@@ -1,0 +1,21 @@
+id: dk.publish.registries-quiz
+type: mcq
+version: 1
+title: Where Images Live
+xp: 5
+difficulty: 1
+tags: [registry]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Email the Dockerfile and ask the server to build it" }
+    - { id: b, text: "Push the image to a registry, then pull it on the server" }
+    - { id: c, text: "Copy the running container to the server" }
+    - { id: d, text: "Run docker build on your laptop with the server's address" }
+  answer: [b]
+  explain: >
+    A registry is the shared shelf for images. You build once, push the image to the
+    registry, and every server (or teammate) pulls exactly that image. Rebuilding on each
+    server risks a slightly different result each time, and containers aren't copied
+    around: they're always started fresh from an image.

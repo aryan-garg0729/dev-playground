@@ -1,0 +1,25 @@
+id: dk.dockerfile.copy-a-website
+type: project_cli
+version: 1
+title: Put a Website in an Image
+xp: 20
+difficulty: 1
+tags: [dockerfile, copy]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8084
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-site runs cq/site:v1 on port 8084
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-site && docker port cq-site 80/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=cq/site:v1", ":8084"]
+    - description: The page baked into the image is served
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Built into the image"

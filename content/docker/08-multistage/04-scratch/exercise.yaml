@@ -1,0 +1,28 @@
+id: dk.multistage.scratch
+type: project_cli
+version: 1
+title: From Scratch
+xp: 25
+difficulty: 3
+tags: [multistage, scratch]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:scratch works
+      cli_command:
+        command: docker run --rm cq/webapp:scratch --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp"]
+    - description: cq/webapp:scratch has a single layer and no shell at all
+      cli_command:
+        command: "docker image inspect -f 'layers={{len .RootFS.Layers}}' cq/webapp:scratch; docker run --rm --entrypoint /bin/sh cq/webapp:scratch -c true 2>&1 | grep -q 'no such file' && echo shell=none || echo shell=present"
+        tests:
+          - stdout_contains_all: ["layers=1", "shell=none"]
+    - description: cq/webapp:scratch is tiny
+      cli_command:
+        command: "docker image inspect -f '{{.Size}}' cq/webapp:scratch | awk '{print ($1 < 15000000 ? \"size=tiny\" : \"size=too-big\")}'"
+        tests:
+          - stdout_contains_all: ["size=tiny"]

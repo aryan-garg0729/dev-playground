@@ -1,0 +1,30 @@
+id: gt.sharing.github
+type: project_cli
+version: 1
+title: Put It on GitHub
+xp: 25
+difficulty: 2
+tags: [github, push]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The github remote points at GitHub
+      cli_command:
+        command: git remote get-url github
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["github.com"]
+    - description: Find your main
+      cli_command:
+        command: git rev-parse main
+        captures: [{ name: main, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: GitHub has your main
+      cli_command:
+        command: git ls-remote github refs/heads/main
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["${main}"]

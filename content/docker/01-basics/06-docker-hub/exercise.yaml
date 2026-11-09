@@ -1,0 +1,25 @@
+id: dk.basics.docker-hub
+type: project_cli
+version: 1
+title: Docker Hub
+xp: 15
+difficulty: 1
+tags: [images, pull]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: alpine:3.20 is downloaded
+      cli_command:
+        command: "docker image inspect -f 'found={{.Os}}' alpine:3.20"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["found=linux"]
+    - description: nginx:1.27-alpine is downloaded
+      cli_command:
+        command: "docker image inspect -f 'found={{.Os}}' nginx:1.27-alpine"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["found=linux"]

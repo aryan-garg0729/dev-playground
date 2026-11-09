@@ -1,0 +1,29 @@
+id: gt.sharing.revert
+type: project_cli
+version: 1
+title: Undo a Shared Commit
+xp: 25
+difficulty: 2
+tags: [revert, push]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The remote's main still has D6, with a revert of it on top
+      cli_command:
+        command: "git --git-dir=../project-origin.git log --format=%s -n 2 main"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ['Revert "D6:', "D6:"]
+    - description: phone.md is gone from the remote's main
+      cli_command:
+        command: git --git-dir=../project-origin.git ls-tree --name-only main
+        tests:
+          - exit_code: 0
+          - stdout_contains_none: ["phone.md"]
+    - description: Your main and origin/main agree
+      cli_command:
+        command: git status -sb
+        tests:
+          - stdout_contains_all: ["## main...origin/main\n"]

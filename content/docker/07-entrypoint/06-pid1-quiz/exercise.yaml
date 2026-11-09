@@ -1,0 +1,21 @@
+id: dk.entrypoint.pid1-quiz
+type: mcq
+version: 1
+title: Who Hears the Stop?
+xp: 5
+difficulty: 3
+tags: [signals, pid1]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The webapp, because it's the app" }
+    - { id: b, text: "The shell running start.sh, because it is PID 1, and it doesn't pass the message on" }
+    - { id: c, text: "Nobody: docker stop never sends a message" }
+    - { id: d, text: "Every process in the container gets it at the same time" }
+  answer: [b]
+  explain: >
+    docker stop sends SIGTERM to PID 1 only. Here PID 1 is the sh running start.sh, and a
+    shell waiting for a child doesn't forward signals. The webapp never hears anything,
+    so after 10 seconds Docker kills everything (137). Fix it by making the webapp PID 1:
+    exec in the script, or brackets-form ENTRYPOINT with no script at all.

@@ -1,0 +1,24 @@
+id: dk.dockerfile.first-dockerfile
+type: project_cli
+version: 1
+title: Your First Image
+xp: 20
+difficulty: 1
+tags: [dockerfile, build]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: hello/Dockerfile starts from alpine:3.20
+      cli_command:
+        command: cat hello/Dockerfile
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["FROM alpine:3.20", "CMD"]
+    - description: cq/hello:v1 prints the greeting when it runs
+      cli_command:
+        command: docker run --rm cq/hello:v1
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Hello from my own image!"]

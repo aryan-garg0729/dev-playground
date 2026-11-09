@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "172.21.0.2\n"}}, {"cli": {"exit_code": 1, "stdout": ""}}, {"cli": {"exit_code": 0, "stdout": "cq/webapp:1.6\n"}}, {"cli": {"exit_code": 0, "stdout": "api_image=cq/webapp:1.6\n"}}]}

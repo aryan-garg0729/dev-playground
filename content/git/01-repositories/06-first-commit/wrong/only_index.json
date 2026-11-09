@@ -1,1 +1,0 @@
-{"steps":[{"cli":{"exit_code":0,"stdout":"A1: start the handbook\n"}},{"cli":{"exit_code":0,"stdout":"index.md\n"}},{"cli":{"exit_code":0,"stdout":"author=sam@elixirbytes.shop\n"}},{"cli":{"exit_code":128,"stdout":"fatal: path 'oncall.md' exists on disk, but not in 'HEAD'\n"}},{"cli":{"exit_code":1,"stdout":"?? oncall.md\n"}}]}

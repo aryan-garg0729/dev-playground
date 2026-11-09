@@ -1,0 +1,12 @@
+id: command-line
+title: Command Line
+description: >
+  Lessons you solve on your own machine. Write the code in your editor, then
+  run and submit it with the `codequest` CLI.
+order: 3
+chapters:
+  - 01-first-steps
+icon: cli
+level: beginner
+tags: [CLI, HTTP]
+topics: Shell commands and HTTP requests

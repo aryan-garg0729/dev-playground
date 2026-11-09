@@ -1,0 +1,30 @@
+id: gt.internals.local-config
+type: project_cli
+version: 1
+title: A Setting for One Repo
+xp: 20
+difficulty: 2
+tags: [config]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The email Git uses here comes from this repo's .git/config
+      cli_command:
+        command: git config --show-origin --get user.email
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["file:.git/config", "@work.example"]
+    - description: B2 was made with the work email
+      cli_command:
+        command: "git log -1 --format='author=%ae' ':/^B2:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@work.example"]
+    - description: A1 still has your global email
+      cli_command:
+        command: "git log -1 --format='author=%ae' ':/^A1:'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_none: ["@work.example"]

@@ -1,0 +1,35 @@
+id: dk.cache.order-matters
+type: project_cli
+version: 1
+title: Order Matters
+xp: 25
+difficulty: 2
+tags: [cache, dockerfile]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The Dockerfile copies go.mod on its own and downloads libraries first
+      cli_command:
+        command: grep -E '^(COPY|RUN)' Dockerfile
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["COPY app/go.mod", "go mod download"]
+    - description: In cq/webapp:cached, libraries are downloaded before the app's code is copied
+      cli_command:
+        command: |-
+          docker history --no-trunc --format '{{.CreatedBy}}' cq/webapp:cached | awk '/go mod download/{d=NR} /COPY app\/ \./{c=NR} END{if (d > c && c > 0) print "order=deps-first"; else print "order=code-first"}'
+        tests:
+          - stdout_contains_all: ["order=deps-first"]
+    - description: In build.log, the library download was reused after the code changed
+      cli_command:
+        command: grep -A1 'RUN go mod download' build.log
+        tests:
+          - stdout_contains_all: ["CACHED"]
+    - description: In build.log, the changed code was copied fresh
+      cli_command:
+        command: grep -A1 'COPY app/ \.' build.log
+        tests:
+          - stdout_contains_all: ["COPY app/"]
+          - stdout_contains_none: ["CACHED"]

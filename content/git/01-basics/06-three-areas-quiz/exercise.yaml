@@ -1,0 +1,22 @@
+id: gt.basics.three-areas-quiz
+type: mcq
+version: 1
+title: The Three Areas
+xp: 5
+difficulty: 1
+tags: [concepts, staging]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Both files, because they're both in the folder" }
+    - { id: b, text: "Only index.md, the one that was staged with git add" }
+    - { id: c, text: "Only index.md, and about.md gets deleted" }
+    - { id: d, text: "Nothing, because you must add every file first" }
+  answer: [b]
+  explain: >
+    git commit saves exactly what's in the staging area, not everything in the folder.
+    index.md was staged with git add, so it goes in. about.md stays untracked and
+    untouched on disk until you git add it. That's the point of the staging area: you
+    choose exactly what goes into each snapshot.

@@ -1,0 +1,35 @@
+id: gt.internals.gitignore
+type: project_cli
+version: 1
+title: Ignore Files with .gitignore
+xp: 20
+difficulty: 1
+tags: [gitignore]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: answers.txt is ignored by a rule in .gitignore
+      cli_command:
+        command: git check-ignore -v answers.txt
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: [".gitignore"]
+    - description: Log files are ignored too
+      cli_command:
+        command: git check-ignore -v debug.log
+        tests:
+          - exit_code: 0
+    - description: .gitignore is committed in A2, and answers.txt is not tracked
+      cli_command:
+        command: "git show ':/^A2:' --format= --name-only && echo --- && git ls-files"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: [".gitignore"]
+          - stdout_contains_none: ["answers.txt"]
+    - description: Nothing is left uncommitted
+      cli_command:
+        command: "git status --short; test -z \"$(git status --porcelain)\""
+        tests:
+          - exit_code: 0

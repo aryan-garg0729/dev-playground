@@ -1,0 +1,29 @@
+id: dk.dockerfile.run-instruction
+type: project_cli
+version: 1
+title: Install Things with RUN
+xp: 20
+difficulty: 1
+tags: [dockerfile, run]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: tools/Dockerfile installs curl with RUN
+      cli_command:
+        command: grep -E '^(FROM|RUN)' tools/Dockerfile
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["FROM alpine:3.20", "RUN", "curl"]
+    - description: cq/tools:v1 has curl ready to use
+      cli_command:
+        command: docker run --rm cq/tools:v1 curl --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["curl"]
+    - description: Plain alpine:3.20 still doesn't have curl
+      cli_command:
+        command: "docker run --rm alpine:3.20 sh -c 'command -v curl || echo no-curl'"
+        tests:
+          - stdout_contains_all: ["no-curl"]

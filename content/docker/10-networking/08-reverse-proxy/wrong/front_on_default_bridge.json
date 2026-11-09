@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "image=nginx:1.27-alpine nets=bridge, mounts=/etc/nginx/conf.d:rw=false \n0.0.0.0:8094\n"}}, {"cli": {"exit_code": 0, "stdout": "ports={}\n"}}, {"http": {"status": 502, "headers": {"Content-Type": "text/plain"}, "body": "<html><head><title>502 Bad Gateway</title></head></html>\n"}}]}

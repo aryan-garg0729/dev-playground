@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "8b2b71d2b0aedc2fd7d78c6a252bb8730447fcbb\n"}}, {"cli": {"exit_code": 0, "stdout": "v0.9.0-5-g8b2b71d\n"}}, {"cli": {"exit_code": 1, "stdout": ""}}]}

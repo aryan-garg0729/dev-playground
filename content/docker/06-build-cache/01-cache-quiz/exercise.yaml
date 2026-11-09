@@ -1,0 +1,21 @@
+id: dk.cache.cache-quiz
+type: mcq
+version: 1
+title: Why Was That So Fast?
+xp: 5
+difficulty: 2
+tags: [cache]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Only step 3, the one whose file changed" }
+    - { id: b, text: "Steps 3 and 4: the changed step and every step after it" }
+    - { id: c, text: "All four steps, because a file changed" }
+    - { id: d, text: "None: Docker always reuses everything" }
+  answer: [b]
+  explain: >
+    Steps 1 and 2 have the same instruction and inputs as last time, so they come from
+    the cache. Step 3's input (index.html) changed, so it runs again, and because every
+    layer sits on top of the one before, step 4 must run again too, even though its own
+    line didn't change.

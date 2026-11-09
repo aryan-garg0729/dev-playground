@@ -1,0 +1,37 @@
+id: dk.networking.load-balancer-boss
+type: project_cli
+version: 1
+title: Load Balancer
+xp: 50
+difficulty: 3
+tags: [networks, proxy]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8095
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-lb runs nginx on cq-net with its config read-only, published on 8095
+      cli_command:
+        command: "docker inspect -f 'nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}} mounts={{range .Mounts}}{{.Destination}}:rw={{.RW}} {{end}}' cq-lb && docker port cq-lb 80/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["nets=cq-net,", "/etc/nginx/conf.d:rw=false", ":8095"]
+    - description: cq-app-a and cq-app-b are on cq-net and not published
+      cli_command:
+        command: "docker inspect -f '{{.Name}} nets={{range $k, $v := .NetworkSettings.Networks}}{{$k}},{{end}} ports={{json .HostConfig.PortBindings}}' cq-app-a cq-app-b"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/cq-app-a nets=cq-net, ports={}", "/cq-app-b nets=cq-net, ports={}"]
+    - description: The load balancer answers
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "from webapp 1.6"
+    - description: Requests are shared between both apps
+      cli_command:
+        command: "for i in 1 2 3 4 5 6; do curl -s http://localhost:8095/; done | sort -u"
+        tests:
+          - stdout_contains_all: ["Server A from webapp", "Server B from webapp"]

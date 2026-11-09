@@ -1,0 +1,11 @@
+id: dk.ports
+title: Ports and exec
+exercises:
+  - 01-run-a-website
+  - 02-ports-quiz
+  - 03-exec
+  - 04-shell
+  - 05-shell-quiz
+  - 06-fresh-start
+  - 07-env-vars
+  - 08-two-websites-boss

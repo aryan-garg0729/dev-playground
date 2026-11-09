@@ -1,0 +1,21 @@
+id: gt.internals.object-path-quiz
+type: mcq
+version: 1
+title: Where Objects Live
+xp: 5
+difficulty: 2
+tags: [internals]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: ".git/objects/9a04b31c5e.../ (one folder per object, named by the full id)" }
+    - { id: b, text: ".git/objects/9a/04b31c5e... (the first 2 characters are a folder, the other 38 the file name)" }
+    - { id: c, text: ".git/objects/commits/A1 (sorted by type, named by message)" }
+    - { id: d, text: ".git/objects/main/9a04b31 (one folder per branch)" }
+  answer: [b]
+  explain: >
+    Git splits the 40-character id into a 2-character folder and a 38-character file name,
+    so .git/objects never ends up with huge numbers of files in one folder. Objects are
+    named only by their hash: not by type, message or branch. Branches live elsewhere, in
+    .git/refs.

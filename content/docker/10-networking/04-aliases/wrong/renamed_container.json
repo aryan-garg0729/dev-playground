@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "cq-net=[\"cq-api-v2\"] \n"}}, {"cli": {"exit_code": 1, "stdout": "wget: bad address 'backend:8080'\n"}}]}

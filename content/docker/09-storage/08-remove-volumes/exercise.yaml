@@ -1,0 +1,24 @@
+id: dk.storage.remove-volumes
+type: project_cli
+version: 1
+title: Remove Volumes
+xp: 15
+difficulty: 1
+tags: [volumes]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-scrap is removed, cq-notes is kept
+      cli_command:
+        command: "docker volume ls --filter name=cq- --format '{{.Name}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq-notes"]
+          - stdout_contains_none: ["cq-scrap"]
+    - description: The container that used cq-scrap is gone too
+      cli_command:
+        command: "docker ps -a --filter name=cq-scrapper --format '{{.Names}}'"
+        tests:
+          - stdout_contains_none: ["cq-scrapper"]

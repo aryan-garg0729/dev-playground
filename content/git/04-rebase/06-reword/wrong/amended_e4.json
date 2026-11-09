@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "E4: link the privacy page\nD4: stuff\n"}}, {"cli": {"exit_code": 0, "stdout": "D4: stuff\n"}}, {"cli": {"exit_code": 0, "stdout": "# Privacy\n\nThis site uses no cookies.\n"}}]}

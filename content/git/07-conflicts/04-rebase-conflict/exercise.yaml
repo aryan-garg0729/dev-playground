@@ -1,0 +1,40 @@
+id: gt.resolving.rebase-conflict
+type: project_cli
+version: 1
+title: Conflicts During a Rebase
+xp: 30
+difficulty: 3
+tags: [conflicts, rebase]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find F7 (main's change)
+      cli_command:
+        command: "git log -1 --format=%H ':/^F7:'"
+        captures: [{ name: f7, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Find D7, which now sits on F7
+      cli_command:
+        command: "git log -1 --format='%H parents=%P' ':/^D7:'"
+        captures: [{ name: d7, regex: "^([0-9a-f]{40})" }]
+        tests:
+          - stdout_contains_all: ["parents=${f7}\n"]
+    - description: D7 keeps the first resolution
+      cli_command:
+        command: "git show ${d7}:skills.md | grep -i 'writing'"
+        tests:
+          - stdout_contains_all: ["- Technical writing (blog posts)\n"]
+    - description: E7 sits on D7 at the tip of main
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["E7:", "parents=${d7}\n"]
+    - description: E7 keeps the second resolution, with no markers
+      cli_command:
+        command: "git show main:skills.md"
+        tests:
+          - stdout_contains_all: ["- Technical writing (blog posts and docs)\n"]
+          - stdout_contains_none: ["<<<<<<<", ">>>>>>>"]

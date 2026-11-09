@@ -1,0 +1,21 @@
+id: dk.multistage.bases-quiz
+type: mcq
+version: 1
+title: How Small Can You Go?
+xp: 5
+difficulty: 2
+tags: [base-images]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "scratch, because it's the smallest" }
+    - { id: b, text: "alpine:3.20, because it's small but still has a shell and tools to debug with" }
+    - { id: c, text: "golang:1.23-alpine, because the program was built there" }
+    - { id: d, text: "debian:12, because bigger is safer" }
+  answer: [b]
+  explain: >
+    scratch has nothing at all: no shell, no ls, no package manager. That's great for
+    security and size, but you can't docker exec in to look around. Alpine is still tiny
+    and gives you a shell and apk when you need to poke at a problem. Many teams start on
+    alpine (or distroless) and move to scratch once they're confident.

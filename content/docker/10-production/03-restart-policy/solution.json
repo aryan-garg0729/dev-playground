@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "status=exited exit=1 restarts=3 policy=on-failure:3\n"}}, {"cli": {"exit_code": 0, "stdout": "cauldron overflow at 08:20:01\ncauldron overflow at 08:20:01\ncauldron overflow at 08:20:02\ncauldron overflow at 08:20:02\n"}}]}

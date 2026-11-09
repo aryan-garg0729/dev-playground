@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "PATH=/usr/bin\nAPP_VERSION=dev\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "Hello from webapp 1.0\n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "Howdy from webapp 1.0\n"}}]}

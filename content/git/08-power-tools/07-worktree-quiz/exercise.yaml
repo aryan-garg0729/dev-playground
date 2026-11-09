@@ -1,0 +1,21 @@
+id: gt.toolbox.worktree-quiz
+type: mcq
+version: 1
+title: Two Branches at Once
+xp: 5
+difficulty: 2
+tags: [worktree]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A second clone, with its own copy of every commit" }
+    - { id: b, text: "A second folder that shares the same repository, checked out on a different branch" }
+    - { id: c, text: "A stash you can open in another folder" }
+    - { id: d, text: "A read-only snapshot of a tag" }
+  answer: [b]
+  explain: >
+    git worktree add gives one repository a second working folder. Both folders share the
+    same commits, branches and tags, so a commit made in one is visible in the other at
+    once, with no push or fetch. Each folder has its own branch checked out. Remove it
+    with git worktree remove, so Git forgets it too.

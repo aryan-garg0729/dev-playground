@@ -1,0 +1,22 @@
+id: dk.containers.stop-vs-kill-quiz
+type: mcq
+version: 1
+title: Stop vs Kill
+xp: 5
+difficulty: 2
+tags: [stop, signals]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Docker is slow on this computer" }
+    - { id: b, text: "The app ignored the polite \"please stop\" message, so after 10 seconds Docker forced it to stop" }
+    - { id: c, text: "The app crashed with an error code of 137" }
+    - { id: d, text: "docker stop always waits 10 seconds, for every app" }
+  answer: [b]
+  explain: >
+    docker stop asks nicely first (SIGTERM) and only forces the stop (SIGKILL) if the app
+    is still running 10 seconds later. An app that listens stops in a fraction of a second.
+    sleep ignores the nice request, so you waited the full 10 seconds and got 137, which
+    means "killed by force", not a bug in the app.

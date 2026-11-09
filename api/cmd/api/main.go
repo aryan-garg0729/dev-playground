@@ -59,7 +59,7 @@ func run(log *slog.Logger) error {
 	defer func() { _ = rdb.Close() }()
 
 	board := &game.Board{Redis: rdb}
-	econ := &economy.Service{Pool: pool, Log: log}
+	econ := &economy.Service{Pool: pool, Log: log, DevUnlockAll: cfg.DevAuth}
 	if err := econ.Sync(ctx); err != nil {
 		return err
 	}

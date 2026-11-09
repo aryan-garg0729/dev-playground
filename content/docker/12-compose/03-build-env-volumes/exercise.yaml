@@ -1,0 +1,31 @@
+id: dk.compose.build-env-volumes
+type: project_cli
+version: 1
+title: Build, Settings and Volumes
+xp: 25
+difficulty: 2
+tags: [compose, volumes, env]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8097
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The api service is built from your Dockerfile as cq/webapp:compose
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}}' $(docker compose ps -q api)"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["image=cq/webapp:compose"]
+    - description: api gets DATA_DIR=/notes and stores notes in a volume there
+      cli_command:
+        command: "docker compose exec -T api printenv DATA_DIR && docker inspect -f '{{range .Mounts}}{{.Type}}:{{.Destination}} {{end}}' $(docker compose ps -q api)"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/notes", "volume:/notes"]
+    - description: The greeting comes from compose.yaml
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Hello from Compose from webapp"

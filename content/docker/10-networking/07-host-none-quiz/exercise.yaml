@@ -1,0 +1,20 @@
+id: dk.networking.host-none-quiz
+type: mcq
+version: 1
+title: The Other Network Types
+xp: 5
+difficulty: 2
+tags: [networks]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "bridge (the default)" }
+    - { id: b, text: "your own network, like cq-net" }
+    - { id: c, text: "none" }
+    - { id: d, text: "host" }
+  answer: [c]
+  explain: >
+    --network none gives the container no network at all, so a bug or malicious file
+    can't send anything anywhere. bridge networks (the default one or your own) can reach
+    the internet, and host shares your computer's whole network with the container.

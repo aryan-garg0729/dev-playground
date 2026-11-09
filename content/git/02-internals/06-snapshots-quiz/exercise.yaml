@@ -1,0 +1,21 @@
+id: gt.internals.snapshots-quiz
+type: mcq
+version: 1
+title: Snapshots, Not Copies
+xp: 5
+difficulty: 2
+tags: [internals]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Ten copies of about.md, one per commit" }
+    - { id: b, text: "One blob for about.md, which all ten commits' trees point to" }
+    - { id: c, text: "Only the differences between commits, never the whole file" }
+    - { id: d, text: "Nothing: unchanged files aren't part of a commit" }
+  answer: [b]
+  explain: >
+    Each commit is a full snapshot, but blobs are named by their contents. The same
+    contents always give the same id, so an unchanged file is the same blob and is stored
+    once, no matter how many trees point to it. That's how Git keeps every version of a
+    project without the folder growing out of control.

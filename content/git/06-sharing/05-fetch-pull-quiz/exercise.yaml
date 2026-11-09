@@ -1,0 +1,20 @@
+id: gt.sharing.fetch-pull-quiz
+type: mcq
+version: 1
+title: Fetch vs Pull
+xp: 5
+difficulty: 2
+tags: [fetch, pull]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "They're the same command with different names" }
+    - { id: b, text: "pull is fetch, followed by merging (or rebasing) origin/main into your current branch" }
+    - { id: c, text: "fetch uploads, pull downloads" }
+    - { id: d, text: "fetch also updates your files" }
+  answer: [b]
+  explain: >
+    git pull runs git fetch, then brings the downloaded commits into the branch you're on:
+    by merging, or by rebasing with --rebase. fetch alone only updates origin/main and
+    never touches your branches or files. Neither uploads anything: that's push.

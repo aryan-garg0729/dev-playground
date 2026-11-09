@@ -83,3 +83,39 @@ describe('Markdown tables', () => {
     expect(screen.getByText('9').tagName).toBe('CODE');
   });
 });
+
+describe('Markdown headings and code blocks', () => {
+  it('renders ## as a styled heading', () => {
+    render(<Markdown>{'# Title\n\nText\n\n## Assignment\n\nDo it.'}</Markdown>);
+    expect(screen.getByRole('heading', { level: 1, name: 'Title' })).toHaveClass('text-page-title');
+    expect(screen.getByRole('heading', { level: 2, name: 'Assignment' })).toHaveClass('font-semibold');
+  });
+
+  it('copies a code block without the trailing newline', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    render(<Markdown>{'```sh\ndocker run hello-world\ndocker ps\n```'}</Markdown>);
+    await user.click(screen.getByRole('button', { name: 'Copy code' }));
+    expect(writeText).toHaveBeenCalledWith('docker run hello-world\ndocker ps');
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+  });
+
+  it('gives inline code no copy button', () => {
+    render(<Markdown>{'Run `docker ps` now.'}</Markdown>);
+    expect(screen.queryByRole('button', { name: 'Copy code' })).toBeNull();
+  });
+});
+
+describe('Markdown dropTitle', () => {
+  it('drops only a leading # title', () => {
+    render(<Markdown dropTitle>{'# Image Explorer\n\nBoss time!\n\n## Assignment\n\nGo.'}</Markdown>);
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+    expect(screen.getByText('Boss time!')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Assignment' })).toBeInTheDocument();
+  });
+
+  it('keeps a prompt that starts with text or ##', () => {
+    render(<Markdown dropTitle>{'## Setup\n\nText'}</Markdown>);
+    expect(screen.getByRole('heading', { level: 2, name: 'Setup' })).toBeInTheDocument();
+  });
+});

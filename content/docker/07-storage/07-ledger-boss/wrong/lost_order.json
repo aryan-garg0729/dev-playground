@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "volume:3f9c1d0a7b2e:/data:rw=true bind::/config:rw=false  tmpfs={\"/tmp\":\"\"}\n"}}, {"cli": {"exit_code": 1, "stdout": "cat: can't open '/data/orders.log': No such file or directory\n"}}, {"cli": {"exit_code": 0, "stdout": "recreated=no\n"}}, {"http": {"status": 200, "headers": {}, "body": ""}}]}

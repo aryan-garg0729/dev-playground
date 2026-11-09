@@ -1,0 +1,24 @@
+id: dk.publish.docker-hub
+type: project_cli
+version: 1
+title: Publish to Docker Hub
+xp: 25
+difficulty: 2
+tags: [docker-hub, push]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: answers.txt has your Docker Hub username
+      cli_command:
+        command: "grep -E '^hub_user=' answers.txt | tail -n 1"
+        captures: [{ name: user, regex: "hub_user=([a-z0-9]+)" }]
+        tests:
+          - exit_code: 0
+    - description: Your image is public on Docker Hub
+      cli_command:
+        command: "docker manifest inspect ${user}/cq-webapp:1.0"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["schemaVersion"]

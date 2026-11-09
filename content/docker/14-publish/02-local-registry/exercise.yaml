@@ -1,0 +1,23 @@
+id: dk.publish.local-registry
+type: project_cli
+version: 1
+title: Your Own Registry
+xp: 20
+difficulty: 2
+tags: [registry]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-registry runs the registry:2 image on 127.0.0.1:15000
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-registry && docker port cq-registry 5000/tcp"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=registry:2", "127.0.0.1:15000"]
+    - description: The registry answers its API
+      http_request:
+        request: { method: GET, url: "http://localhost:15000/v2/" }
+        tests:
+          - status_code: 200

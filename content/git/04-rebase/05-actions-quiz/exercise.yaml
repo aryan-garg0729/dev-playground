@@ -1,0 +1,21 @@
+id: gt.rebasing.actions-quiz
+type: mcq
+version: 1
+title: Pick, Squash, Fixup
+xp: 5
+difficulty: 2
+tags: [rebase]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "squash on the typo commit, then delete the extra message" }
+    - { id: b, text: "fixup on the typo commit" }
+    - { id: c, text: "drop on the typo commit" }
+    - { id: d, text: "reword on the first commit" }
+  answer: [b]
+  explain: >
+    fixup folds the typo fix into the commit above and throws its message away, so you
+    end up with one commit called "A: add the menu page" with the typo fixed, and no
+    editor pops up. squash works too but makes you edit the combined message. drop
+    would throw the fix away, and reword only changes a message.

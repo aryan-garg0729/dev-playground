@@ -1,0 +1,20 @@
+id: gt.branching.graph-quiz
+type: mcq
+version: 1
+title: Reading the Graph
+xp: 5
+difficulty: 2
+tags: [merge, log]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "3e9b7d2: it's on top, so it's the merge" }
+    - { id: b, text: "6d14c0a: it has two parent ids, 51ab3f9 and 2c7e880" }
+    - { id: c, text: "51ab3f9: it's where the lines split" }
+    - { id: d, text: "None: merges don't show up in git log" }
+  answer: [b]
+  explain: >
+    A merge commit is the one with two parents. --parents prints every parent after the
+    commit's own id, and only 6d14c0a lists two. In the graph, that's where the two lines
+    join (the |\ just below it). 3e9b7d2 is an ordinary commit made after the merge.

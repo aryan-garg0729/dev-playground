@@ -1,0 +1,36 @@
+id: dk.publish.release-day-boss
+type: project_cli
+version: 1
+title: Release Day
+xp: 60
+difficulty: 3
+tags: [registry, tags, releases]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The registry has 2.0.0, 2.0 and latest for cq/webapp
+      http_request:
+        request: { method: GET, url: "http://localhost:15000/v2/cq/webapp/tags/list" }
+        tests:
+          - status_code: 200
+          - body_contains: "\"2.0.0\""
+    - description: All three tags point at the same image
+      cli_command:
+        command: "for t in 2.0.0 2.0 latest; do curl -sI -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json' http://localhost:15000/v2/cq/webapp/manifests/$t | grep -i '^docker-content-digest' | tr -d '\\r'; done | sort | uniq -c | awk '{print \"tags=\" $1 \" digests=\" NR}' | tail -n 1"
+        tests:
+          - stdout_contains_all: ["tags=3", "digests=1"]
+    - description: The release reports version 2.0.0
+      cli_command:
+        command: docker run --rm localhost:15000/cq/webapp:2.0.0 --version
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["webapp 2.0.0"]
+    - description: cq-v2 runs the 2.0.0 release from the registry and is healthy
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} health={{.State.Health.Status}} user={{.Config.User}}' cq-v2"
+        tests:
+          - stdout_contains_all: ["image=localhost:15000/cq/webapp:2.0.0", "health=healthy"]
+          - stdout_contains_all: ["user=app"]

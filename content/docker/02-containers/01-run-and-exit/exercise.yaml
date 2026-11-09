@@ -1,0 +1,25 @@
+id: dk.containers.run-and-exit
+type: project_cli
+version: 1
+title: Run a Container
+xp: 15
+difficulty: 1
+tags: [run]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-first was made from alpine:3.20 and finished cleanly
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}} image={{.Config.Image}}' cq-first"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=exited", "exit=0", "image=alpine:3.20"]
+    - description: cq-first printed the greeting
+      cli_command:
+        command: docker logs cq-first
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Hello from a container"]

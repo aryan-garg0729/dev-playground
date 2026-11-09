@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 1, "stdout": "status=running \n"}}, {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "<h1>Version 2</h1>\n"}}]}

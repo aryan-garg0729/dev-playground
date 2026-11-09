@@ -1,0 +1,34 @@
+id: dk.debug.inspect
+type: project_cli
+version: 1
+title: Everything Docker Knows
+xp: 20
+difficulty: 2
+tags: [inspect, debugging]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Look up cq-api's address on cq-net
+      cli_command:
+        command: "docker inspect -f '{{(index .NetworkSettings.Networks \"cq-net\").IPAddress}}' cq-api"
+        captures: [{ name: ip, regex: "(\\d+\\.\\d+\\.\\d+\\.\\d+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt has the right api_ip= line
+      cli_command:
+        command: "grep -x 'api_ip=${ip}' answers.txt"
+        tests:
+          - exit_code: 0
+    - description: Look up the image cq-api runs
+      cli_command:
+        command: "docker inspect -f '{{.Config.Image}}' cq-api"
+        captures: [{ name: image, regex: "(\\S+)" }]
+        tests:
+          - exit_code: 0
+    - description: answers.txt has the right api_image= line
+      cli_command:
+        command: "grep -x 'api_image=${image}' answers.txt"
+        tests:
+          - exit_code: 0

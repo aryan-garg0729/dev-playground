@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "commit: D5: add a todo list\n"}}, {"cli": {"exit_code": 0, "stdout": "D5: add a todo list\nC5: bring back the FAQ\nB5: rewrite the FAQ\n"}}, {"cli": {"exit_code": 0, "stdout": ""}}]}

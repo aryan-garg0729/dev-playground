@@ -1,0 +1,21 @@
+id: gt.sharing.tracking-quiz
+type: mcq
+version: 1
+title: What Is origin/main?
+xp: 5
+difficulty: 2
+tags: [remotes]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A live view of the remote's main, always up to date" }
+    - { id: b, text: "Your repo's memory of where the remote's main was the last time you talked to it" }
+    - { id: c, text: "A branch you can commit on directly" }
+    - { id: d, text: "Another name for your local main" }
+  answer: [b]
+  explain: >
+    origin/main is a bookmark that Git only updates when you talk to the remote (fetch,
+    pull, push). In between, the remote can move on and origin/main won't know. You can't
+    commit on it, and it isn't your main: the two differ whenever you have commits you
+    haven't pushed, or the remote has commits you haven't pulled.

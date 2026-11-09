@@ -1,0 +1,25 @@
+id: dk.ports.fresh-start
+type: project_cli
+version: 1
+title: Where Did My Change Go?
+xp: 20
+difficulty: 1
+tags: [containers, images]
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8081
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-web is a brand-new container from nginx:1.27-alpine
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}} image={{.Config.Image}}' cq-web && docker exec cq-web sh -c 'cat /tmp/note.txt 2>/dev/null || echo no-note'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running", "image=nginx:1.27-alpine", "no-note"]
+    - description: The page is back to the original nginx page
+      http_request:
+        request: { method: GET, url: "${baseURL}/" }
+        tests:
+          - status_code: 200
+          - body_contains: "Welcome to nginx!"

@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "name=eb-net driver=bridge\n"}}, {"cli": {"exit_code": 0, "stdout": "nets=eb-net, ports={\"8080/tcp\":[{\"HostIp\":\"\",\"HostPort\":\"18080\"}]} image=elixirbytes/brewd:1.6.0\n"}}, {"cli": {"exit_code": 0, "stdout": "ok\n"}}]}

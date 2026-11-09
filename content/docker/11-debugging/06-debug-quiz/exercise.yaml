@@ -1,0 +1,21 @@
+id: dk.debug.debug-quiz
+type: mcq
+version: 1
+title: Which Tool When?
+xp: 5
+difficulty: 2
+tags: [debugging]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "docker logs" }
+    - { id: b, text: "docker exec -it NAME sh" }
+    - { id: c, text: "docker stats" }
+    - { id: d, text: "docker diff" }
+  answer: [b]
+  explain: >
+    The container is running and the question is about the world it sees: its files and
+    its network. A shell inside lets you test that directly (cat the config file, wget
+    the database by name). logs only shows what the app chose to print, stats only shows
+    resource use, and diff only lists changed files.

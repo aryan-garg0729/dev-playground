@@ -1,0 +1,10 @@
+id: dk.debug
+title: Debugging containers
+exercises:
+  - 01-find-the-error
+  - 02-inspect
+  - 03-top-stats
+  - 04-diff-cp
+  - 05-crash-loop
+  - 06-debug-quiz
+  - 07-fix-it-boss

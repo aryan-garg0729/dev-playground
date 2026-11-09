@@ -1,0 +1,30 @@
+id: dk.entrypoint.entrypoint
+type: project_cli
+version: 1
+title: Make the Image the Program
+xp: 20
+difficulty: 2
+tags: [entrypoint]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq/webapp:ep has webapp as its entrypoint
+      cli_command:
+        command: "docker image inspect -f 'entrypoint={{json .Config.Entrypoint}}' cq/webapp:ep"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["entrypoint=[\"webapp\"]"]
+    - description: cq-oneoff passed just --version to webapp
+      cli_command:
+        command: "docker inspect -f 'path={{.Path}} args={{json .Args}} exit={{.State.ExitCode}}' cq-oneoff && docker logs cq-oneoff"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["path=webapp", "args=[\"--version\"]", "exit=0", "webapp dev"]
+    - description: cq-shell replaced the entrypoint with ls
+      cli_command:
+        command: "docker inspect -f 'path={{.Path}}' cq-shell && docker logs cq-shell"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["path=ls", "main.go"]

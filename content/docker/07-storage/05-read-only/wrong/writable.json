@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "bind:/config:rw=true \n"}}, {"cli": {"exit_code": 0, "stdout": "welcome, brewer\n"}}, {"cli": {"exit_code": 0, "stdout": "done\n"}}]}

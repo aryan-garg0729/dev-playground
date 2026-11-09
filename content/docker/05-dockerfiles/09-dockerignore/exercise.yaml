@@ -1,0 +1,31 @@
+id: dk.dockerfile.dockerignore
+type: project_cli
+version: 1
+title: Leave the Junk Out
+xp: 20
+difficulty: 2
+tags: [dockerignore, context]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: .dockerignore leaves out the archives, answers.txt and app/test-data
+      cli_command:
+        command: cat .dockerignore
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["*.tar", "answers.txt", "app/test-data"]
+    - description: cq/webapp:fat carries the test data (built before .dockerignore)
+      cli_command:
+        command: docker run --rm cq/webapp:fat ls /src
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["main.go", "test-data"]
+    - description: cq/webapp:lean has the app but no test data
+      cli_command:
+        command: docker run --rm cq/webapp:lean ls /src
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["main.go"]
+          - stdout_contains_none: ["test-data"]

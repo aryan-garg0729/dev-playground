@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"path=ls args=[\"/usr/local/bin\"] exit=0\n"}},{"cli":{"exit_code":0,"stdout":"webapp\n"}},{"cli":{"exit_code":0,"stdout":"path=webapp exit=0\nwebapp 1.3\n"}}]}

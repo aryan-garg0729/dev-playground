@@ -1,0 +1,30 @@
+id: gt.basics.config
+type: project_cli
+version: 1
+title: Tell Git Who You Are
+xp: 15
+difficulty: 1
+tags: [config]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Your name is set for all repositories
+      cli_command:
+        command: git config --global --get user.name
+        tests:
+          - exit_code: 0
+    - description: Your email is set for all repositories
+      cli_command:
+        command: git config --global --get user.email
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["@"]
+    - description: New repositories start on a branch called main
+      cli_command:
+        command: git config --global --get init.defaultBranch
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["main"]

@@ -1,0 +1,23 @@
+id: dk.publish.push
+type: project_cli
+version: 1
+title: Push an Image
+xp: 20
+difficulty: 2
+tags: [registry, push]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: The registry lists cq/webapp with the 1.0 tag
+      http_request:
+        request: { method: GET, url: "http://localhost:15000/v2/cq/webapp/tags/list" }
+        tests:
+          - status_code: 200
+          - body_contains: "\"1.0\""
+    - description: The pushed image is your production image
+      cli_command:
+        command: "docker image inspect -f '{{.Id}}' cq/webapp:prod localhost:15000/cq/webapp:1.0 | sort -u | wc -l | awk '{print \"distinct=\" $1}'"
+        tests:
+          - stdout_contains_all: ["distinct=1"]

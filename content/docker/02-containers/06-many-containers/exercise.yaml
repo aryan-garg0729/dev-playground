@@ -1,0 +1,25 @@
+id: dk.containers.many-containers
+type: project_cli
+version: 1
+title: Many Containers
+xp: 20
+difficulty: 1
+tags: [run, ps]
+free: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-one, cq-two and cq-three are all running
+      cli_command:
+        command: "docker ps --filter name=cq- --format '{{.Names}}={{.State}}'"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq-one=running", "cq-two=running", "cq-three=running"]
+    - description: All three came from the same image
+      cli_command:
+        command: "docker inspect -f '{{.Name}} {{.Config.Image}}' cq-one cq-two cq-three"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["/cq-one alpine:3.20", "/cq-two alpine:3.20", "/cq-three alpine:3.20"]

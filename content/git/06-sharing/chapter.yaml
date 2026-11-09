@@ -1,0 +1,15 @@
+id: gt.sharing
+title: Remotes and GitHub
+exercises:
+  - 01-publish
+  - 02-tracking-quiz
+  - 03-clone
+  - 04-fetch
+  - 05-fetch-pull-quiz
+  - 06-pull
+  - 07-rejected
+  - 08-revert
+  - 09-force-lease-quiz
+  - 10-github
+  - 11-fork-pr-quiz
+  - 12-team-day-boss

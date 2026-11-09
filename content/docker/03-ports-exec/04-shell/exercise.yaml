@@ -1,0 +1,24 @@
+id: dk.ports.shell
+type: project_cli
+version: 1
+title: A Shell Inside
+xp: 20
+difficulty: 1
+tags: [exec, shell]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: You left a note in cq-web's /tmp folder
+      cli_command:
+        command: docker exec cq-web cat /tmp/note.txt
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["I was here"]
+    - description: cq-web is still running after you left the shell
+      cli_command:
+        command: "docker inspect -f 'status={{.State.Status}}' cq-web"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["status=running"]

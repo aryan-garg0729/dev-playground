@@ -1,0 +1,22 @@
+id: gt.undoing.reflog-limits-quiz
+type: mcq
+version: 1
+title: What the Reflog Can't Save
+xp: 5
+difficulty: 3
+tags: [reflog]
+spec:
+  question: prompt.md
+  multiple: true
+  options:
+    - { id: a, text: "A commit you made, then lost with git reset --hard" }
+    - { id: b, text: "Edits you never committed, thrown away by git reset --hard" }
+    - { id: c, text: "A commit on a branch you deleted with -D" }
+    - { id: d, text: "Commits a teammate lost on their own computer" }
+  answer: [b, d]
+  explain: >
+    The reflog records where HEAD pointed, so it can only bring back commits. Edits that
+    were never committed were never recorded, so a hard reset destroys them for real. And
+    the reflog is local: it lives in your own .git folder and is never shared, so it knows
+    nothing about a teammate's computer. Lost commits on your own machine (a and c) are
+    recoverable, for about 30 to 90 days.

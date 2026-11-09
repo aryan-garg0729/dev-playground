@@ -1,0 +1,38 @@
+id: gt.rebasing.onto
+type: project_cli
+version: 1
+title: Rebase a Branch
+xp: 25
+difficulty: 2
+tags: [rebase]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find A4 (the gallery link on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^A4:'"
+        captures: [{ name: a4, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: B4 was replayed on top of A4
+      cli_command:
+        command: "git log -1 --format='parents=%P' ':/^B4:'"
+        tests:
+          - stdout_contains_all: ["parents=${a4}"]
+    - description: main is at B4
+      cli_command:
+        command: "git log -1 --format=%s main"
+        tests:
+          - stdout_contains_all: ["B4:"]
+    - description: No merge commit since A4
+      cli_command:
+        command: "echo \"merges=$(git rev-list --merges --count ${a4}..main)\""
+        tests:
+          - stdout_contains_all: ["merges=0\n"]
+    - description: The skills page is on main
+      cli_command:
+        command: "git show main:skills.md"
+        tests:
+          - stdout_contains_all: ["# Skills"]

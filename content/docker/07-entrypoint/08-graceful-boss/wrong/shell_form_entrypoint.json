@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "entrypoint=[\"/bin/sh\",\"-c\",\"sh /src/start.sh\"]\n"}}, {"cli": {"exit_code": 0, "stdout": "pid1=sh\nstop=slow\nexit=137\nstarting webapp...\n"}}, {"cli": {"exit_code": 0, "stdout": "starting webapp...\nwebapp 1.4\n"}}]}

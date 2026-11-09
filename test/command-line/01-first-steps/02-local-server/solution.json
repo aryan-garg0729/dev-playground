@@ -1,0 +1,4 @@
+{"steps": [
+  {"http": {"status": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello from my server\n"}},
+  {"http": {"status": 200, "headers": {"Content-Type": "application/json"}, "body": "{ \"course\": \"command-line\", \"lessons\": 2 }\n"}}
+]}

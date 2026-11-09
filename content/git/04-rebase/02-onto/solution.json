@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"4eee638edb09a50373c9fc36ef6daaaf6b746531\n"}},{"cli":{"exit_code":0,"stdout":"parents=4eee638edb09a50373c9fc36ef6daaaf6b746531\n"}},{"cli":{"exit_code":0,"stdout":"B4: add the skills page\n"}},{"cli":{"exit_code":0,"stdout":"merges=0\n"}},{"cli":{"exit_code":0,"stdout":"# Skills\n\n- Git\n- Writing\n"}}]}

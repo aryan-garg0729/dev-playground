@@ -1,0 +1,12 @@
+id: gt.internals
+title: How Git stores things
+exercises:
+  - 01-hashes-quiz
+  - 02-gitignore
+  - 03-cat-file
+  - 04-trees-and-blobs
+  - 05-object-path-quiz
+  - 06-snapshots-quiz
+  - 07-config-levels-quiz
+  - 08-local-config
+  - 09-under-the-hood-boss

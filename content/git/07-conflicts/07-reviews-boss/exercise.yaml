@@ -1,0 +1,47 @@
+id: gt.resolving.reviews-boss
+type: project_cli
+version: 1
+title: The Reviews Page
+xp: 60
+difficulty: 3
+tags: [conflicts, rebase, squash]
+boss: true
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: Find H7 (the new email on main)
+      cli_command:
+        command: "git log -1 --format=%H ':/^H7:'"
+        captures: [{ name: h7, regex: "([0-9a-f]{40})" }]
+        tests:
+          - exit_code: 0
+    - description: Exactly one I7, and no wip on any branch
+      cli_command:
+        command: "echo \"i7_commits=$(git log --all --format=%s | grep -c '^I7:')\"; git --no-pager log --all --format=%s"
+        tests:
+          - stdout_contains_all: ["i7_commits=1\n"]
+          - stdout_contains_none: ["wip"]
+    - description: I7 was squashed first, then rebased onto H7
+      cli_command:
+        command: "git log -1 --format='%H parents=%P' ':/^I7:'"
+        captures: [{ name: i7, regex: "^([0-9a-f]{40})" }]
+        tests:
+          - stdout_contains_all: ["parents=${h7}\n"]
+    - description: J7 is a real merge of H7 and I7 at the tip of main
+      cli_command:
+        command: "git log -1 --format='%s parents=%P' main"
+        tests:
+          - stdout_contains_all: ["J7:", "${h7}", "${i7}"]
+    - description: The email line keeps both sides, with no markers
+      cli_command:
+        command: "git show main:contact.md"
+        tests:
+          - stdout_contains_all: ["Email: hi@example.com (replies within a day)\n"]
+          - stdout_contains_none: ["<<<<<<<", "hello@"]
+    - description: The reviews page has both sections
+      cli_command:
+        command: "git show main:reviews.md"
+        tests:
+          - stdout_contains_all: ["# Reviews", "## Leave a review"]

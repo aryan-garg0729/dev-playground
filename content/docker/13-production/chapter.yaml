@@ -1,0 +1,12 @@
+id: dk.production
+title: Production ready
+exercises:
+  - 01-healthcheck
+  - 02-restart-quiz
+  - 03-restart-policy
+  - 04-memory-limit
+  - 05-non-root
+  - 06-lockdown
+  - 07-secrets-quiz
+  - 08-disk-space-quiz
+  - 09-production-boss

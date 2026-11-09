@@ -1,0 +1,38 @@
+id: dk.storage.notebook-boss
+type: project_cli
+version: 1
+title: The Notebook That Survives
+xp: 50
+difficulty: 3
+tags: [volumes, bind-mount]
+boss: true
+spec:
+  prompt: prompt.md
+  base_url: http://localhost:8092
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-notebook has the cq-book volume at /data and config read-only at /config
+      cli_command:
+        command: "docker inspect -f 'image={{.Config.Image}} {{range .Mounts}}{{.Type}}:{{.Destination}}:rw={{.RW}} {{end}}' cq-notebook && docker inspect -f '{{range .Mounts}}{{.Name}} {{end}}' cq-notebook"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["image=cq/webapp:1.6", "volume:/data:rw=true", "cq-book"]
+          - stdout_contains_all: ["bind:/config:rw=false"]
+    - description: The volume holds both notes
+      cli_command:
+        command: docker run --rm -v cq-book:/data alpine:3.20 cat /data/notes.txt
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["first note", "second note"]
+    - description: cq-notebook was created after the notes were written
+      cli_command:
+        command: "c=$(docker inspect -f '{{.Created}}' cq-notebook | cut -c1-19 | tr -d 'T:-'); o=$(docker run --rm -v cq-book:/data alpine:3.20 date -u -r /data/notes.txt +%Y%m%d%H%M%S); if [ \"$c\" -gt \"$o\" ]; then echo recreated=yes; else echo recreated=no; fi"
+        tests:
+          - stdout_contains_all: ["recreated=yes"]
+    - description: The new container serves the old notes
+      http_request:
+        request: { method: GET, url: "${baseURL}/notes" }
+        tests:
+          - status_code: 200
+          - body_contains: "second note"

@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "name=cq-net driver=bridge\n"}}, {"cli": {"exit_code": 0, "stdout": "nets=cq-net, ports={\"8080/tcp\":[{\"HostIp\":\"\",\"HostPort\":\"8080\"}]} image=cq/webapp:1.6\n"}}, {"cli": {"exit_code": 0, "stdout": "ok\n"}}]}

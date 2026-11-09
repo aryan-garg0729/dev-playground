@@ -1,0 +1,22 @@
+id: fd.sql.select-columns
+type: sql
+version: 1
+title: Pick columns
+xp: 10
+difficulty: 1
+tags: [select]
+free: true
+spec:
+  prompt: prompt.md
+  setup: setup.sql
+  solution: solution.sql
+  checks:
+    - kind: sql_result_equals
+      name: Every customer's name and email
+      expected:
+        columns: [name, email]
+        rows:
+          - [Ada, ada@example.com]
+          - [Ravi, ravi@example.com]
+          - [Mei, mei@example.com]
+          - [Anaya, anaya@example.com]

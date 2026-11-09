@@ -1,0 +1,1 @@
+{"steps": [{"cli": {"exit_code": 0, "stdout": "contact=changed\n"}}, {"cli": {"exit_code": 0, "stdout": "about.md\n"}}, {"cli": {"exit_code": 0, "stdout": "diff --git a/about.md b/about.md\nindex bd1f1e5..9495eb1 100644\n--- a/about.md\n+++ b/about.md\n@@ -3,3 +3,4 @@\n I am learning Git.\n I also like cooking.\n I live by the sea.\n+I also play the guitar.\n"}}]}

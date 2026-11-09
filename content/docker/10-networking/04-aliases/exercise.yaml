@@ -1,0 +1,24 @@
+id: dk.networking.aliases
+type: project_cli
+version: 1
+title: Nicknames on the Network
+xp: 20
+difficulty: 2
+tags: [networks, dns]
+spec:
+  prompt: prompt.md
+  allowed_os: [linux, darwin]
+  solution: solution.json
+  steps:
+    - description: cq-api-v2 is on cq-net with the alias "backend"
+      cli_command:
+        command: "docker inspect -f '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}={{json $v.Aliases}} {{end}}' cq-api-v2"
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["cq-net=", "\"backend\""]
+    - description: http://backend:8080 answers on cq-net, with the version 2 greeting
+      cli_command:
+        command: docker run --rm --network cq-net alpine:3.20 wget -qO- -T 3 http://backend:8080/
+        tests:
+          - exit_code: 0
+          - stdout_contains_all: ["Hi from webapp 1.6"]

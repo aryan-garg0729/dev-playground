@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "ro=false caps=null sec=null tmpfs=null\n"}}, {"cli": {"exit_code": 0, "stdout": "touch: /etc/x: Permission denied\ndone\n"}}, {"http": {"status": 201, "headers": {}, "body": "ordered shield\n"}}]}

@@ -1,0 +1,1 @@
+{"steps":[{"cli":{"exit_code":0,"stdout":"nets=cq-private,\n"}},{"cli":{"exit_code":0,"stdout":"ok\n"}},{"cli":{"exit_code":0,"stdout":"wget: bad address 'cq-vault:8080'\n"}}]}

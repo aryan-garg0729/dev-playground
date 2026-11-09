@@ -1,0 +1,11 @@
+id: dk.entrypoint
+title: ENTRYPOINT, CMD and stopping cleanly
+exercises:
+  - 01-cmd-entrypoint-quiz
+  - 02-override-cmd
+  - 03-entrypoint
+  - 04-shell-form-quiz
+  - 05-slow-stop
+  - 06-pid1-quiz
+  - 07-exec-fix
+  - 08-graceful-boss

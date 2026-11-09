@@ -1,1 +1,0 @@
-{"steps": [{"cli": {"exit_code": 0, "stdout": "bridge=[\"orders\"] eb-net=null \n"}}, {"cli": {"exit_code": 1, "stdout": "wget: bad address 'orders:8080'\n"}}, {"cli": {"exit_code": 0, "stdout": "brewd 1.6.0\n"}}]}

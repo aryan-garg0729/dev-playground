@@ -1,0 +1,21 @@
+id: gt.branching.head-quiz
+type: mcq
+version: 1
+title: Where Is HEAD?
+xp: 5
+difficulty: 1
+tags: [head]
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The newest commit in the whole project" }
+    - { id: b, text: "A pointer to the branch you're on, which in turn points to a commit" }
+    - { id: c, text: "Another name for main" }
+    - { id: d, text: "The very first commit" }
+  answer: [b]
+  explain: >
+    HEAD is "you are here". Normally it points at a branch (ref: refs/heads/add-projects),
+    and that branch points at a commit. git switch moves HEAD to another branch; git
+    commit moves the branch HEAD points at. It isn't tied to main, and the newest commit
+    in the project can be on another branch entirely.

@@ -1,1 +1,0 @@
-{"steps":[{"cli":{"exit_code":0,"stdout":"bisect=off\nmain\n"}},{"cli":{"exit_code":0,"stdout":"culprit=3acf9eba1259bea54c3a8e1ae33c73afd8f80037\n"}},{"cli":{"exit_code":0,"stdout":"bisect_bad=3acf9eba1259bea54c3a8e1ae33c73afd8f80037\n"}}]}
