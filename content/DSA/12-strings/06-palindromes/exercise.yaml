@@ -1,0 +1,18 @@
+id: dsa.strings.palindromes
+type: mcq
+version: 1
+title: "Palindromes"
+xp: 5
+difficulty: 3
+tags: [strings, palindromes]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "To mark the end of the string" }
+    - { id: b, text: "To make the string long enough for the mirror trick" }
+    - { id: c, text: "So even-length palindromes get a centre too, and one loop handles both kinds" }
+    - { id: d, text: "To avoid comparing equal characters" }
+  answer: [c]
+  explain: "'abba' has no middle character, but in '#a#b#b#a#' its centre is the `#` between the two b's. Every palindrome in t has odd length, and its radius `p[i]` equals the length of the original palindrome in s. The bounds checks in the `while` stop it from running off either end."

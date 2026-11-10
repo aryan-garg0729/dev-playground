@@ -1,0 +1,18 @@
+id: dsa.strings.finding-borders
+type: mcq
+version: 1
+title: "Finding Borders"
+xp: 10
+difficulty: 2
+tags: [strings, kmp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "1 3" }
+    - { id: b, text: "3" }
+    - { id: c, text: "1 2 3" }
+    - { id: d, text: "1 3 7" }
+  answer: [a]
+  explain: "`pi[6] = 3` ('aba'), then `pi[2] = 1` ('a'), then `pi[0] = 0` ends the chain. Sorted, that's 1 3. The whole string isn't a border because a border must be proper, so 7 doesn't count. Every border of s is somewhere in that chain, which is why it lists them all in O(n)."

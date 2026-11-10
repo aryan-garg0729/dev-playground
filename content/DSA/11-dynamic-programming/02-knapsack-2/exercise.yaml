@@ -1,0 +1,18 @@
+id: dsa.dp.knapsack-2
+type: mcq
+version: 1
+title: "E - Knapsack 2"
+xp: 10
+difficulty: 3
+tags: [dp, knapsack]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It's faster" }
+    - { id: b, text: "So dp[v - value[i]] still holds the value from before this item, which stops the item being used twice" }
+    - { id: c, text: "To find the largest value first" }
+    - { id: d, text: "Upwards is also correct for 0/1 knapsack" }
+  answer: [b]
+  explain: "Going down, `dp[v - value[i]]` hasn't been updated for item i yet, so it describes a solution without item i. Going up, it may already include item i, and the item gets used again: that's the *unbounded* knapsack. Downwards for 0/1, upwards for unlimited copies."

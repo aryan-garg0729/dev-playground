@@ -1,0 +1,18 @@
+id: dsa.dsu.road-construction
+type: mcq
+version: 1
+title: "Road Construction"
+xp: 10
+difficulty: 2
+tags: [dsu]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Because the largest component never changes" }
+    - { id: b, text: "Because a DSU keeps its components sorted" }
+    - { id: c, text: "Components only merge, so sizes only grow: the new largest is max(largest, size of the merged component)" }
+    - { id: d, text: "It isn't enough; you need a multiset of sizes" }
+  answer: [c]
+  explain: "Building a road can only join two components into a bigger one; nothing ever shrinks. So after each successful union, `largest = max(largest, size[root])` and `components -= 1`. A road between cities that are already connected changes nothing. Removing roads would break this, which is the next problem."

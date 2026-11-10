@@ -1,0 +1,14 @@
+id: dsa.dp
+title: "Dynamic Programming"
+exercises:
+  - 01-dp-states
+  - 02-knapsack-2
+  - 03-lcs
+  - 04-longest-path
+  - 05-sushi
+  - 06-slimes
+  - 07-matching
+  - 08-independent-set
+  - 09-flowers
+  - 10-digit-sum
+  - 11-frog-3

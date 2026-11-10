@@ -1,0 +1,18 @@
+id: dsa.dp.frog-3
+type: mcq
+version: 1
+title: "Z - Frog 3"
+xp: 10
+difficulty: 5
+tags: [dp, convex-hull-trick]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Slope h_i and intercept dp[i]" }
+    - { id: b, text: "Slope −2·h_i and intercept dp[i] + h_i², with h_j² added afterwards" }
+    - { id: c, text: "Slope 2·h_i and intercept dp[i] − h_i²" }
+    - { id: d, text: "Slope h_i² and intercept dp[i]" }
+  answer: [b]
+  explain: "(h_j − h_i)² = h_j² − 2·h_i·h_j + h_i². The h_j² term is the same for every i, so pull it out; what's left is the line y = (−2·h_i)·x + (dp[i] + h_i²). Because h increases, the slopes decrease and the queries increase, so a monotonic deque of lines gives O(n) total. A Li Chao tree works without those guarantees, in O(n log n)."

@@ -1,0 +1,18 @@
+id: dsa.math.prime-multiples
+type: mcq
+version: 1
+title: "Prime Multiples"
+xp: 10
+difficulty: 3
+tags: [combinatorics, inclusion-exclusion]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Compute the product in floating point" }
+    - { id: b, text: "Take the product modulo 10⁹+7" }
+    - { id: c, text: "Ignore it; overflow only causes small errors" }
+    - { id: d, text: "Stop building a subset's product once it exceeds n; that subset contributes 0" }
+  answer: [d]
+  explain: "Once the product passes n, `n // product` is 0, so that subset adds nothing. In C++, check before multiplying (`p > n / cur`) so you never overflow, which is undefined behaviour for signed integers. A modular product makes the division meaningless, and doubles lose precision long before 10¹⁸. Python's integers can't overflow, but capping still saves time."

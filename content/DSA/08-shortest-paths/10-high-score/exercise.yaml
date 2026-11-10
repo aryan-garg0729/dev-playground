@@ -1,0 +1,18 @@
+id: dsa.paths.high-score
+type: mcq
+version: 1
+title: "High Score"
+xp: 10
+difficulty: 4
+tags: [graphs, negative-cycles]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Print −1" }
+    - { id: b, text: "The answer is the score at room 7" }
+    - { id: c, text: "Nothing: that cycle can't be used on a route that ends at n, so ignore it" }
+    - { id: d, text: "Run Bellman–Ford again from room 7" }
+  answer: [c]
+  explain: "An unbounded score needs a cycle you can enter from room 1 and leave towards room n. Run a reachability pass forward from room 1 and backward from room n (on the reversed graph), and print −1 only when a room still improving in the extra round passes both checks. Forgetting the 'can reach n' part is the classic wrong answer on this problem."

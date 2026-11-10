@@ -1,0 +1,18 @@
+id: dsa.trees.subtree-queries
+type: mcq
+version: 1
+title: "Subtree Queries"
+xp: 10
+difficulty: 3
+tags: [trees, euler-tour, fenwick]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "add(tin[v], 5)" }
+    - { id: b, text: "add(tin[v], 9)" }
+    - { id: c, text: "add 5 to the whole range [tin[v], tout[v]]" }
+    - { id: d, text: "add(v, 5)" }
+  answer: [a]
+  explain: "A Fenwick tree stores sums, so record the change, 9 − 4 = 5, at v's position `tin[v]`, and keep the current values in an array to compute the next change. Adding 9 would count the old value too. Indexing by v instead of `tin[v]` loses the 'subtree is a contiguous range' property. The query is `prefix(tout[v]) − prefix(tin[v] − 1)`, shifted to 1-based positions."

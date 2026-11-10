@@ -1,0 +1,18 @@
+id: dsa.dsu.road-reparation
+type: mcq
+version: 1
+title: "Road Reparation"
+xp: 10
+difficulty: 2
+tags: [dsu, mst]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Always; Kruskal is slower" }
+    - { id: b, text: "On dense graphs: Prim's O(V²) array version beats sorting about V² edges" }
+    - { id: c, text: "When the weights are negative" }
+    - { id: d, text: "When the graph is disconnected" }
+  answer: [b]
+  explain: "Kruskal is O(E log E), dominated by the sort, and the DSU work is almost free. Prim with a heap is O(E log V), about the same. Prim's real advantage is a dense graph: the O(V²) version with a plain array beats sorting V² edges. Both handle negative weights, since an MST only compares weights, and neither builds a spanning tree of a disconnected graph."

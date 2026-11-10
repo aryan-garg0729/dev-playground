@@ -1,0 +1,18 @@
+id: dsa.stack-window.distinct-values-subarrays-ii
+type: mcq
+version: 1
+title: "Distinct Values Subarrays II"
+xp: 10
+difficulty: 3
+tags: [two-pointers]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "1" }
+    - { id: b, text: "(r - l + 1) * (r - l + 2) / 2" }
+    - { id: c, text: "k" }
+    - { id: d, text: "r - l + 1" }
+  answer: [d]
+  explain: "Every shorter subarray ending at r (starting at l + 1, l + 2, …, r) has at most as many distinct values, so it's valid too: r − l + 1 subarrays in all. Adding the triangle number at every r counts the same subarrays many times. The total can reach about n²/2, so use 64-bit. Both pointers only move forward: O(n)."

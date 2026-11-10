@@ -1,0 +1,25 @@
+id: dsa
+title: DSA Interview Prep
+description: >
+  Revise data structures and algorithms before interviews. Each lesson recaps a pattern or
+  links a classic problem on CSES, AtCoder or LeetCode, then checks you know the key idea.
+  Every lesson is open: pick any topic, in any order.
+order: 6
+published: true
+chapters:
+  - 01-classics
+  - 02-search-sort-greedy
+  - 03-stacks-windows
+  - 04-bits
+  - 05-math
+  - 06-range-queries
+  - 07-graph-traversal
+  - 08-shortest-paths
+  - 09-dsu-mst
+  - 10-trees
+  - 11-dynamic-programming
+  - 12-strings
+icon: dsa
+level: intermediate
+tags: [DSA, Algorithms, Interviews]
+topics: Graphs, trees, DP, strings, range queries

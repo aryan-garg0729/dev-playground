@@ -1,0 +1,18 @@
+id: dsa.strings.distinct-substrings
+type: mcq
+version: 1
+title: "Distinct Substrings"
+xp: 10
+difficulty: 4
+tags: [strings, suffix-array]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "6" }
+    - { id: b, text: "3" }
+    - { id: c, text: "4" }
+    - { id: d, text: "5" }
+  answer: [b]
+  explain: "The suffixes 'a', 'aa' and 'aaa' have 1 + 2 + 3 = 6 prefixes between them. Neighbours share 1 and 2 of those, so 6 − 3 = 3: 'a', 'aa' and 'aaa'. Use 64-bit integers: the count can reach about n²/2 = 5·10⁹."

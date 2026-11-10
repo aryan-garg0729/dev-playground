@@ -1,0 +1,18 @@
+id: dsa.trees.binary-lifting
+type: mcq
+version: 1
+title: "Binary Lifting and LCA"
+xp: 5
+difficulty: 3
+tags: [trees, binary-lifting, lca]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "To save one jump" }
+    - { id: b, text: "Jumping only while the ancestors differ is the safe test: equal ancestors could be the LCA or anything above it" }
+    - { id: c, text: "Because up[j][a] is undefined at the root" }
+    - { id: d, text: "It doesn't matter; jumping while they're equal works too" }
+  answer: [b]
+  explain: "If `up[j][a] == up[j][b]`, that node is *a* common ancestor, but maybe not the lowest one, so you can't jump there. If they differ, the LCA is strictly above both, so the jump is safe. After trying every j from large to small, a and b are the LCA's children on each side, and `up[0][a]` is the answer."

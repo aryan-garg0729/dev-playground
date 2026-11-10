@@ -9,3 +9,9 @@ paths:
       - { course: git, note: Version control on your machine }
       - { course: docker, note: Containerise a real service }
       - { course: kubernetes, note: Run it on a cluster }
+  - id: interview-prep
+    title: Interview Prep
+    description: Revise data structures and algorithms, then practise classic problems.
+    goal: interviews
+    courses:
+      - { course: dsa, note: "Patterns, then CSES, AtCoder and LeetCode practice" }

@@ -1,0 +1,18 @@
+id: dsa.graphs.counting-rooms
+type: mcq
+version: 1
+title: "Counting Rooms"
+xp: 10
+difficulty: 1
+tags: [graphs, grid]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It counts the rooms wrong" }
+    - { id: b, text: "A RecursionError, or a crash, when one room has about 10⁶ cells" }
+    - { id: c, text: "It visits some cells twice" }
+    - { id: d, text: "No risk; recursion is fine for grids" }
+  answer: [b]
+  explain: "A snake-shaped room can make the recursion as deep as the room is big, up to 10⁶ levels. Python's default limit is 1,000, and raising it with `sys.setrecursionlimit` can overflow the real C stack and crash the interpreter. An explicit stack (or BFS) is O(rows × cols) with no depth problem. C++ copes with deeper recursion, but 10⁶ levels can still overflow its stack."

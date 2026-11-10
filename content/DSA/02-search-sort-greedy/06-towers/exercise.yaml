@@ -1,0 +1,18 @@
+id: dsa.greedy.towers
+type: mcq
+version: 1
+title: "Towers"
+xp: 10
+difficulty: 3
+tags: [greedy, binary-search]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "On a tower with top 5 (bisect_left)" }
+    - { id: b, text: "On the tower with top 9 (bisect_right)" }
+    - { id: c, text: "It starts a new tower" }
+    - { id: d, text: "On the tower with top 3" }
+  answer: [b]
+  explain: "A cube needs a strictly bigger top, so the 5s are out and 3 is too small. The smallest top bigger than 5 is 9, which `bisect_right(tops, 5)` finds (index 3), and replacing it keeps the list sorted: `[3, 5, 5, 5]`. `bisect_left` would land on a 5 and break the strict rule. Each cube costs one binary search, O(n log n) total. Using the smallest bigger top keeps the large tops free for large cubes."

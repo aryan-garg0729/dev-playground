@@ -1,0 +1,18 @@
+id: dsa.math.counting-grids
+type: mcq
+version: 1
+title: "Counting Grids"
+xp: 10
+difficulty: 4
+tags: [combinatorics]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "n²/2" }
+    - { id: b, text: "n" }
+    - { id: c, text: "n²/4 for every n" }
+    - { id: d, text: "n²/4 for even n, (n² + 3)/4 for odd n" }
+  answer: [d]
+  explain: "Away from the centre, every cell is on a cycle of 4 (its four rotated positions). With even n that's n²/4 cycles. With odd n the centre cell stays put, giving (n² − 1)/4 cycles of 4 plus 1, which is (n² + 3)/4. A 180° rotation pairs cells instead: ⌈n²/2⌉ cycles. The answer is (2^(n²) + 2 · 2^c90 + 2^c180) / 4, with the division done by a modular inverse."

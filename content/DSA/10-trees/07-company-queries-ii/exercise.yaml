@@ -1,0 +1,18 @@
+id: dsa.trees.company-queries-ii
+type: mcq
+version: 1
+title: "Company Queries II"
+xp: 10
+difficulty: 3
+tags: [trees, lca]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "a's parent" }
+    - { id: b, text: "The root" }
+    - { id: c, text: "a, right after lifting b to a's depth, because they're now equal" }
+    - { id: d, text: "b" }
+  answer: [c]
+  explain: "After the swap, the deeper node b is lifted `depth[b] − depth[a]` levels, and because a is its ancestor, it lands exactly on a. The `if a == b: return a` check catches that before the main loop. Forgetting that check returns a's parent instead, which is the most common LCA bug."

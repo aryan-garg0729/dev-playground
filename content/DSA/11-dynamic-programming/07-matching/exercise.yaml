@@ -1,0 +1,18 @@
+id: dsa.dp.matching
+type: mcq
+version: 1
+title: "O - Matching"
+xp: 10
+difficulty: 4
+tags: [dp, bitmask-dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Because every man is compatible with every woman" }
+    - { id: b, text: "Because the mask stores men, not women" }
+    - { id: c, text: "Men are matched in a fixed order, so the number of set bits in mask already says which man is next" }
+    - { id: d, text: "It does need it: the state must be dp[i][mask]" }
+  answer: [c]
+  explain: "Matching men in a fixed order means each matching is built in exactly one way, so nothing is double-counted. The popcount tells you which man is next, so a separate man index is redundant, and the state space is 2²¹ ≈ 2·10⁶. The transition tries each compatible woman not yet in the mask: O(2ⁿ · n)."

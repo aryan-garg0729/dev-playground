@@ -1,0 +1,18 @@
+id: dsa.graphs.longest-flight-route
+type: mcq
+version: 1
+title: "Longest Flight Route"
+xp: 10
+difficulty: 3
+tags: [graphs, dag-dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Every city starts at 1" }
+    - { id: b, text: "best[1] = 1 and every other city unreachable (−∞), so routes can't start anywhere else" }
+    - { id: c, text: "Every city starts at 0" }
+    - { id: d, text: "It doesn't matter in a DAG" }
+  answer: [b]
+  explain: "If every city started at 1, a long chain that never touches city 1 could look like the best way into n, giving a route that doesn't start at 1. Mark unreachable cities and never extend a route out of them. Print 'IMPOSSIBLE' if n stays unreachable. Running a BFS from city 1 first and keeping only the cities it reaches works too."

@@ -1,0 +1,18 @@
+id: dsa.paths.shortest-routes-i
+type: mcq
+version: 1
+title: "Shortest Routes I"
+xp: 10
+difficulty: 2
+tags: [graphs, dijkstra]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Real distances exceed both int and INF, so they overflow or look unreachable" }
+    - { id: b, text: "Nothing; 1e9 is large enough" }
+    - { id: c, text: "Dijkstra becomes O(n²)" }
+    - { id: d, text: "Only the output format breaks" }
+  answer: [a]
+  explain: "A path of 10⁵ flights of weight 10⁹ costs 10¹⁴. That overflows a 32-bit int, and even a correct distance above 10⁹ would compare as worse than 'infinity'. Use `long long` and an INF like `LLONG_MAX / 4` (or `1e18`), so `dist + w` can't overflow either."

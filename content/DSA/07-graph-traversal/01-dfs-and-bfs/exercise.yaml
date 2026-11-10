@@ -1,0 +1,18 @@
+id: dsa.graphs.dfs-and-bfs
+type: mcq
+version: 1
+title: "DFS and BFS"
+xp: 5
+difficulty: 1
+tags: [graphs, bfs, dfs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "When it's pushed onto the queue" }
+    - { id: b, text: "When it's popped from the queue" }
+    - { id: c, text: "Either; the result and the cost are the same" }
+    - { id: d, text: "Only the start node needs marking" }
+  answer: [a]
+  explain: "Mark on push. If you wait until pop, the same node can be pushed many times by different neighbours before it's processed. The distances stay right, but the queue can grow far beyond V, which turns into time or memory failures on dense graphs and big grids. Dijkstra is the opposite: there you check on pop, because a better distance can still arrive later."

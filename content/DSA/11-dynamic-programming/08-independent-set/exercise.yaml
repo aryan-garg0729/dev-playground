@@ -1,0 +1,18 @@
+id: dsa.dp.independent-set
+type: mcq
+version: 1
+title: "P - Independent Set"
+xp: 10
+difficulty: 2
+tags: [dp, trees]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "white[v] = Σ (white[c] + black[c]); black[v] = Σ white[c]" }
+    - { id: b, text: "white[v] = Π white[c]; black[v] = Π (white[c] + black[c])" }
+    - { id: c, text: "white[v] = Π (white[c] + black[c]); black[v] = Π white[c]" }
+    - { id: d, text: "black[v] = white[v] for every v" }
+  answer: [c]
+  explain: "A white node lets each child be either colour, and the children's subtrees are independent, so their counts multiply. A black node forces every child to be white. Summing would count one child's choices at a time instead of the combinations. The answer is `white[root] + black[root]`, reduced mod 10⁹+7 after every multiplication."

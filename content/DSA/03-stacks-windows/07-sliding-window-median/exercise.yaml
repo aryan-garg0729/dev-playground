@@ -1,0 +1,18 @@
+id: dsa.stack-window.sliding-window-median
+type: mcq
+version: 1
+title: "Sliding Window Median"
+xp: 10
+difficulty: 4
+tags: [heap, ordered-set]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing; the clean-up happens when it reaches the top" }
+    - { id: b, text: "The other heap's top" }
+    - { id: c, text: "The live-size counter of the heap it belongs to, so balancing uses the real sizes" }
+    - { id: d, text: "Both heaps, rebuilt with heapify" }
+  answer: [c]
+  explain: "Balancing compares sizes. If a dead element still counts towards `low`, the heaps look balanced when they aren't, and the wrong element ends up as the median. Keep a live-size counter per heap: decrement it when you mark an element dead, and work out which heap it's in by comparing it with `low`'s top. Pop dead elements whenever they surface at a top. Each step is O(log n) amortized, while a heapify rebuild would cost O(k) per window."

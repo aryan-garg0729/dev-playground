@@ -1,0 +1,18 @@
+id: dsa.paths.floyd-warshall
+type: mcq
+version: 1
+title: "Floyd–Warshall"
+xp: 5
+difficulty: 2
+tags: [graphs, all-pairs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Nothing; the loop order doesn't matter" }
+    - { id: b, text: "It becomes O(n⁴)" }
+    - { id: c, text: "The result is wrong: dist[i][k] and dist[k][j] may not be final yet when they're used" }
+    - { id: d, text: "It only breaks with negative edges" }
+  answer: [c]
+  explain: "The DP relies on step k using distances that already allow every middle node before k. With k innermost, `dist[i][k]` is used before it has been improved through other nodes, so some shortest paths are never found. Loop order is the most common Floyd–Warshall bug, and it passes small tests surprisingly often."

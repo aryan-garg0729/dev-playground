@@ -1,0 +1,18 @@
+id: dsa.math.next-prime
+type: mcq
+version: 1
+title: "Next Prime"
+xp: 10
+difficulty: 3
+tags: [math, primes]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "You can skip testing and add a fixed offset instead" }
+    - { id: b, text: "You only test a handful of candidates, so each query costs a few primality tests" }
+    - { id: c, text: "It proves every odd number in the gap is prime" }
+    - { id: d, text: "It means the sieve can stop at n" }
+  answer: [b]
+  explain: "The next prime is never far away, so try n + 1, n + 2, … and each candidate costs one primality test (skipping even numbers halves the work). With trial division each test is O(√n), up to 10⁶ steps for n near 10¹². With Miller–Rabin it's a few modular powers, which is what keeps many queries fast."

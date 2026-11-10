@@ -1,0 +1,18 @@
+id: dsa.trees
+title: "Trees"
+exercises:
+  - 01-tree-diameter-pattern
+  - 02-tree-diameter
+  - 03-tree-distances-i
+  - 04-binary-lifting
+  - 05-company-queries-i
+  - 06-planets-queries-i
+  - 07-company-queries-ii
+  - 08-distance-queries
+  - 09-tree-dp
+  - 10-tree-distances-ii
+  - 11-tree-matching
+  - 12-euler-tour
+  - 13-subtree-queries
+  - 14-path-queries
+  - 15-distinct-colors

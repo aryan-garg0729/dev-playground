@@ -1,0 +1,18 @@
+id: dsa.trees.tree-matching
+type: mcq
+version: 1
+title: "Tree Matching"
+xp: 10
+difficulty: 3
+tags: [trees, dp, greedy]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Match the highest-degree nodes first" }
+    - { id: b, text: "Match edges in input order whenever both ends are free" }
+    - { id: c, text: "Process nodes bottom-up; match a node with its parent if both are still free" }
+    - { id: d, text: "Match the root first, then work downwards" }
+  answer: [c]
+  explain: "A leaf has only one possible partner, its parent, and matching them never hurts (an exchange argument). Going bottom-up applies that rule to every node whose children are already decided. Input-order greedy only finds a *maximal* matching (one you can't extend), which can be smaller: on the path 1 – 2 – 3 – 4, taking edge 2 – 3 first leaves 1 match instead of 2. The DP gives the same answer and extends to weighted versions."

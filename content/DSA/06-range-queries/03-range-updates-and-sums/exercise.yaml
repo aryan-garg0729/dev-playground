@@ -1,0 +1,18 @@
+id: dsa.range.range-updates-and-sums
+type: mcq
+version: 1
+title: "Range Updates and Sums"
+xp: 10
+difficulty: 4
+tags: [segment-tree, lazy]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Set to 7" }
+    - { id: b, text: "Set to 2 (the earlier add is discarded)" }
+    - { id: c, text: "Add 5 (the set is ignored while an add is pending)" }
+    - { id: d, text: "Add −3" }
+  answer: [b]
+  explain: "An assignment overwrites everything before it, including pending adds, so the tag becomes 'set 2'. The other order does combine: 'set 2' then 'add 5' becomes 'set 7', and 'add 5' then 'add 3' becomes 'add 8'. Getting this composition right, and pushing it to both children before descending, is the whole problem. Range sums reach about 2·10⁵ · 10⁶, so use 64-bit."

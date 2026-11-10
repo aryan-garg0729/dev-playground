@@ -1,9 +1,13 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { Element } from 'hast';
+import { useCodeLang } from '../stores/codeLang';
+import { highlight, HIGHLIGHT_LANGS, TOKEN_CLASS } from './highlight';
 import { ImageLightbox } from './ImageLightbox';
 import { useLessonAsset } from './LessonAssets';
+import { remarkCodeTabs, TAB_LANGS, TABS_LANG, type CodeTab } from './remarkCodeTabs';
 
 /** A lesson image: framed so transparent diagrams read in both themes; click to enlarge. */
 function LessonImage({ src, alt }: { src: string; alt: string }) {
@@ -60,6 +64,100 @@ function CodeBlock({ children }: { children: ReactNode }) {
   );
 }
 
+/** The language and text of a fenced block's `<code>` child, if it has a language. */
+function fenced(node: Element | undefined): { lang: string; text: string } | null {
+  const code = node?.children[0];
+  if (code?.type !== 'element' || code.tagName !== 'code') return null;
+  const classes = code.properties.className;
+  const cls = Array.isArray(classes) ? classes.find((c) => String(c).startsWith('language-')) : undefined;
+  const text = code.children[0];
+  if (!cls || text?.type !== 'text') return null;
+  return { lang: String(cls).slice('language-'.length), text: text.value.replace(/\n$/, '') };
+}
+
+/** The tabs of a merged code block (see remarkCodeTabs), or null for an ordinary block. */
+function tabsOf(block: { lang: string; text: string } | null): CodeTab[] | null {
+  if (block?.lang !== TABS_LANG) return null;
+  try {
+    const tabs = JSON.parse(block.text) as CodeTab[];
+    return Array.isArray(tabs) && tabs.length > 0 ? tabs : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Code coloured like the editor (C++ and Python; other languages stay plain). */
+function Highlighted({ code, lang }: { code: string; lang: string }) {
+  return (
+    <code>
+      {highlight(code, lang).map((t, i) =>
+        TOKEN_CLASS[t.kind] ? (
+          <span key={i} className={TOKEN_CLASS[t.kind]}>
+            {t.text}
+          </span>
+        ) : (
+          t.text
+        ),
+      )}
+    </code>
+  );
+}
+
+/**
+ * The same code in several languages, one tab each. The picked language is shared by
+ * every tabbed block and remembered per device (C++ until the learner picks another).
+ */
+function CodeTabs({ tabs }: { tabs: CodeTab[] }) {
+  const { lang, setLang } = useCodeLang();
+  const id = useId();
+  const current = tabs.find((t) => t.lang === lang) ?? tabs[0]!;
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const i = tabs.indexOf(current);
+    const next = (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+    setLang(tabs[next]!.lang);
+    tabRefs.current[next]?.focus();
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="tablist" aria-label="Code language" onKeyDown={onKeyDown} className="flex gap-1 border-b border-border">
+        {tabs.map((t, i) => {
+          const selected = t === current;
+          return (
+            <button
+              key={t.lang}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
+              type="button"
+              role="tab"
+              id={`${id}-tab-${t.lang}`}
+              aria-selected={selected}
+              aria-controls={`${id}-panel`}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => setLang(t.lang)}
+              className={`text-caption -mb-px rounded-t-sm border px-3 py-1.5 ${
+                selected
+                  ? 'border-border border-b-surface-raised bg-surface-raised text-text'
+                  : 'border-transparent text-text-muted hover:text-text'
+              }`}
+            >
+              {TAB_LANGS[t.lang] ?? t.lang}
+            </button>
+          );
+        })}
+      </div>
+      <div role="tabpanel" id={`${id}-panel`} aria-labelledby={`${id}-tab-${current.lang}`}>
+        <CodeBlock>
+          <Highlighted code={current.code} lang={current.lang} />
+        </CodeBlock>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Renders author-written markdown (lesson prompts), with GitHub-flavoured tables,
  * strikethrough and task lists. Raw HTML in the source is not
@@ -74,7 +172,7 @@ export function Markdown({ children, dropTitle = false }: { children: string; dr
   return (
     <div className="text-body flex flex-col gap-3 text-text-secondary">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkCodeTabs]}
         components={{
           // Wide tables scroll inside their own box instead of widening the pane.
           table: ({ children }) => (
@@ -117,7 +215,32 @@ export function Markdown({ children, dropTitle = false }: { children: string; dr
             </li>
           ),
           strong: ({ children }) => <strong className="font-semibold text-text">{children}</strong>,
-          pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+          pre: ({ children, node }) => {
+            const block = fenced(node);
+            const tabs = tabsOf(block);
+            if (tabs) return <CodeTabs tabs={tabs} />;
+            if (block && HIGHLIGHT_LANGS.includes(block.lang)) {
+              return (
+                <CodeBlock>
+                  <Highlighted code={block.text} lang={block.lang} />
+                </CodeBlock>
+              );
+            }
+            return <CodeBlock>{children}</CodeBlock>;
+          },
+          // Links stand out from body text; links to other sites open in a new tab.
+          a: ({ children, href }) => {
+            const external = typeof href === 'string' && /^https?:\/\//.test(href);
+            return (
+              <a
+                href={href}
+                {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="font-medium text-accent-text underline decoration-accent-line underline-offset-2 hover:decoration-accent-text"
+              >
+                {children}
+              </a>
+            );
+          },
           // The CSS reset strips heading sizes, so headings bring their own.
           h1: ({ children }) => <h1 className="text-page-title text-text">{children}</h1>,
           h2: ({ children }) => <h2 className="text-[17px] font-semibold leading-6 text-text [&:not(:first-child)]:mt-3">{children}</h2>,

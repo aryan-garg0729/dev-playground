@@ -1,0 +1,8 @@
+id: dsa.range
+title: "Range Queries"
+exercises:
+  - 01-static-range-minimum-queries
+  - 02-fenwick-and-segment-trees
+  - 03-range-updates-and-sums
+  - 04-hotel-queries
+  - 05-forest-queries-ii

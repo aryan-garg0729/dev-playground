@@ -1,0 +1,7 @@
+id: dsa.dsu
+title: "Disjoint Set Union & MST"
+exercises:
+  - 01-disjoint-set-union
+  - 02-road-reparation
+  - 03-road-construction
+  - 04-dynamic-connectivity

@@ -119,3 +119,55 @@ describe('Markdown dropTitle', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Setup' })).toBeInTheDocument();
   });
 });
+
+describe('Markdown links', () => {
+  it('styles links and opens other sites in a new tab', () => {
+    render(<Markdown>{'Solve [Towers](https://cses.fi/problemset/task/1073) or see [notes](#notes).'}</Markdown>);
+    const ext = screen.getByRole('link', { name: 'Towers' });
+    expect(ext).toHaveAttribute('target', '_blank');
+    expect(ext).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(ext).toHaveClass('text-accent-text', 'underline');
+    expect(screen.getByRole('link', { name: 'notes' })).not.toHaveAttribute('target');
+  });
+});
+
+describe('Markdown code tabs', () => {
+  const md = '```python\nprint(1)\n```\n\n```cpp\ncout << 1;\n```';
+
+  it('merges back-to-back cpp and python blocks into tabs, C++ first and selected', () => {
+    const { container } = render(<Markdown>{md}</Markdown>);
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((t) => t.textContent)).toEqual(['C++', 'Python']);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelectorAll('pre')).toHaveLength(1);
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('cout << 1;');
+  });
+
+  it('switches every tabbed block when one tab is picked, and remembers it', async () => {
+    render(<Markdown>{`${md}\n\nText\n\n${md}`}</Markdown>);
+    await userEvent.click(screen.getAllByRole('tab', { name: 'Python' })[0]!);
+    for (const panel of screen.getAllByRole('tabpanel')) expect(panel).toHaveTextContent('print(1)');
+    expect(localStorage.getItem('cq-code-lang')).toBe('python');
+  });
+
+  it('moves between tabs with the arrow keys', async () => {
+    render(<Markdown>{md}</Markdown>);
+    screen.getByRole('tab', { name: 'C++' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'Python' })).toHaveFocus();
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('print(1)');
+  });
+
+  it('colours C++ and Python like the editor, and leaves other languages plain', () => {
+    const { container } = render(<Markdown>{'```python\nreturn 1\n```\n\n```sh\necho return\n```'}</Markdown>);
+    const [py, sh] = container.querySelectorAll('pre');
+    expect(py?.querySelector('.text-code-keyword')).toHaveTextContent('return');
+    expect(py?.querySelector('.text-code-number')).toHaveTextContent('1');
+    expect(sh?.querySelector('span')).toBeNull();
+  });
+
+  it('leaves single blocks and other languages alone', () => {
+    render(<Markdown>{'```python\nx = 1\n```\n\n```sh\nls\n```'}</Markdown>);
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  });
+});

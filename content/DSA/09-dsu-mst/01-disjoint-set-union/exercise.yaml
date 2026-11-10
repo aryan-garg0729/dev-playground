@@ -1,0 +1,18 @@
+id: dsa.dsu.disjoint-set-union
+type: mcq
+version: 1
+title: "Disjoint Set Union"
+xp: 5
+difficulty: 2
+tags: [dsu, mst]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The MST was finished early" }
+    - { id: b, text: "The graph had a cycle" }
+    - { id: c, text: "Some edges had equal weights" }
+    - { id: d, text: "The graph is disconnected, so there's no spanning tree" }
+  answer: [d]
+  explain: "A spanning tree on n nodes always has exactly n − 1 edges. If Kruskal runs out of edges before taking that many, some components could never be joined: the graph is disconnected (CSES wants 'IMPOSSIBLE'). Cycles are normal; those edges are just skipped because `union` returns False. Equal weights can give several MSTs, all with the same total."

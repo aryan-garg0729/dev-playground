@@ -1,0 +1,18 @@
+id: dsa.trees.distance-queries
+type: mcq
+version: 1
+title: "Distance Queries"
+xp: 10
+difficulty: 3
+tags: [trees, lca]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "6" }
+    - { id: b, text: "4" }
+    - { id: c, text: "8" }
+    - { id: d, text: "2" }
+  answer: [b]
+  explain: "a climbs 5 − 2 = 3 edges to the LCA and b climbs 3 − 2 = 1, so the distance is 3 + 1 = 4 = 5 + 3 − 2 · 2. Subtracting the LCA's depth only once (6) counts the path from the root to the LCA once too often."

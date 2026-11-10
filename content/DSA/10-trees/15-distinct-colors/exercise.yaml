@@ -1,0 +1,18 @@
+id: dsa.trees.distinct-colors
+type: mcq
+version: 1
+title: "Distinct Colors"
+xp: 10
+difficulty: 4
+tags: [trees, small-to-large]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Swap them, so the parent keeps the child's big set, then pour the small one in" }
+    - { id: b, text: "Copy the child's set into the parent's anyway" }
+    - { id: c, text: "Skip that child" }
+    - { id: d, text: "Sort both sets first" }
+  answer: [a]
+  explain: "Swapping is what makes it O(n log n): the big set is reused as it is, and only the small one's elements move. Copying a big child set into a small parent can cost O(n) per node, and O(n²) on a path-shaped tree. In Python, swap the references (`sets[v], sets[c] = sets[c], sets[v]`); in C++, `std::swap` on two sets is O(1)."

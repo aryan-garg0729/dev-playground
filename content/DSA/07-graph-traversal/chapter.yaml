@@ -1,0 +1,16 @@
+id: dsa.graphs
+title: "Graph Traversal"
+exercises:
+  - 01-dfs-and-bfs
+  - 02-counting-rooms
+  - 03-monsters
+  - 04-topological-sort
+  - 05-course-schedule
+  - 06-longest-flight-route
+  - 07-cycle-detection
+  - 08-round-trip
+  - 09-round-trip-ii
+  - 10-planets-cycles
+  - 11-strongly-connected-components
+  - 12-flight-routes-check
+  - 13-planets-and-kingdoms

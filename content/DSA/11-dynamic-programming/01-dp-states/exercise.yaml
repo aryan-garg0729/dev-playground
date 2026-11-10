@@ -1,0 +1,18 @@
+id: dsa.dp.dp-states
+type: mcq
+version: 1
+title: "Designing a DP State"
+xp: 5
+difficulty: 2
+tags: [dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "dp[i][w] = best value with total weight ≤ w" }
+    - { id: b, text: "dp[w] = best value with weight exactly w" }
+    - { id: c, text: "dp[i] = best value from the first i items" }
+    - { id: d, text: "dp[i][v] = least weight that reaches total value exactly v" }
+  answer: [d]
+  explain: "Capacity 10⁹ rules out any table indexed by weight. The total value is at most 100 · 1000 = 10⁵, so 'least weight for value v' has 10⁵ entries per item, about 10⁷ steps. The answer is the largest v with `dp[v] ≤ W`. A single-index `dp[i]` throws away what you need to know: how much weight is left."

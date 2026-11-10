@@ -1,0 +1,18 @@
+id: dsa.trees.tree-distances-ii
+type: mcq
+version: 1
+title: "Tree Distances II"
+xp: 10
+difficulty: 3
+tags: [trees, rerooting]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "7" }
+    - { id: b, text: "6" }
+    - { id: c, text: "9" }
+    - { id: d, text: "8" }
+  answer: [c]
+  explain: "Moving from u to v brings the 2 nodes of v's subtree one step closer (−2) and pushes the other 5 − 2 = 3 nodes one step farther (+3): 8 − 2 + 3 = 9. The sums reach about n² ≈ 4·10¹⁰, so use 64-bit."

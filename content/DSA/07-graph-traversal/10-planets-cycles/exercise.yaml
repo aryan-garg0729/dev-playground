@@ -1,0 +1,18 @@
+id: dsa.graphs.planets-cycles
+type: mcq
+version: 1
+title: "Planets Cycles"
+xp: 10
+difficulty: 4
+tags: [graphs, functional-graph]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "3" }
+    - { id: b, text: "5" }
+    - { id: c, text: "8" }
+    - { id: d, text: "7" }
+  answer: [c]
+  explain: "You make 3 teleports to reach the cycle, then 5 more take you around it and back to the first cycle planet, which you've seen: 3 + 5 = 8. Every planet on the cycle has the answer 5. Compute it with an iterative walk that stops either at a planet that's already solved (add its answer) or at one on the current walk (you've found a new cycle). Each planet is processed once: O(n)."

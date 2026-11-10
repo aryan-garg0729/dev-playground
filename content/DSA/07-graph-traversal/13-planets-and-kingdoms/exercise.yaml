@@ -1,0 +1,18 @@
+id: dsa.graphs.planets-and-kingdoms
+type: mcq
+version: 1
+title: "Planets and Kingdoms"
+xp: 10
+difficulty: 3
+tags: [graphs, scc]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "To visit the nodes in numeric order" }
+    - { id: b, text: "So the second pass does less work" }
+    - { id: c, text: "Any order works in the second pass" }
+    - { id: d, text: "The last node to finish is in an SCC nothing else points into; with edges reversed nothing leaves it, so its DFS can't leak into other SCCs" }
+  answer: [d]
+  explain: "The node with the latest finish time lies in a 'source' SCC of the condensation: no other SCC has an edge into it. After reversing the edges nothing leaves that SCC, so a DFS from it marks exactly that SCC. Remove it and repeat, peeling off one SCC at a time. In an arbitrary order, a DFS on the reversed graph can run from one SCC into another and merge them."

@@ -1,0 +1,18 @@
+id: dsa.paths.cycle-finding
+type: mcq
+version: 1
+title: "Cycle Finding"
+xp: 10
+difficulty: 3
+tags: [graphs, negative-cycles]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "To avoid overflow" }
+    - { id: b, text: "Because negative cycles always pass through node 0" }
+    - { id: c, text: "A negative cycle that node 1 can't reach would be missed; zeros everywhere act like a source with an edge to every node" }
+    - { id: d, text: "It's only faster; the answer is the same either way" }
+  answer: [c]
+  explain: "The problem asks for any negative cycle in the whole graph. With a single source, relaxations never reach a cycle in another part of the graph, so you'd print NO by mistake. Starting everything at 0 is the same as adding a virtual node with a 0-weight edge to every node, and it lets every cycle show up."

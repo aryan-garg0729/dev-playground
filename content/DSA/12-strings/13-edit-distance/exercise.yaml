@@ -1,0 +1,18 @@
+id: dsa.strings.edit-distance
+type: mcq
+version: 1
+title: "Edit Distance"
+xp: 10
+difficulty: 2
+tags: [strings, dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "prev[j − 1]" }
+    - { id: b, text: "cur[j − 1]" }
+    - { id: c, text: "prev[j]" }
+    - { id: d, text: "cur[j + 1]" }
+  answer: [b]
+  explain: "Insert comes from `dp[i][j − 1]`, which is in the row being filled: `cur[j − 1]`. Delete reads `prev[j]`, and replace/keep reads `prev[j − 1]`. Mixing these up gives answers that are only wrong on a few tests. Also remember to set `cur[0] = i` at the start of each row."

@@ -1,0 +1,18 @@
+id: dsa.paths.shortest-routes-ii
+type: mcq
+version: 1
+title: "Shortest Routes II"
+xp: 10
+difficulty: 2
+tags: [graphs, all-pairs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "4" }
+    - { id: b, text: "7" }
+    - { id: c, text: "11" }
+    - { id: d, text: "Whichever road comes last in the input" }
+  answer: [a]
+  explain: "The starting matrix holds the best *direct* road, so take the minimum over all roads between the same pair: `dist[a][b] = min(dist[a][b], c)`, and the same for `dist[b][a]`, since roads go both ways. Overwriting with the last road read is a bug that only fails on tests with duplicate roads."

@@ -1,0 +1,13 @@
+id: dsa.paths
+title: "Shortest Paths"
+exercises:
+  - 01-dijkstra
+  - 02-shortest-routes-i
+  - 03-flight-discount
+  - 04-flight-routes
+  - 05-floyd-warshall
+  - 06-shortest-routes-ii
+  - 07-hamiltonian-flights
+  - 08-bellman-ford
+  - 09-cycle-finding
+  - 10-high-score

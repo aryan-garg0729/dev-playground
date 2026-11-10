@@ -1,0 +1,15 @@
+id: dsa.greedy
+title: "Searching, Sorting & Greedy"
+exercises:
+  - 01-factory-machines
+  - 02-greedy-by-sorting
+  - 03-movie-festival
+  - 04-tasks-and-deadlines
+  - 05-reading-books
+  - 06-towers
+  - 07-prefix-sums
+  - 08-subarray-sums-ii
+  - 09-maximum-subarray-sum
+  - 10-heaps-and-ordered-sets
+  - 11-concert-tickets
+  - 12-traffic-lights

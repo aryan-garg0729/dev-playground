@@ -1,0 +1,18 @@
+id: dsa.paths.flight-discount
+type: mcq
+version: 1
+title: "Flight Discount"
+xp: 10
+difficulty: 3
+tags: [graphs, dijkstra, state-graph]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "d1[u] + w + dn[v]" }
+    - { id: b, text: "d1[v] + w // 2 + dn[u]" }
+    - { id: c, text: "(d1[u] + w + dn[v]) // 2" }
+    - { id: d, text: "d1[u] + w // 2 + dn[v]" }
+  answer: [d]
+  explain: "Use the coupon on flight u → v: reach u as cheaply as possible (d1[u]), pay half for that flight, then get from v to n as cheaply as possible (dn[v], from the reversed graph). Trying every flight is O(E). The third option mixes up the flight's direction; the last halves the whole trip instead of one flight. Both methods are O((V + E) log V), and the state graph is the one that extends to k coupons."

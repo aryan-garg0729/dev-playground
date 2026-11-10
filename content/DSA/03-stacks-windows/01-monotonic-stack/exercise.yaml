@@ -1,0 +1,18 @@
+id: dsa.stack-window.monotonic-stack
+type: mcq
+version: 1
+title: "Monotonic Stack"
+xp: 5
+difficulty: 2
+tags: [stack]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "O(n²) in the worst case" }
+    - { id: b, text: "O(n log n)" }
+    - { id: c, text: "O(n), because each index is pushed once and popped at most once" }
+    - { id: d, text: "O(n · h), where h is the largest stack height" }
+  answer: [c]
+  explain: "The inner loop's total work over the whole run is bounded by the number of pushes, which is n. One `while` can pop many items, but those items are gone for good. This amortized argument is what interviewers want to hear when they point at the nested loop."

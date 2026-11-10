@@ -1,0 +1,18 @@
+id: dsa.range.fenwick-and-segment-trees
+type: mcq
+version: 1
+title: "Fenwick and Segment Trees"
+xp: 5
+difficulty: 3
+tags: [fenwick, segment-tree]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Fenwick trees can only store integers" }
+    - { id: b, text: "Its updates are O(n)" }
+    - { id: c, text: "A range minimum isn't a difference of two prefix answers: you can't 'subtract' a prefix minimum" }
+    - { id: d, text: "It's a perfect fit; range minimum is the classic Fenwick use" }
+  answer: [c]
+  explain: "A Fenwick tree answers prefixes. For sums, `sum(l..r) = prefix(r) − prefix(l − 1)`, but there's no way to remove `min(1..l−1)` from `min(1..r)`. Prefix minimums alone are possible when values only decrease, but arbitrary ranges need a segment tree (or a sparse table if the array never changes)."

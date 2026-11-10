@@ -1,0 +1,18 @@
+id: dsa.strings.suffix-arrays
+type: mcq
+version: 1
+title: "Suffix Arrays"
+xp: 5
+difficulty: 4
+tags: [strings, suffix-array]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A repeated substring is a common prefix of two suffixes, and the longest common prefix of any two suffixes is always found between neighbours in sorted order" }
+    - { id: b, text: "Because the LCP array is sorted" }
+    - { id: c, text: "Because the suffix array lists substrings by length" }
+    - { id: d, text: "It isn't; you have to compare every pair of suffixes" }
+  answer: [a]
+  explain: "Suffixes that share a long prefix sort next to each other, or with suffixes in between that share at least as much. So the best pair among all suffixes is always some pair of neighbours, and only the n − 1 neighbour values matter. That's what lets suffix arrays answer substring questions in linear time after the build."

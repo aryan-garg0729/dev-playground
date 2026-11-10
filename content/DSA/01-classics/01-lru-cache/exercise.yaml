@@ -1,0 +1,18 @@
+id: dsa.classics.lru-cache
+type: mcq
+version: 1
+title: "LRU Cache"
+xp: 10
+difficulty: 3
+tags: [design, hashing, linked-list]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "So you can unlink any node in O(1) when the map hands you a pointer to it" }
+    - { id: b, text: "So you can walk backwards from the tail to find the least recently used key" }
+    - { id: c, text: "Because a singly linked list can't hold both a key and a value" }
+    - { id: d, text: "It doesn't: a singly linked list plus the map is also O(1) per operation" }
+  answer: [a]
+  explain: "To move a node to the front you must unlink it, and unlinking means rewiring its predecessor's `next`. A singly linked node doesn't know its predecessor, so you would have to walk from the head to find it: O(n). The tail is reachable in O(1) through the sentinel either way, so walking backwards isn't the reason. With `prev` pointers, `unlink` is two assignments, which is what makes both `get` and `put` O(1)."

@@ -1,0 +1,18 @@
+id: dsa.trees.planets-queries-i
+type: mcq
+version: 1
+title: "Planets Queries I"
+xp: 10
+difficulty: 3
+tags: [binary-lifting, functional-graph]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "About 240 KB" }
+    - { id: b, text: "About 2.4 GB" }
+    - { id: c, text: "About 6 MB" }
+    - { id: d, text: "About 24 MB" }
+  answer: [d]
+  explain: "30 · 2·10⁵ = 6·10⁶ entries × 4 bytes ≈ 24 MB, which is fine in C++. In Python, a list of lists costs far more (an 8-byte pointer per entry plus the int objects), so use the `array` module, or answer the queries offline one bit level at a time. Memory is a real constraint for binary lifting, and interviewers like to ask about it."

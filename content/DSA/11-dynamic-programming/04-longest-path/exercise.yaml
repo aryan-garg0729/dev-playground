@@ -1,0 +1,18 @@
+id: dsa.dp.longest-path
+type: mcq
+version: 1
+title: "G - Longest Path"
+xp: 10
+difficulty: 2
+tags: [dp, graphs, dag-dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "There's no topological order, and longest *simple* path in a general graph is NP-hard" }
+    - { id: b, text: "Kahn's algorithm runs forever" }
+    - { id: c, text: "The dp values become negative" }
+    - { id: d, text: "It does; cycles only add a constant" }
+  answer: [a]
+  explain: "A DP needs an order where each state depends only on states already computed, and a DAG's topological order is exactly that. A cycle makes nodes depend on each other. Kahn's algorithm doesn't loop forever; it just stops with some nodes never processed. On graphs with cycles, collapse the SCCs first if revisiting nodes is allowed; otherwise the longest simple path is NP-hard."

@@ -1,0 +1,18 @@
+id: dsa.strings.string-dp
+type: mcq
+version: 1
+title: "String DP"
+xp: 5
+difficulty: 3
+tags: [strings, dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "2" }
+    - { id: b, text: "4" }
+    - { id: c, text: "3" }
+    - { id: d, text: "7" }
+  answer: [c]
+  explain: "Replace k → s, replace e → i, and insert g at the end: 3 operations. Two can't be enough: one operation must be an insert, because the lengths differ, and that leaves only one more for the two mismatched letters. The base row and column (`dp[i][0] = i`, `dp[0][j] = j`) are the cost of turning a prefix into the empty string; forgetting them is the most common bug."

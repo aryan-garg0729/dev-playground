@@ -1,0 +1,18 @@
+id: dsa.graphs.round-trip
+type: mcq
+version: 1
+title: "Round Trip"
+xp: 10
+difficulty: 3
+tags: [graphs, dfs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "With no duplicate roads, the only way back to a visited neighbour without reusing the same road goes through at least one other city" }
+    - { id: b, text: "Because the graph is connected" }
+    - { id: c, text: "Because DFS visits cities in increasing order" }
+    - { id: d, text: "It doesn't; it can report a cycle of 2 cities" }
+  answer: [a]
+  explain: "The parent check stops you from treating the road you just used as a cycle. Without duplicate roads, any other visited neighbour was reached by a different route, so the cycle through it has at least 3 cities. With parallel edges, track the edge id instead of the parent node. To print it, walk parent pointers from the current city back to that neighbour, then close the loop."

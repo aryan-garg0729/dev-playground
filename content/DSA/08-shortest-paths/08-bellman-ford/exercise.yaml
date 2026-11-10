@@ -1,0 +1,18 @@
+id: dsa.paths.bellman-ford
+type: mcq
+version: 1
+title: "Bellman–Ford"
+xp: 5
+difficulty: 3
+tags: [graphs, negative-cycles]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "x might be on a path leading into the cycle; after n steps back you're guaranteed to be on the cycle" }
+    - { id: b, text: "To compute the cycle's length" }
+    - { id: c, text: "To check that the cycle is negative" }
+    - { id: d, text: "It isn't needed; x is always on the cycle" }
+  answer: [a]
+  explain: "The node relaxed in round n is affected by a negative cycle, but it can sit on a tail hanging off the cycle. A tail has fewer than n nodes, so n steps back can't still be on it, and you end on the cycle. From there, follow parents until you return to the same node, then reverse and print."

@@ -1,0 +1,18 @@
+id: dsa.dp.lcs
+type: mcq
+version: 1
+title: "F - LCS"
+xp: 10
+difficulty: 3
+tags: [dp, strings]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Move to whichever of (i − 1, j) and (i, j − 1) is bigger" }
+    - { id: b, text: "Add that character and move to (i − 1, j − 1)" }
+    - { id: c, text: "Move to (i − 1, j)" }
+    - { id: d, text: "Stop: the walk is done" }
+  answer: [b]
+  explain: "When the last characters match, `dp[i][j] = dp[i-1][j-1] + 1`, so taking the match is always optimal. Otherwise, step towards the neighbour with the larger value (either one on a tie). The characters come out backwards, so reverse at the end. A 3001 × 3001 table is 9·10⁶ cells: fine in C++, slow with plain Python lists."

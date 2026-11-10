@@ -1,0 +1,18 @@
+id: dsa.greedy.concert-tickets
+type: mcq
+version: 1
+title: "Concert Tickets"
+xp: 10
+difficulty: 3
+tags: [ordered-set, greedy]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "5 5 3" }
+    - { id: b, text: "5 5 -1" }
+    - { id: c, text: "5 3 -1" }
+    - { id: d, text: "7 7 7" }
+  answer: [a]
+  explain: "Each customer takes the largest unsold price ≤ 6: first a 5, then the other 5, then the 3. Only a fourth such customer would get −1. With a C++ multiset: `it = upper_bound(x)`; if `it` is `begin()`, print −1; otherwise step back once, print it and erase *that iterator*. `erase(value)` would delete every copy of the price."

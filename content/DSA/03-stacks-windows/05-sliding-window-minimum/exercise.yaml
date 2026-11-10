@@ -1,0 +1,18 @@
+id: dsa.stack-window.sliding-window-minimum
+type: mcq
+version: 1
+title: "Sliding Window Minimum"
+xp: 10
+difficulty: 2
+tags: [deque]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Those values are no smaller than x and leave the window before it, so they can never be a window's minimum again" }
+    - { id: b, text: "To keep the deque at most k long" }
+    - { id: c, text: "To keep the deque sorted by index" }
+    - { id: d, text: "It's only an optimization; the answers would be the same without it" }
+  answer: [a]
+  explain: "While x is in the window, no earlier value ≥ x can be the minimum, and those values leave the window *before* x does, so they're useless from now on. Popping keeps the deque's values increasing, so the front is always the minimum. The length is controlled by the `popleft` check, and indices are sorted anyway because you only append. Without the pops the front isn't the minimum, so the answers would be wrong."

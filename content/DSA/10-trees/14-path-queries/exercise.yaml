@@ -1,0 +1,18 @@
+id: dsa.trees.path-queries
+type: mcq
+version: 1
+title: "Path Queries"
+xp: 10
+difficulty: 4
+tags: [trees, euler-tour, fenwick]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "add(tin[u], d) only" }
+    - { id: b, text: "add(tin[u], d) and add(tout[u] + 1, -d)" }
+    - { id: c, text: "add(tout[u], d) and add(tin[u], -d)" }
+    - { id: d, text: "add(d) at every ancestor of u" }
+  answer: [b]
+  explain: "Root-to-v sums change for exactly the nodes in u's subtree, which is a contiguous range of positions. On a difference array a range add is two point updates: at the start, and just past the end. A point query (the prefix sum at `tin[v]`) then gives the full path sum. Both operations are O(log n)."

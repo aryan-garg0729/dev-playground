@@ -1,0 +1,18 @@
+id: dsa.strings.required-substring
+type: mcq
+version: 1
+title: "Required Substring"
+xp: 10
+difficulty: 4
+tags: [strings, dp, kmp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The length of the longest pattern prefix that's a suffix of pattern[:k] + c, found with the prefix function's fallback" }
+    - { id: b, text: "k + 1 if c matches, otherwise 0" }
+    - { id: c, text: "Always k + 1" }
+    - { id: d, text: "c's position in the alphabet" }
+  answer: [a]
+  explain: "A mismatch doesn't always reset to 0. With the pattern 'ABAB', state 3 ('ABA') plus 'A' gives 'ABAA', whose longest suffix that's also a pattern prefix is 'A', so the new state is 1. Precompute a table `go[k][c]` using the prefix function's fallback: m × 26 entries. The DP is then O(n · m · 26)."

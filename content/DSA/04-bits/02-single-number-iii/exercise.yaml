@@ -1,0 +1,18 @@
+id: dsa.bits.single-number-iii
+type: mcq
+version: 1
+title: "Single Number III"
+xp: 10
+difficulty: 3
+tags: [bits, xor]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It equals a" }
+    - { id: b, text: "It's a bit that a and b have in common" }
+    - { id: c, text: "It counts how many numbers there are" }
+    - { id: d, text: "It's a bit where a and b differ, so it splits all numbers into two groups with one of a, b in each" }
+  answer: [d]
+  explain: "`s` is non-zero because a ≠ b, and each of its set bits is a position where a and b differ. `s & -s` isolates the lowest one. XOR the numbers that have that bit into one accumulator and the rest into another. Each pair lands in the same group and cancels, so one accumulator ends as a and the other as b. In C++ with `int`, `-s` overflows when `s` is `INT_MIN`, so use an unsigned or 64-bit type."

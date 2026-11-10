@@ -1,0 +1,18 @@
+id: dsa.greedy.subarray-sums-ii
+type: mcq
+version: 1
+title: "Subarray Sums II"
+xp: 10
+difficulty: 2
+tags: [prefix-sum, hashing]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "An empty input array" }
+    - { id: b, text: "Zeros inside the array" }
+    - { id: c, text: "Subarrays that start at index 0" }
+    - { id: d, text: "Nothing; it only avoids a KeyError" }
+  answer: [c]
+  explain: "A subarray that starts at index 0 has sum `cur` itself, and it matches when `cur - x == 0`: the empty prefix before the first element. Without `seen[0] = 1`, those subarrays are never counted. For `a = [5]` and `x = 5` you'd get 0 instead of 1. With `defaultdict` a missing key already reads as 0, so the line isn't about KeyErrors."

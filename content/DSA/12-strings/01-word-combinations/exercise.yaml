@@ -1,0 +1,18 @@
+id: dsa.strings.word-combinations
+type: mcq
+version: 1
+title: "Word Combinations"
+xp: 10
+difficulty: 3
+tags: [strings, trie, dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "One trie walk finds every matching word from a position and stops when no word continues; checking each word separately costs up to 10⁵ comparisons per position" }
+    - { id: b, text: "Tries use less memory than the word list" }
+    - { id: c, text: "Tries sort the words" }
+    - { id: d, text: "There's no difference in speed" }
+  answer: [a]
+  explain: "With 5000 positions and 10⁵ words, testing every word everywhere is far too slow. The trie walk from position i costs at most the length of the longest matching prefix, and usually much less. The DP itself is `dp[i] = Σ dp[i + len(w)]` over the words w that match at i, with `dp[n] = 1`."

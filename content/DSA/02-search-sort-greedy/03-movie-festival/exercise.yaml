@@ -1,0 +1,18 @@
+id: dsa.greedy.movie-festival
+type: mcq
+version: 1
+title: "Movie Festival"
+xp: 10
+difficulty: 1
+tags: [greedy, intervals]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "start > last_end" }
+    - { id: b, text: "end >= last_end" }
+    - { id: c, text: "start <= last_end" }
+    - { id: d, text: "start >= last_end" }
+  answer: [d]
+  explain: "A movie that starts exactly when the previous one ends fits: the sample takes 3–5 and then 5–8. With `>` you would skip those movies and undercount. The other two options test the wrong thing, since after sorting every later end is already ≥ `last_end`. Total O(n log n) for the sort."

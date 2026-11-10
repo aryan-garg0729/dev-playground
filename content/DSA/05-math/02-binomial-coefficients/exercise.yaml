@@ -1,0 +1,18 @@
+id: dsa.math.binomial-coefficients
+type: mcq
+version: 1
+title: "Binomial Coefficients"
+xp: 10
+difficulty: 3
+tags: [math, combinatorics]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Because every inverse factorial is the same" }
+    - { id: b, text: "Because MOD is odd" }
+    - { id: c, text: "It's an approximation that's only exact for small i" }
+    - { id: d, text: "Because 1/(i−1)! = i · (1/i!)" }
+  answer: [d]
+  explain: "`(i−1)! = i! / i`, so `1/(i−1)! = i · (1/i!)`. Starting from the single inverse computed with Fermat, each step down costs one multiplication: O(N + log MOD) in total instead of O(N log MOD). It relies on MOD being prime, so every non-zero value has an inverse."

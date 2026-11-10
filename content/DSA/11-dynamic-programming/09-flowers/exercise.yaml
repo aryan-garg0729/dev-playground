@@ -1,0 +1,18 @@
+id: dsa.dp.flowers
+type: mcq
+version: 1
+title: "Q - Flowers"
+xp: 10
+difficulty: 4
+tags: [dp, fenwick]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Fenwick trees support any range operation" }
+    - { id: b, text: "Because the heights are distinct" }
+    - { id: c, text: "It can't; this needs a segment tree" }
+    - { id: d, text: "Queries are always prefixes and each dp[h] only ever increases, so no node ever needs a value removed" }
+  answer: [d]
+  explain: "A Fenwick tree can't subtract a maximum, but a prefix query never needs to: it combines whole nodes covering 1..h−1. It also needs updates that only raise values, because a node can't forget an old larger value. Here each height is written once, from 'nothing' to its value. O(n log n), and the totals need 64-bit."

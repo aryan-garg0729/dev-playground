@@ -1,0 +1,18 @@
+id: dsa.trees.tree-dp
+type: mcq
+version: 1
+title: "Tree DP and Rerooting"
+xp: 5
+difficulty: 3
+tags: [trees, dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "It's the order the nodes appear in the input" }
+    - { id: b, text: "It sorts the nodes by value" }
+    - { id: c, text: "BFS order lists every parent before its children, so the reverse handles every child before its parent" }
+    - { id: d, text: "Any order works for tree DP" }
+  answer: [c]
+  explain: "A node's DP needs its children's final values. In BFS order every node comes after its parent, so in the reversed list every node comes after all of its children. This replaces recursion, which matters in Python (the recursion limit) and in C++ on path-shaped trees with 2·10⁵ levels."

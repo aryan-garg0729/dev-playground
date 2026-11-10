@@ -1,0 +1,18 @@
+id: dsa.graphs.cycle-detection
+type: mcq
+version: 1
+title: "Cycle Detection"
+xp: 5
+difficulty: 2
+tags: [graphs, dfs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "There's a cycle through u and v" }
+    - { id: b, text: "Nothing about a cycle: v's subtree is done and can't lead back to u" }
+    - { id: c, text: "The graph isn't a DAG" }
+    - { id: d, text: "u is unreachable from the start" }
+  answer: [b]
+  explain: "A black node has explored everything reachable from it without meeting u on the current path, so this edge (a cross or forward edge) closes no cycle. Only an edge to a grey node, which is still on the path, closes one. Treating every visited node as a cycle is the classic bug when undirected code is reused on a directed graph."

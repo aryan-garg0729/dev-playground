@@ -441,6 +441,13 @@ Put images in a flat `assets/` folder inside the lesson and reference them from 
 
 Everything in `assets/` is public, so never draw the answer. Write real alt text: it's what screen readers say and what shows if the image fails. Diagrams should read in both dark and light themes (they sit on a neutral panel), so avoid black-on-transparent strokes.
 
+### Code blocks and links in prompts
+
+- Every fenced code block gets a **Copy** button.
+- **Language tabs:** put a ` ```cpp ` block and a ` ```python ` block right after each other (only blank lines between them) and they render as one block with a **C++** and a **Python** tab. C++ is shown first; the language a learner picks is remembered and applies to every tabbed block. A lone block, or any other language, renders as before.
+- **Syntax colours:** ` ```cpp ` and ` ```python ` blocks are coloured like the editor (keywords, function and type names, numbers, comments). Other languages (`sh`, `yaml`, `text`, …) stay plain, so always tag a block with its language.
+- Links are underlined in the accent colour; links to other sites open in a new tab.
+
 ## 12. Career paths
 
 `content/paths.yaml` groups courses into paths for the Courses page, Home and the profile:

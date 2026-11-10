@@ -1,0 +1,18 @@
+id: dsa.graphs.strongly-connected-components
+type: mcq
+version: 1
+title: "Strongly Connected Components"
+xp: 5
+difficulty: 3
+tags: [graphs, scc]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Node 1 reaches every node" }
+    - { id: b, text: "Node 1 reaches every node, and node 1 also reaches every node in the reversed graph" }
+    - { id: c, text: "Every node has an outgoing edge" }
+    - { id: d, text: "The graph has a cycle" }
+  answer: [b]
+  explain: "Reaching every node from node 1 shows 1 → x for each x. Reaching every node from 1 in the reversed graph shows x → 1 in the original. Chain the two through node 1 and every node reaches every other. One direction isn't enough: a star with edges going out of node 1 passes the first check, but nothing can come back. That's two BFS runs, and it's the whole next problem."

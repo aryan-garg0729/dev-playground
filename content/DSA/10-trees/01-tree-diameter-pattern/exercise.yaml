@@ -1,0 +1,18 @@
+id: dsa.trees.tree-diameter-pattern
+type: mcq
+version: 1
+title: "Tree Diameter"
+xp: 5
+difficulty: 2
+tags: [trees, bfs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "BFS doesn't work on graphs" }
+    - { id: b, text: "General graphs have no longest path" }
+    - { id: c, text: "It does; it works on every graph" }
+    - { id: d, text: "With cycles, the farthest node from a start needn't be an end of the longest path; that problem is NP-hard in general" }
+  answer: [d]
+  explain: "The proof relies on paths in a tree being unique: there's only one path between any two nodes. Cycles create alternatives and the argument falls apart. In fact, the longest simple path in a general graph is NP-hard. In trees it's linear, which is one reason trees get their own chapter."

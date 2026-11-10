@@ -1,0 +1,18 @@
+id: dsa.trees.company-queries-i
+type: mcq
+version: 1
+title: "Company Queries I"
+xp: 10
+difficulty: 2
+tags: [trees, binary-lifting]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Employee 0 is the real director" }
+    - { id: b, text: "It makes the table smaller" }
+    - { id: c, text: "Python lists can't store self-references" }
+    - { id: d, text: "If the root pointed to itself, going too far would quietly return the root instead of signalling 'no ancestor'" }
+  answer: [d]
+  explain: "With `up[0][root] = root`, asking for 10 levels above an employee who is 3 levels deep returns the root, and you'd print 1 instead of −1. A sentinel 0 whose ancestors are all 0 makes 'past the top' visible: print −1 when the result is 0. Comparing k with `depth[x]` first works too."

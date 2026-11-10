@@ -1,0 +1,18 @@
+id: dsa.dp.digit-sum
+type: mcq
+version: 1
+title: "S - Digit Sum"
+xp: 10
+difficulty: 4
+tags: [dp, digit-dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Add 1 for K itself" }
+    - { id: b, text: "Nothing" }
+    - { id: c, text: "Subtract 1: 0 is counted (its digit sum 0 is a multiple of D) but isn't in 1..K" }
+    - { id: d, text: "Divide by D" }
+  answer: [c]
+  explain: "The all-zeros path (leading zeros allowed) represents 0, and a digit sum of 0 is divisible by every D, so the DP counts it. Subtract 1, then take the result mod 10⁹+7 again, adding the modulus first so it can't go negative. Leading zeros don't change a digit sum, so this problem needs no 'started' flag; problems about digit *patterns* usually do."

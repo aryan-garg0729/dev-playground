@@ -1,0 +1,10 @@
+id: dsa.stack-window
+title: "Stacks & Sliding Windows"
+exercises:
+  - 01-monotonic-stack
+  - 02-nearest-smaller-values
+  - 03-advertisement
+  - 04-sliding-window
+  - 05-sliding-window-minimum
+  - 06-distinct-values-subarrays-ii
+  - 07-sliding-window-median

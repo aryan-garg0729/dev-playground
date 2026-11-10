@@ -1,0 +1,18 @@
+id: dsa.greedy.heaps-and-ordered-sets
+type: mcq
+version: 1
+title: "Heaps and Ordered Sets"
+xp: 5
+difficulty: 2
+tags: [heap, ordered-set]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A min-heap" }
+    - { id: b, text: "A hash map from value to count" }
+    - { id: c, text: "A balanced BST / ordered multiset" }
+    - { id: d, text: "A sorted Python list with bisect" }
+  answer: [c]
+  explain: "An ordered multiset (C++ `multiset`, Java `TreeMap`) answers 'largest ≤ x' with `upper_bound` and one step back, and deletes in O(log n). A heap only knows its top element. A hash map has no order at all. A sorted list finds the value in O(log n), but deleting it shifts every later element, which is O(n). That often passes because the shift is fast, but it isn't O(log n)."

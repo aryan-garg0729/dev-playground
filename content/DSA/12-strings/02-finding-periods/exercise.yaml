@@ -1,0 +1,18 @@
+id: dsa.strings.finding-periods
+type: mcq
+version: 1
+title: "Finding Periods"
+xp: 10
+difficulty: 3
+tags: [strings, hashing]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "n is divisible by p" }
+    - { id: b, text: "s[:p] appears twice in s" }
+    - { id: c, text: "s[p] == s[0]" }
+    - { id: d, text: "s[p:] equals s[:n − p] (the string matches itself shifted by p)" }
+  answer: [d]
+  explain: "Repeating the first p characters means `s[i] == s[i − p]` for every i ≥ p, which is exactly the shifted comparison. p doesn't have to divide n: 'abcab' has period 3 ('abc' + 'ab'). With hashing, each p is one O(1) comparison, O(n) in total. With the Z-function, p is a period when `z[p] == n − p`."

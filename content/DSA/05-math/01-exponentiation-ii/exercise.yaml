@@ -1,0 +1,18 @@
+id: dsa.math.exponentiation-ii
+type: mcq
+version: 1
+title: "Exponentiation II"
+xp: 10
+difficulty: 3
+tags: [math, modular]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Compute b^c mod (10⁹+7)" }
+    - { id: b, text: "Compute b^c mod (10⁹+6)" }
+    - { id: c, text: "Compute b^c exactly, then reduce it" }
+    - { id: d, text: "Reduce b mod (10⁹+7), then raise it to c" }
+  answer: [b]
+  explain: "By Fermat, `a^(p−1) ≡ 1 (mod p)` for p = 10⁹+7 whenever p doesn't divide a, so exponents repeat with period p − 1 = 10⁹+6. Reducing mod p is the classic wrong answer. `b^c` itself is astronomically large. The one exception is when a is a multiple of p: then the answer is 0 for any positive exponent, so handle it if the limits allow it."

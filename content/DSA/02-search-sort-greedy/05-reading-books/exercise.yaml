@@ -1,0 +1,18 @@
+id: dsa.greedy.reading-books
+type: mcq
+version: 1
+title: "Reading Books"
+xp: 10
+difficulty: 2
+tags: [greedy, math]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "16" }
+    - { id: b, text: "13" }
+    - { id: c, text: "26" }
+    - { id: d, text: "11" }
+  answer: [a]
+  explain: "The answer is `max(sum, 2 * max)`. Usually both readers stay busy the whole time and finish together after `sum` minutes, by reading in a staggered order. But if one book is longer than all the others combined, it's the bottleneck: the readers take turns with it, so it alone takes `2 * max`. Here the 8-minute book is longer than 2 + 3 = 5, so the answer is 2 · 8 = 16, not 13."

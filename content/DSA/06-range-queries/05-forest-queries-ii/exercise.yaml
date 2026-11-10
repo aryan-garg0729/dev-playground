@@ -1,0 +1,18 @@
+id: dsa.range.forest-queries-ii
+type: mcq
+version: 1
+title: "Forest Queries II"
+xp: 10
+difficulty: 3
+tags: [fenwick, 2d]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Two nested loops: x moves by x & -x, and for each x, y moves by y & -y" }
+    - { id: b, text: "One loop over x, then a separate loop over y" }
+    - { id: c, text: "A loop over every cell in row x" }
+    - { id: d, text: "A segment tree per row, updated in O(n)" }
+  answer: [a]
+  explain: "Each row-level Fenwick node owns a whole Fenwick tree over the columns, so the update walks both: `i = x; while i <= n: j = y; while j <= n: t[i][j] += d; j += j & -j` and then `i += i & -i`. That's O(log² n). Two separate loops would update a cross shape instead of the right set of nodes. A flip is `add(+1)` or `add(-1)` depending on the current state, so keep the grid itself too."

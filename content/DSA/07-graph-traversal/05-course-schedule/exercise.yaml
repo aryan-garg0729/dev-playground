@@ -1,0 +1,18 @@
+id: dsa.graphs.course-schedule
+type: mcq
+version: 1
+title: "Course Schedule"
+xp: 10
+difficulty: 2
+tags: [graphs, topological-sort]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "b → a" }
+    - { id: b, text: "a → b, so a course's in-degree counts its prerequisites" }
+    - { id: c, text: "Either direction gives a valid answer" }
+    - { id: d, text: "An undirected edge between a and b" }
+  answer: [b]
+  explain: "Edges point from what comes first to what depends on it, so a course with in-degree 0 has no pending prerequisites and can be taken now. Reversing every edge produces the reverse order, which lists each course *before* its prerequisites. You could fix that by printing the result backwards, but mixing up the direction is the classic bug."

@@ -1,0 +1,18 @@
+id: dsa.dp.sushi
+type: mcq
+version: 1
+title: "J - Sushi"
+xp: 10
+difficulty: 4
+tags: [dp, probability]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Move it to the left and solve: E = (n + a·E[a−1][b][c] + b·E[a+1][b−1][c] + c·E[a][b+1][c−1]) / (a + b + c)" }
+    - { id: b, text: "Ignore it, since empty dishes change nothing" }
+    - { id: c, text: "Iterate until the values converge" }
+    - { id: d, text: "Replace it with 0" }
+  answer: [a]
+  explain: "The self-loop just means some rolls are wasted. Solve the linear equation once: E·(1 − z/n) = 1 + …, then multiply through by n and divide by a + b + c. Eating from a 2-piece dish turns it into a 1-piece dish (b − 1, a + 1), and a 3 becomes a 2. Loop c outermost, then b, then a, so every state you read is already computed. Ignoring the self-loop gives too small an answer, and iterating to convergence is slow and inexact."

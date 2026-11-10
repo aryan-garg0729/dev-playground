@@ -1,0 +1,18 @@
+id: dsa.strings
+title: "Strings"
+exercises:
+  - 01-word-combinations
+  - 02-finding-periods
+  - 03-kmp
+  - 04-string-matching
+  - 05-finding-borders
+  - 06-palindromes
+  - 07-longest-palindrome
+  - 08-palindrome-queries
+  - 09-suffix-arrays
+  - 10-distinct-substrings
+  - 11-repeating-substring
+  - 12-string-dp
+  - 13-edit-distance
+  - 14-required-substring
+  - 15-minimal-rotation

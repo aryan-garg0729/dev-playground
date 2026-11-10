@@ -1,0 +1,18 @@
+id: dsa.trees.tree-distances-i
+type: mcq
+version: 1
+title: "Tree Distances I"
+xp: 10
+difficulty: 2
+tags: [trees, bfs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "2" }
+    - { id: b, text: "3" }
+    - { id: c, text: "n" }
+    - { id: d, text: "1" }
+  answer: [b]
+  explain: "One BFS from any node finds a, one from a finds b (and gives `dist_a`), and one from b gives `dist_b`. The answer for v is `max(dist_a[v], dist_b[v])`. Three O(n) passes, instead of one BFS from every node at O(n²). Rerooting DP, later in this chapter, gets the same answer another way and generalizes further."

@@ -1,0 +1,18 @@
+id: dsa.paths.hamiltonian-flights
+type: mcq
+version: 1
+title: "Hamiltonian Flights"
+xp: 10
+difficulty: 4
+tags: [graphs, bitmask-dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Skip masks that don't contain city 1, and never extend a route out of city n before the mask is full" }
+    - { id: b, text: "Skip masks with an even number of cities" }
+    - { id: c, text: "Process the masks in decreasing order" }
+    - { id: d, text: "Leave city n out of the DP entirely" }
+  answer: [a]
+  explain: "Every route starts at city 1, so masks without it have zero ways; skipping them halves the states. City n must come last, so never extend a route out of n before every city is visited. Masks are processed in increasing order, because adding a city makes the mask bigger. The transition is `dp[mask | 1<<u][u] += dp[mask][v]` for each flight v → u with u not in mask."

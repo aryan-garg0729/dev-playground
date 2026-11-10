@@ -1,0 +1,18 @@
+id: dsa.dp.slimes
+type: mcq
+version: 1
+title: "N - Slimes"
+xp: 10
+difficulty: 3
+tags: [dp, interval-dp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "By increasing l, then increasing r" }
+    - { id: b, text: "By decreasing r" }
+    - { id: c, text: "By increasing interval length" }
+    - { id: d, text: "Any order" }
+  answer: [c]
+  explain: "Every split uses two strictly shorter intervals, so all shorter intervals must be done first: loop the length from 2 to n, then l. (Increasing r with *decreasing* l also works, but increasing l with increasing r reads `dp[k+1][r]` before it's computed.) It's O(n³) = 6.4·10⁷ for n = 400. Knuth's optimization cuts it to O(n²) by limiting where the best split can be."

@@ -1,0 +1,18 @@
+id: dsa.trees.euler-tour
+type: mcq
+version: 1
+title: "Euler Tour Flattening"
+xp: 5
+difficulty: 3
+tags: [trees, euler-tour]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "tin[u] < tin[v]" }
+    - { id: b, text: "depth[u] < depth[v]" }
+    - { id: c, text: "tin[u] <= tin[v] and tout[v] <= tout[u]" }
+    - { id: d, text: "tout[u] < tin[v]" }
+  answer: [c]
+  explain: "v's interval sits inside u's exactly when v is in u's subtree. Comparing only entry times or depths can't tell a cousin from a descendant. `tout[u] < tin[v]` means u's subtree ended before v started: they're in different branches. This O(1) test is handy inside LCA code and tree queries."

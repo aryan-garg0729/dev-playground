@@ -1,0 +1,18 @@
+id: dsa.dsu.dynamic-connectivity
+type: mcq
+version: 1
+title: "Dynamic Connectivity"
+xp: 10
+difficulty: 5
+tags: [dsu, offline, segment-tree]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Path compression makes find slower" }
+    - { id: b, text: "Path compression breaks union by size" }
+    - { id: c, text: "Path compression changes many parent pointers per find, so a union can't be undone by restoring one pointer" }
+    - { id: d, text: "It doesn't need to skip it" }
+  answer: [c]
+  explain: "Rollback works by remembering, for each union, the one parent pointer and the one size it changed, and restoring them in reverse order. Path compression rewrites pointers all over the place during `find`, so there's no small record to undo. Union by size alone keeps trees O(log n) deep, which is good enough here."

@@ -1,0 +1,18 @@
+id: dsa.math.burnside
+type: mcq
+version: 1
+title: "Counting Under Symmetry"
+xp: 5
+difficulty: 3
+tags: [combinatorics]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "6" }
+    - { id: b, text: "4" }
+    - { id: c, text: "8" }
+    - { id: d, text: "16" }
+  answer: [a]
+  explain: "Rotations by 0, 1, 2 and 3 positions make 4, 1, 2 and 1 cycles, so they fix 2⁴ = 16, 2¹ = 2, 2² = 4 and 2¹ = 2 colourings. The average is (16 + 2 + 4 + 2) / 4 = 6: 0000, 0001, 0011, 0101, 0111, 1111. The naive 16 / 4 = 4 undercounts, because 0000 and 0101 look the same under more than one rotation."

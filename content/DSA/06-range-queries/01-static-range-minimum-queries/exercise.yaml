@@ -1,0 +1,18 @@
+id: dsa.range.static-range-minimum-queries
+type: mcq
+version: 1
+title: "Static Range Minimum Queries"
+xp: 10
+difficulty: 2
+tags: [sparse-table]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The two blocks overlap, and a sum would count the overlap twice; min and max don't care" }
+    - { id: b, text: "Sums are too large to store" }
+    - { id: c, text: "The table would need O(n²) memory" }
+    - { id: d, text: "It can; sums work exactly like min" }
+  answer: [a]
+  explain: "The O(1) query covers [l, r] with two blocks of length 2^j that usually overlap. That's fine for *idempotent* operations, where f(x, x) = x: min, max, gcd, AND, OR. A sum would count the overlap twice. For static sums use prefix sums, and when the array changes, a Fenwick tree."

@@ -1,0 +1,18 @@
+id: dsa.greedy.traffic-lights
+type: mcq
+version: 1
+title: "Traffic Lights"
+xp: 10
+difficulty: 3
+tags: [ordered-set, offline]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Removing a light merges two gaps, so the longest gap can only grow and one running max is enough" }
+    - { id: b, text: "Reversing the order sorts the positions" }
+    - { id: c, text: "The last light added is always in the middle of the street" }
+    - { id: d, text: "It isn't easier; it's the same work as the online version" }
+  answer: [a]
+  explain: "Adding lights only shrinks gaps, so the longest one can disappear and you need a multiset to find the next longest. Removing lights only merges gaps, so the answer never goes down: track `max(best, merged_gap)`. You still need each light's neighbours, and a doubly linked list over the sorted positions gives them in O(1) per removal. Total: one sort, then O(n), which is easy in Python."

@@ -1,0 +1,6 @@
+id: dsa.bits
+title: "Bit Manipulation"
+exercises:
+  - 01-bit-tricks
+  - 02-single-number-iii
+  - 03-maximum-xor-subarray

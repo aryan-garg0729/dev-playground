@@ -1,0 +1,18 @@
+id: dsa.paths.dijkstra
+type: mcq
+version: 1
+title: "Dijkstra's Algorithm"
+xp: 5
+difficulty: 2
+tags: [graphs, dijkstra]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "To skip nodes with negative distances" }
+    - { id: b, text: "To stop the algorithm early" }
+    - { id: c, text: "It's an outdated entry: u was pushed again with a smaller distance, and that one was already processed" }
+    - { id: d, text: "Without it, Dijkstra returns wrong distances" }
+  answer: [c]
+  explain: "Python's heap has no 'decrease key', so improving a distance pushes a new entry and leaves the old one behind. When the old one pops, `d > dist[u]` shows it's stale. Without the check the distances are still right, but you re-scan u's edges for every stale entry, which can be very slow on bad inputs."

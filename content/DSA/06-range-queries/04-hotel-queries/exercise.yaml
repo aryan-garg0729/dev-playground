@@ -1,0 +1,18 @@
+id: dsa.range.hotel-queries
+type: mcq
+version: 1
+title: "Hotel Queries"
+xp: 10
+difficulty: 3
+tags: [segment-tree]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Descending finds the leftmost index in one O(log n) walk; binary search with range queries costs O(log² n)" }
+    - { id: b, text: "Binary search gives the wrong hotel" }
+    - { id: c, text: "A segment tree can't answer prefix maximums" }
+    - { id: d, text: "There's no difference" }
+  answer: [a]
+  explain: "Binary search with a range-max query per step is correct, but every step is itself O(log n), so a group costs O(log² n). Walking down from the root, taking the left child whenever its max is ≥ r, finds the same hotel in O(log n). Then subtract r at that leaf and update the path back up. This 'descend to the first position' trick comes up often."

@@ -1,0 +1,18 @@
+id: dsa.strings.palindrome-queries
+type: mcq
+version: 1
+title: "Palindrome Queries"
+xp: 10
+difficulty: 4
+tags: [strings, hashing, fenwick]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Scale both to the same power of B first (multiply the one with the smaller offset), since they're shifted by different powers" }
+    - { id: b, text: "Compare the two range sums directly" }
+    - { id: c, text: "Divide both sums by b − a" }
+    - { id: d, text: "Compare only the first and last characters" }
+  answer: [a]
+  explain: "The forward range sum is `Σ code(s[k]) · B^k` for k in [a, b], so it carries an extra factor of B^a. In the reversed string the same characters sit at positions n − 1 − b … n − 1 − a, with an extra factor of B^(n−1−b). Multiply each side by the power the other one has (or use modular inverses), then compare. Changing position k changes one term in each tree: O(log n) per operation."

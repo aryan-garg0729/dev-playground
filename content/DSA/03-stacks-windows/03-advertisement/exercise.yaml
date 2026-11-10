@@ -1,0 +1,18 @@
+id: dsa.stack-window.advertisement
+type: mcq
+version: 1
+title: "Advertisement"
+xp: 10
+difficulty: 3
+tags: [stack]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "12" }
+    - { id: b, text: "10" }
+    - { id: c, text: "6" }
+    - { id: d, text: "8" }
+  answer: [b]
+  explain: "Height 5 spans the boards of height 5 and 6 (its smaller neighbours are the 1 on the left and the 2 on the right): 5 × 2 = 10. The second 2 spans the four boards 5, 6, 2, 3 for 8, and height 1 spans all six for 6. 12 would need a width-2 rectangle of height 6, but the 6's neighbours are shorter. Area = `h[i] * (right[i] - left[i] - 1)`, where left and right are the indices of the previous and next smaller boards. Use 64-bit."

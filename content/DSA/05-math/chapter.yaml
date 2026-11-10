@@ -1,0 +1,10 @@
+id: dsa.math
+title: "Math & Counting"
+exercises:
+  - 01-exponentiation-ii
+  - 02-binomial-coefficients
+  - 03-next-prime
+  - 04-burnside
+  - 05-counting-necklaces
+  - 06-counting-grids
+  - 07-prime-multiples

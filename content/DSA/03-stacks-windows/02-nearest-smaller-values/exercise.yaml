@@ -1,0 +1,18 @@
+id: dsa.stack-window.nearest-smaller-values
+type: mcq
+version: 1
+title: "Nearest Smaller Values"
+xp: 10
+difficulty: 2
+tags: [stack]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "a[st[-1]] >= x" }
+    - { id: b, text: "a[st[-1]] > x" }
+    - { id: c, text: "a[st[-1]] < x" }
+    - { id: d, text: "a[st[-1]] <= x" }
+  answer: [a]
+  explain: "An equal value isn't strictly smaller, so it can't be x's answer, and nothing to the right needs it either, because x is just as small and closer. Pop it. With `>` and `a = [2, 2]`, the second 2 would report position 1. The last two options keep a decreasing stack, which finds nearest *greater* values instead."

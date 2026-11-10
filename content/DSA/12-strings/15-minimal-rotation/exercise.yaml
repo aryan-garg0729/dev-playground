@@ -1,0 +1,18 @@
+id: dsa.strings.minimal-rotation
+type: mcq
+version: 1
+title: "Minimal Rotation"
+xp: 10
+difficulty: 4
+tags: [strings]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Because those starts were already tested" }
+    - { id: b, text: "For each 0 ≤ d ≤ k, start i + d loses to start j + d, which meets the same deciding pair of characters" }
+    - { id: c, text: "Because k is always 0" }
+    - { id: d, text: "It can't; only i + 1 is safe" }
+  answer: [b]
+  explain: "Starts i + d and j + d (for d ≤ k) line up the same matching stretch, shifted by d, and hit the same deciding pair `t[i + k] > t[j + k]`. So i + d is never better than j + d, and it can't be the unique answer. Skipping k + 1 starts at a time is what makes the whole scan O(n)."

@@ -1,0 +1,18 @@
+id: dsa.strings.kmp
+type: mcq
+version: 1
+title: "KMP and the Prefix Function"
+xp: 5
+difficulty: 3
+tags: [strings, kmp]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "[0, 1, 0, 1, 2, 2, 3]" }
+    - { id: b, text: "[0, 1, 0, 1, 2, 3, 3]" }
+    - { id: c, text: "[0, 0, 0, 1, 2, 2, 3]" }
+    - { id: d, text: "[0, 1, 0, 1, 2, 3, 4]" }
+  answer: [a]
+  explain: "At i = 5 the border 'aa' can't grow, because the character after it is 'b', not 'a'. So k falls back to `pi[1] = 1` and then grows to 2 ('aa'). At i = 6 the border 'aa' grows into 'aab', giving 3. The second option skips the fallback. And `pi[0]` is always 0, because a border must be shorter than the string."

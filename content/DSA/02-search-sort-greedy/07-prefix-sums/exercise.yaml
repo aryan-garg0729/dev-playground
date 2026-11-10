@@ -1,0 +1,18 @@
+id: dsa.greedy.prefix-sums
+type: mcq
+version: 1
+title: "Prefix Sums"
+xp: 5
+difficulty: 1
+tags: [prefix-sum, hashing]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Two pointers (a sliding window)" }
+    - { id: b, text: "Sort the array, then two pointers" }
+    - { id: c, text: "Prefix sums plus a hash map of prefix counts" }
+    - { id: d, text: "Binary search over the prefix sums" }
+  answer: [c]
+  explain: "Two pointers rely on the sum only growing as the window grows, which negatives break. Binary search over prefix sums needs them sorted, which again only holds without negatives. Sorting the array destroys which elements are next to each other, so subarrays lose their meaning. The hash map counts, for each right end, how many earlier prefixes equal `cur - x`, and it doesn't care about signs."

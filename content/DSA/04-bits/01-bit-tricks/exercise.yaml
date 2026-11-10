@@ -1,0 +1,18 @@
+id: dsa.bits.bit-tricks
+type: mcq
+version: 1
+title: "Bit Tricks"
+xp: 5
+difficulty: 2
+tags: [bits]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "x is even" }
+    - { id: b, text: "x is odd" }
+    - { id: c, text: "x has every bit set" }
+    - { id: d, text: "x is a power of two" }
+  answer: [d]
+  explain: "`x - 1` flips the lowest set bit and every zero below it, so `x & (x - 1)` clears exactly the lowest set bit. The result is 0 only when that was the *only* set bit, which means x is a power of two. Evenness is `(x & 1) == 0`. 'Every bit set' is `(x & (x + 1)) == 0`."

@@ -1,0 +1,18 @@
+id: dsa.greedy.factory-machines
+type: mcq
+version: 1
+title: "Factory Machines"
+xp: 10
+difficulty: 2
+tags: [binary-search]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "min(k) * t" }
+    - { id: b, text: "t" }
+    - { id: c, text: "max(k)" }
+    - { id: d, text: "sum(k)" }
+  answer: [a]
+  explain: "The fastest machine alone makes t products in `min(k) * t` seconds, so that much time is always enough. `t` fails when every machine needs more than 1 second per product, and `max(k)` or `sum(k)` fail when t is large. With k and t up to 10⁹, `hi` can be 10¹⁸. That still fits in a 64-bit integer, but the running sum inside `ok` can overflow unless you stop early."

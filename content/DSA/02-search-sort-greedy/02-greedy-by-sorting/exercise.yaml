@@ -1,0 +1,18 @@
+id: dsa.greedy.greedy-by-sorting
+type: mcq
+version: 1
+title: "Greedy by Sorting"
+xp: 5
+difficulty: 2
+tags: [greedy, sorting]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Pick the interval that ends first" }
+    - { id: b, text: "Pick the shortest interval first" }
+    - { id: c, text: "Pick the interval that starts first" }
+    - { id: d, text: "Pick the interval that overlaps the fewest others first" }
+  answer: [a]
+  explain: "Ending first leaves the most room for everything after it, which is what the exchange argument proves. Shortest-first fails on `[1, 5], [4, 7], [6, 10]`: it takes `[4, 7]`, which blocks both others, while `[1, 5], [6, 10]` gives 2. Earliest start fails when one long interval starts first. Fewest-overlaps-first sounds clever but has known counterexamples too."

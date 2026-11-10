@@ -1,0 +1,6 @@
+id: dsa.classics
+title: "Interview Classics"
+exercises:
+  - 01-lru-cache
+  - 02-merge-intervals
+  - 03-count-inversions

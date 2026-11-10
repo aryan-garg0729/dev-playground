@@ -1,0 +1,18 @@
+id: dsa.greedy.tasks-and-deadlines
+type: mcq
+version: 1
+title: "Tasks and Deadlines"
+xp: 10
+difficulty: 2
+tags: [greedy, sorting]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "By duration, shortest first" }
+    - { id: b, text: "By deadline, earliest first" }
+    - { id: c, text: "By d − a, largest first" }
+    - { id: d, text: "By duration, longest first" }
+  answer: [a]
+  explain: "Total reward = (sum of deadlines) − (sum of finish times). The sum of deadlines is the same in every order, so only the finish times matter, and running the shortest tasks first minimizes their sum: each duration counts once for its own task and once for every task after it. Sorting by deadline is the tempting trap; deadlines don't affect the best order at all here. Use 64-bit integers: the total is large and can be negative."

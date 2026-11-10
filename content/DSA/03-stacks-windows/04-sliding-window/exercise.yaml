@@ -1,0 +1,18 @@
+id: dsa.stack-window.sliding-window
+type: mcq
+version: 1
+title: "Sliding Window"
+xp: 5
+difficulty: 2
+tags: [two-pointers, deque]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Shortest subarray with sum ≥ s, where values may be negative" }
+    - { id: b, text: "Longest substring without repeating characters" }
+    - { id: c, text: "Shortest subarray with sum ≥ s, where all values are positive" }
+    - { id: d, text: "Longest subarray with at most k zeros" }
+  answer: [a]
+  explain: "With negatives, shrinking the window can *raise* the sum and growing it can lower it, so the 'shrink while bad' rule is wrong. That version (LeetCode 862) uses prefix sums with a monotonic deque instead. The other three keep the monotone property: adding elements can only add repeats, sum or zeros."

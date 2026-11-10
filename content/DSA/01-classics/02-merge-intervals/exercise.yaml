@@ -1,0 +1,18 @@
+id: dsa.classics.merge-intervals
+type: mcq
+version: 1
+title: "Merge Intervals"
+xp: 10
+difficulty: 2
+tags: [sorting, intervals]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "[[1, 10]]" }
+    - { id: b, text: "[[1, 5]]" }
+    - { id: c, text: "[[1, 10], [4, 5]]" }
+    - { id: d, text: "[[1, 3], [4, 5]]" }
+  answer: [d]
+  explain: "`[1, 10]` starts the output. `[2, 3]` overlaps (2 ≤ 10), but the bug sets the end to 3, shrinking the interval to `[1, 3]`. Then `[4, 5]` no longer overlaps (4 > 3), so it's appended: `[[1, 3], [4, 5]]`. The right answer is `[[1, 10]]`, because both later intervals sit inside `[1, 10]`. Contained intervals are the case `max` exists for."

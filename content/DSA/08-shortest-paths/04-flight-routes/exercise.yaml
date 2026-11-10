@@ -1,0 +1,18 @@
+id: dsa.paths.flight-routes
+type: mcq
+version: 1
+title: "Flight Routes"
+xp: 10
+difficulty: 4
+tags: [graphs, dijkstra]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "A route can visit each city at most k times" }
+    - { id: b, text: "A route through its (k+1)-th cheapest arrival is beaten by the k routes through its k cheaper arrivals, so it can't be among the k cheapest" }
+    - { id: c, text: "Dijkstra guarantees each city has at most k edges" }
+    - { id: d, text: "It isn't correct; it only works when k = 1" }
+  answer: [b]
+  explain: "Suppose a route to n used the (k+1)-th cheapest way of reaching city c. Swapping in each of the k cheaper ways of reaching c gives k different routes that are all cheaper, so it isn't among the k cheapest. A pop counter per city replaces the single `dist` array, and the total is O(k · E log(k · E))."

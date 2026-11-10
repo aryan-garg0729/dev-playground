@@ -1,0 +1,18 @@
+id: dsa.graphs.round-trip-ii
+type: mcq
+version: 1
+title: "Round Trip II"
+xp: 10
+difficulty: 3
+tags: [graphs, dfs]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "1 4 2 5 1" }
+    - { id: b, text: "5 4" }
+    - { id: c, text: "4 2 5 4" }
+    - { id: d, text: "2 5 2" }
+  answer: [c]
+  explain: "The cycle starts at the grey node you reached (4), follows the path down to the current node (5), then takes the flight back: 4 → 2 → 5 → 4. City 1 is on the path but not on the cycle, and including it would need a flight 5 → 1 that doesn't exist. Collect the nodes by walking parents from 5 back to 4, reverse them, and repeat the first at the end."

@@ -1,0 +1,18 @@
+id: dsa.bits.maximum-xor-subarray
+type: mcq
+version: 1
+title: "Maximum Xor Subarray"
+xp: 10
+difficulty: 4
+tags: [bits, trie]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "So the trie isn't empty when you query, otherwise it crashes" }
+    - { id: b, text: "So subarrays that start at index 0 are counted" }
+    - { id: c, text: "Because 0 XOR anything is 0" }
+    - { id: d, text: "It's only needed when the array has negative values" }
+  answer: [b]
+  explain: "The XOR of `a[0:r]` is `p[r] ^ p[0]`, with `p[0] = 0`. Without the 0, those subarrays, including the whole array, are missed: for `[7]` you'd report nothing (or 0) instead of 7. It's the same idea as `seen[0] = 1` in prefix-sum counting. Each insert and query walks about 30 bits, so the total is O(30 · n)."

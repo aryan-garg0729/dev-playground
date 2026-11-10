@@ -1,0 +1,18 @@
+id: dsa.graphs.flight-routes-check
+type: mcq
+version: 1
+title: "Flight Routes Check"
+xp: 10
+difficulty: 3
+tags: [graphs, scc]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "1 4" }
+    - { id: b, text: "4 1" }
+    - { id: c, text: "4 4" }
+    - { id: d, text: "Either order is fine" }
+  answer: [b]
+  explain: "In the reversed graph, an edge x → y means y → x in the original. Not reaching 4 from 1 in the reversed graph means there's no original route from 4 to 1, so print `4 1`. If the *forward* BFS from 1 misses some city x instead, print `1 x`. Printing the pair backwards is the usual wrong answer."

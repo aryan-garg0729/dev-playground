@@ -1,0 +1,18 @@
+id: dsa.greedy.maximum-subarray-sum
+type: mcq
+version: 1
+title: "Maximum Subarray Sum"
+xp: 10
+difficulty: 1
+tags: [dp, kadane]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "-1" }
+    - { id: b, text: "-6" }
+    - { id: c, text: "0" }
+    - { id: d, text: "-3" }
+  answer: [c]
+  explain: "`cur` is clamped to 0 at every step and `best` never drops below its starting 0, so the result is 0: the sum of an *empty* subarray. The task wants a non-empty one, so the right answer is −1. Start from `a[0]` (or negative infinity) and use `max(x, cur + x)`. Any test where every value is negative catches this."

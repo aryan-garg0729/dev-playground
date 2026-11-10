@@ -1,0 +1,18 @@
+id: dsa.graphs.topological-sort
+type: mcq
+version: 1
+title: "Topological Sort"
+xp: 5
+difficulty: 2
+tags: [graphs, topological-sort]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "The graph has a directed cycle" }
+    - { id: b, text: "The graph is disconnected" }
+    - { id: c, text: "Some nodes have no edges" }
+    - { id: d, text: "The queue was processed in the wrong order" }
+  answer: [a]
+  explain: "Nodes on a cycle (and everything downstream of one) never reach in-degree 0, because each waits for another node on the cycle, so they never enter the queue. A disconnected DAG still sorts completely: each part has its own in-degree-0 nodes, and isolated nodes have in-degree 0 from the start."

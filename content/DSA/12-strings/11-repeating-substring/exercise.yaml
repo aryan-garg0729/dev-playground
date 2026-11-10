@@ -1,0 +1,18 @@
+id: dsa.strings.repeating-substring
+type: mcq
+version: 1
+title: "Repeating Substring"
+xp: 10
+difficulty: 4
+tags: [strings, suffix-array, hashing]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "Because hashes come out sorted" }
+    - { id: b, text: "Because the answer is always a power of two" }
+    - { id: c, text: "You can't; you have to try every length" }
+    - { id: d, text: "If some substring of length L repeats, its prefix of length L − 1 repeats too, so 'a repeat of length L exists' is monotone" }
+  answer: [d]
+  explain: "Chop the last character off both copies of a repeated substring and you get a shorter repeat. So the lengths that have a repeat are exactly 0 up to the answer, and binary search applies. Checking one length L puts the hash of every length-L window into a set: O(n), so O(n log n) overall. It's the same 'binary search on the answer' idea as Factory Machines."

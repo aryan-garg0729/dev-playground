@@ -1,0 +1,18 @@
+id: dsa.graphs.monsters
+type: mcq
+version: 1
+title: "Monsters"
+xp: 10
+difficulty: 4
+tags: [graphs, bfs, multi-source]
+free: true
+spec:
+  question: prompt.md
+  multiple: false
+  options:
+    - { id: a, text: "If a monster can reach a cell no later than you, it can wait there, so the cell is unsafe; otherwise it can never catch you on it" }
+    - { id: b, text: "Monsters always move towards you" }
+    - { id: c, text: "Monsters can't pass through each other" }
+    - { id: d, text: "Because a BFS from your position is enough on its own" }
+  answer: [a]
+  explain: "Assume the monsters play perfectly. Any cell a monster can reach at a time ≤ your arrival time is lost, because the monster can get there first and wait. A cell you reach strictly earlier is safe when you stand on it. That turns a chase into two BFS passes, O(rows × cols). Starting the monster BFS from every monster at once is what keeps it linear."
